@@ -8,6 +8,7 @@ import { measureSheet } from '@/lib/measure';
 import { letterSchema, resumeSchema } from '@/lib/sheetSchema';
 import { cleanCss, designOf, inheritedDesign, MARKUP_GUIDE } from '@/lib/design';
 import { companyDomain, normalizeWebsite } from '@/lib/logo';
+import { desktop, type ToolImage } from '@/lib/desktop';
 import { formTools } from './formTools';
 
 const json = (v: unknown) => JSON.stringify(v, null, 1);
@@ -58,6 +59,8 @@ const jobFields = {
 export interface ToolHost {
   /** Show a page in the app, e.g. "/jobs/<id>" or "/docs/<id>". */
   navigate(path: string): void;
+  /** Hand the agent a picture with the tool's result. Only engines that can see images set this. */
+  attachImage?(image: ToolImage): void;
 }
 
 /**
@@ -313,6 +316,26 @@ function makeTools(host: ToolHost): Record<string, Tool> {
         const d = await sheetDoc(id);
         if (typeof d === 'string') return { content: d, isError: true };
         return saveDesign(d, css, host);
+      },
+    }),
+
+    preview_document: defineTool({
+      description:
+        'Check how a resume or letter really looks: whether it fits one page and, where the engine can see images, a picture of the page as printed. ' +
+        'Use it after every design or content change, look for overflow, clipped or overlapping text, low contrast, cramped or empty areas, and fix what you find.',
+      inputSchema: z.object({ id: z.string() }),
+      timeoutMs: 60_000,
+      run: async ({ id }) => {
+        const d = await sheetDoc(id);
+        if (typeof d === 'string') return { content: d, isError: true };
+        const fit = await measureSheet(d);
+        const pdf = desktop()?.pdf;
+        if (!pdf) return `${fit} (No picture here: the web app can't render one. The user can see it at /documents/${id}.)`;
+        const shot = await pdf.preview(id);
+        const pages = `The PDF is ${shot.pages} page${shot.pages === 1 ? '' : 's'}.`;
+        if (!host.attachImage) return `${fit} ${pages} (This engine can't see images, so check with the user.)`;
+        host.attachImage({ data: shot.image, mimeType: shot.mimeType });
+        return `${fit} ${pages} The picture shows the document as printed, at 816px per 8.5in page width${shot.pages > 1 ? '; everything below 1056px is on page 2' : ''}.`;
       },
     }),
 

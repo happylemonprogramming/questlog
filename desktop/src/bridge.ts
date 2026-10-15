@@ -12,6 +12,8 @@ export interface ToolSpec {
 export interface ToolOutcome {
   text: string;
   isError?: boolean;
+  /** Base64 pictures for the agent to look at, e.g. a rendered page. */
+  images?: { data: string; mimeType: string }[];
 }
 
 /**

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { desktop } from '@/lib/desktop';
+import { desktop, type ToolImage } from '@/lib/desktop';
 import { buildTools, type ToolHost } from './tools';
 
 /**
@@ -21,10 +21,12 @@ export function serveTools(host: ToolHost) {
       }));
     },
     async call(name, args) {
-      const tool = buildTools(host)[name];
+      // Coding agents can look at pictures, so tools like preview_document can hand them one.
+      const images: ToolImage[] = [];
+      const tool = buildTools({ ...host, attachImage: (i) => images.push(i) })[name];
       if (!tool) return { text: `No tool ${name}.`, isError: true };
       const r = await tool.execute(args ?? {});
-      return { text: r.content, isError: r.isError };
+      return { text: r.content, isError: r.isError, images };
     },
   });
 }

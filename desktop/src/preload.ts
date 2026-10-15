@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('offerdexDesktop', {
     make: (docId: string, fileName?: string) => invoke('pdf:make', docId, fileName),
     save: (docId: string, fileName?: string) => invoke('pdf:save', docId, fileName),
     reveal: (file: string) => invoke('pdf:reveal', file),
+    preview: (docId: string) => invoke('pdf:preview', docId),
   },
   form: {
     status: () => invoke('form:status'),

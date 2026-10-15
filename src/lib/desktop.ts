@@ -71,6 +71,11 @@ export interface PermissionAsk {
 
 type Off = () => void;
 
+export interface ToolImage {
+  data: string;
+  mimeType: string;
+}
+
 export interface DesktopBridge {
   version: string;
   platform: string;
@@ -78,6 +83,8 @@ export interface DesktopBridge {
     make(docId: string, fileName?: string): Promise<{ path: string; name: string }>;
     save(docId: string, fileName?: string): Promise<string | null>;
     reveal(file: string): Promise<void>;
+    /** The PDF's page count and a JPEG of the document as printed, base64. */
+    preview(docId: string): Promise<{ pages: number; image: string; mimeType: string }>;
   };
   form: {
     status(): Promise<{ open: boolean; url?: string; loading?: boolean }>;
@@ -99,7 +106,7 @@ export interface DesktopBridge {
     onSession(fn: (msg: { chatId: string; engine: EngineId; configOptions: ConfigOption[] }) => void): Off;
     onExit(fn: (msg: { engine: EngineId; code: number; stderr: string }) => void): Off;
   };
-  serveTools(handler: { list(): Promise<unknown>; call(name: string, args: unknown): Promise<{ text: string; isError?: boolean }> }): Off;
+  serveTools(handler: { list(): Promise<unknown>; call(name: string, args: unknown): Promise<{ text: string; isError?: boolean; images?: ToolImage[] }> }): Off;
 }
 
 declare global {

@@ -95,12 +95,10 @@ function createWindow() {
 
 const slug = (s: string) => s.replace(/[^\w.-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
 
-/**
- * A document as a PDF, rendered by the same engine that shows it, so the file
- * matches the preview exactly and keeps real text for applicant tracking.
- */
-async function makePdf(docId: string, fileName?: string): Promise<{ path: string; name: string }> {
-  const page = new BrowserWindow({ show: false, width: 816, height: 1056, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true } });
+/** A document's print view in a hidden window, once its fonts have loaded. */
+async function withRendered<T>(docId: string, fn: (page: BrowserWindow) => Promise<T>, offscreen = false): Promise<T> {
+  // A hidden window never paints, so pictures need an offscreen one.
+  const page = new BrowserWindow({ show: false, width: 816, height: 1056, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, offscreen } });
   try {
     await page.loadURL(`${ORIGIN}/print/${encodeURIComponent(docId)}?pdf=1`);
     const deadline = Date.now() + 20_000;
@@ -111,17 +109,54 @@ async function makePdf(docId: string, fileName?: string): Promise<{ path: string
       if (Date.now() > deadline) throw new Error('The document took too long to render.');
       await new Promise((r) => setTimeout(r, 100));
     }
+    return await fn(page);
+  } finally {
+    page.destroy();
+  }
+}
+
+const printPdf = (page: BrowserWindow) =>
+  page.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true, margins: { top: 0, bottom: 0, left: 0, right: 0 } });
+
+/**
+ * A document as a PDF, rendered by the same engine that shows it, so the file
+ * matches the preview exactly and keeps real text for applicant tracking.
+ */
+async function makePdf(docId: string, fileName?: string): Promise<{ path: string; name: string }> {
+  return withRendered(docId, async (page) => {
     const title = await page.webContents.executeJavaScript('document.title');
-    const data = await page.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true, margins: { top: 0, bottom: 0, left: 0, right: 0 } });
+    const data = await printPdf(page);
     const name = `${slug(fileName || title || 'Document')}.pdf`;
     const dir = path.join(app.getPath('userData'), 'pdfs');
     await mkdir(dir, { recursive: true });
     const file = path.join(dir, name);
     await writeFile(file, data);
     return { path: file, name };
-  } finally {
-    page.destroy();
-  }
+  });
+}
+
+/**
+ * What the agent sees when it checks its work: the page count of the real PDF,
+ * and a picture of the document as printed, taller than one page when it spills.
+ */
+async function previewDoc(docId: string): Promise<{ pages: number; image: string; mimeType: string }> {
+  return withRendered(docId, async (page) => {
+    const pdf = await printPdf(page);
+    const pages = pdf.toString('latin1').match(/\/Type\s*\/Page(?!s)/g)?.length ?? 0;
+    const wc = page.webContents;
+    wc.debugger.attach();
+    try {
+      await wc.debugger.sendCommand('Emulation.setEmulatedMedia', { media: 'print' });
+      await new Promise((r) => setTimeout(r, 100));
+      const height = Math.min(4 * 1056, Math.max(1056, await wc.executeJavaScript('document.documentElement.scrollHeight')));
+      page.setContentSize(816, height);
+      await new Promise((r) => setTimeout(r, 150));
+      const shot = await wc.capturePage({ x: 0, y: 0, width: 816, height }, { stayHidden: true });
+      return { pages, image: shot.toJPEG(85).toString('base64'), mimeType: 'image/jpeg' };
+    } finally {
+      wc.debugger.detach();
+    }
+  }, true);
 }
 
 function handle(channel: string, fn: (...args: any[]) => unknown) {
@@ -129,6 +164,7 @@ function handle(channel: string, fn: (...args: any[]) => unknown) {
 }
 
 handle('pdf:make', (docId: string, fileName?: string) => makePdf(docId, fileName));
+handle('pdf:preview', (docId: string) => previewDoc(docId));
 handle('pdf:save', async (docId: string, fileName?: string) => {
   const made = await makePdf(docId, fileName);
   const res = await dialog.showSaveDialog(win!, { defaultPath: path.join(app.getPath('downloads'), made.name), filters: [{ name: 'PDF', extensions: ['pdf'] }] });

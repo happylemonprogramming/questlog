@@ -26,8 +26,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: await pos
 
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
   try {
-    const out = (await post('/call', { name: req.params.name, args: req.params.arguments ?? {} })) as { text: string; isError?: boolean };
-    return { content: [{ type: 'text', text: out.text }], isError: !!out.isError };
+    const out = (await post('/call', { name: req.params.name, args: req.params.arguments ?? {} })) as {
+      text: string;
+      isError?: boolean;
+      images?: { data: string; mimeType: string }[];
+    };
+    const images = (out.images ?? []).map((i) => ({ type: 'image' as const, data: i.data, mimeType: i.mimeType }));
+    return { content: [{ type: 'text', text: out.text }, ...images], isError: !!out.isError };
   } catch (e) {
     return { content: [{ type: 'text', text: `Offerdex isn't reachable: ${(e as Error).message}` }], isError: true };
   }
