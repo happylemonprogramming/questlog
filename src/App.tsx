@@ -165,6 +165,7 @@ function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
 }
 
 const WIDTH_KEY = 'offerdex:chat-width';
+const OPEN_KEY = 'offerdex:assistant-open';
 
 /** Ask-from-page buttons bring the assistant forward. */
 function useAskOpens(open: () => void) {
@@ -318,12 +319,13 @@ function MobileShell() {
 function DesktopShell() {
   const { pane, applyJobId } = useWorkspace();
   const applyJob = useLiveQuery(() => (applyJobId ? db.jobs.get(applyJobId) : undefined), [applyJobId]);
-  const [open, setOpen] = useState(() => localStorage.getItem('offerdex:chat-open') !== '0');
+  // Closed until asked for: the page should be the first thing you see.
+  const [open, setOpen] = useState(() => localStorage.getItem(OPEN_KEY) === '1');
   const [width, setWidth] = useState(() => Number(localStorage.getItem(WIDTH_KEY)) || 420);
   const showApply = !!applyJobId && pane === 'apply';
 
   useEffect(() => {
-    localStorage.setItem('offerdex:chat-open', open ? '1' : '0');
+    localStorage.setItem(OPEN_KEY, open ? '1' : '0');
   }, [open]);
 
   useAskOpens(() => setOpen(true));
