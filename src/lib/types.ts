@@ -155,8 +155,15 @@ export interface Provider {
   model?: string;
 }
 
+/** Who runs the agent: the built-in one with a provider, or a coding agent in the desktop app. */
+export type EngineChoice = 'builtin' | 'claude' | 'codex' | 'opencode' | 'goose';
+
 export interface Settings {
   id: 'settings';
   providers: Provider[];
+  /** Desktop only. Unset means the built-in agent. */
+  engine?: EngineChoice;
+  /** Per engine, preferred session options such as the model: { claude: { model: 'opus' } }. */
+  engineOptions?: Partial<Record<EngineChoice, Record<string, string>>>;
   activeProviderId?: string;
 }

@@ -22,7 +22,7 @@ export const PRESETS: Preset[] = [
     id: 'openrouter',
     name: 'OpenRouter',
     baseURL: 'https://openrouter.ai/api/v1',
-    blurb: 'Hundreds of models behind one key.',
+    blurb: 'Hundreds of models behind one key, including free ones. Free models may log what you send.',
     keyURL: 'https://openrouter.ai/keys',
   },
   {

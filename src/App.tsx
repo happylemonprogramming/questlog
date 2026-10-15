@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import * as D from '@radix-ui/react-dialog';
-import { BrowserRouter, Link, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Link, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   BriefcaseBusiness, ClipboardPen, FileText, Loader2, Menu, Monitor, Moon, PanelRightOpen, PanelsTopLeft, Settings as SettingsIcon, Sparkles, Sun, Sunrise,
@@ -15,6 +15,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ApplyPane } from '@/components/ApplyPane';
 import { isJobsPath } from '@/components/JobsHeader';
 import { onAsk, useLive } from '@/agent/runtime';
+import { serveTools } from '@/agent/serve';
 import { setPane, useWorkspace } from '@/lib/workspace';
 import { useIsMobile } from '@/lib/useMedia';
 import { cn } from '@/lib/utils';
@@ -425,6 +426,11 @@ function DesktopShell() {
 }
 
 function Shell() {
+  // In the desktop app, an external agent (Claude Code, Codex…) works through this window's tools.
+  const navigate = useNavigate();
+  const nav = useRef(navigate);
+  nav.current = navigate;
+  useEffect(() => serveTools({ navigate: (p) => nav.current(p) }), []);
   return useIsMobile() ? <MobileShell /> : <DesktopShell />;
 }
 

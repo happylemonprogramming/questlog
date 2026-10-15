@@ -13,7 +13,11 @@ import type { ResumeData } from '@/lib/sheet';
  */
 export default function PrintView() {
   const { id = '' } = useParams();
-  const doc = useLiveQuery(() => db.docs.get(id), [id]);
+  const doc = useLiveQuery(async () => (await db.docs.get(id)) ?? null, [id]);
+
+  // The desktop app renders this page off-screen to make a PDF, and waits for this flag.
+  const pdf = new URLSearchParams(location.search).has('pdf');
+  const flag = window as { __printReady?: boolean | string };
 
   useEffect(() => {
     document.documentElement.classList.remove('dark');
@@ -21,6 +25,7 @@ export default function PrintView() {
   }, []);
 
   useEffect(() => {
+    if (doc === null && pdf) flag.__printReady = 'No such document.';
     if (!doc) return;
     const name = ((doc.data as ResumeData).header?.name || 'Document').replace(/\s+/g, '_');
     document.title = `${name}_${doc.kind === 'letter' ? 'Cover_Letter' : 'Resume'}`;
@@ -29,14 +34,18 @@ export default function PrintView() {
     page.textContent = pageRules(doc.css);
     document.head.appendChild(page);
     let cancelled = false;
-    void fontsReady().then(() => setTimeout(() => !cancelled && window.print(), 300));
+    void fontsReady().then(() => setTimeout(() => {
+      if (cancelled) return;
+      if (pdf) flag.__printReady = true;
+      else window.print();
+    }, 300));
     return () => { cancelled = true; page.remove(); };
   }, [doc]);
 
   if (!doc) return null;
   return (
     <div className="mx-auto w-[8.5in] print:w-auto">
-      <p className="py-3 text-center font-sans text-[13px] text-neutral-500 print:hidden">
+      <p className={`py-3 text-center font-sans text-[13px] text-neutral-500 print:hidden ${pdf ? 'hidden' : ''}`}>
         In the print dialog choose <b>Save as PDF</b>, paper <b>Letter</b>, margins <b>None</b>, and turn off headers and footers.
       </p>
       <DocSheet doc={doc} />

@@ -9,6 +9,7 @@ import { Empty } from '@/components/common';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { DocSheet, ScaledSheet, SHEET_H } from '@/components/Sheet';
 import { DEFAULT_CSS, designOf } from '@/lib/design';
+import { desktop } from '@/lib/desktop';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/input';
@@ -243,7 +244,7 @@ export default function DocumentView() {
             </Button>
           )}
           {isSheet && (
-            <Button variant="primary" onClick={() => window.open(`/print/${doc.id}`, '_blank')}>
+            <Button variant="primary" onClick={() => (desktop() ? void desktop()!.pdf.save(doc.id) : window.open(`/print/${doc.id}`, '_blank'))}>
               <Printer /> Export PDF
             </Button>
           )}

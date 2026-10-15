@@ -8,6 +8,7 @@ import { measureSheet } from '@/lib/measure';
 import { letterSchema, resumeSchema } from '@/lib/sheetSchema';
 import { cleanCss, designOf, inheritedDesign, MARKUP_GUIDE } from '@/lib/design';
 import { companyDomain, normalizeWebsite } from '@/lib/logo';
+import { formTools } from './formTools';
 
 const json = (v: unknown) => JSON.stringify(v, null, 1);
 
@@ -435,6 +436,8 @@ function makeTools(host: ToolHost): Record<string, Tool> {
         return `Showing ${path}.`;
       },
     }),
+
+    ...formTools(),
   };
 }
 

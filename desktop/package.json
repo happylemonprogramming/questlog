@@ -1,0 +1,64 @@
+{
+  "name": "offerdex-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Offerdex for the desktop: fills in application forms and runs Claude Code, Codex or OpenCode as its agent.",
+  "license": "AGPL-3.0-or-later",
+  "main": "build/main.cjs",
+  "dependencies": {
+    "@agentclientprotocol/claude-agent-acp": "^0.90.0",
+    "@agentclientprotocol/codex-acp": "^2.2.2",
+    "@agentclientprotocol/sdk": "^1.8.0",
+    "@modelcontextprotocol/sdk": "^1.32.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "electron": "^44.7.2",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  },
+  "scripts": {
+    "build:main": "esbuild src/main.ts src/preload.ts src/mcp-bridge.ts --bundle --platform=node --target=node22 --format=cjs --outdir=build --out-extension:.js=.cjs --external:electron --log-level=warning",
+    "build:web": "npm --prefix .. run build && rm -rf web && cp -r ../dist web",
+    "typecheck": "tsc -p .",
+    "dev": "npm run build:main && OFFERDEX_DEV_URL=${OFFERDEX_DEV_URL:-http://localhost:5173} electron .",
+    "start": "npm run build:main && electron .",
+    "dist": "npm run build:web && npm run build:main && electron-builder"
+  },
+  "build": {
+    "appId": "wtf.offerdex.desktop",
+    "productName": "Offerdex",
+    "files": [
+      "build/**",
+      "web/**",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "build/mcp-bridge.cjs",
+      "node_modules/@agentclientprotocol/**",
+      "node_modules/@openai/**",
+      "node_modules/@anthropic-ai/**"
+    ],
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
+  }
+}

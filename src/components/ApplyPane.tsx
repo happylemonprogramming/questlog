@@ -1,7 +1,9 @@
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Check, Copy, ExternalLink, FileDown, Info, RotateCw, ShieldAlert, X } from 'lucide-react';
+import { Check, Copy, ExternalLink, FileDown, Info, Loader2, Paperclip, RotateCw, ShieldAlert, Sparkles, X } from 'lucide-react';
+import { desktop, isDesktop } from '@/lib/desktop';
+import { ask } from '@/agent/runtime';
 import { db, getProfile } from '@/lib/db';
 import { applicationPage, closeApplication, setPane } from '@/lib/workspace';
 import type { LetterData } from '@/lib/sheet';
@@ -46,6 +48,40 @@ function CopyChip({ label, text, icon }: { label: string; text: string; icon?: R
   );
 }
 
+/**
+ * Desktop only: put the resume, as a PDF, into the form's resume upload. Picks
+ * the file field labeled resume or CV, or the first one.
+ */
+function AttachChip({ docId }: { docId: string }) {
+  const [state, setState] = useState<'idle' | 'busy' | 'done' | string>('idle');
+  async function attach() {
+    const d = desktop()!;
+    setState('busy');
+    try {
+      const form = await d.form.read();
+      const files = form.fields.filter((f) => f.kind === 'file');
+      const field = files.find((f) => /resume|cv/i.test(f.label)) ?? files[0];
+      if (!field) throw new Error('No upload field on this page yet');
+      const r = await d.form.attach(field.ref, docId);
+      if (!r.ok) throw new Error(r.note);
+      setState('done');
+    } catch (e) {
+      setState((e as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''));
+    }
+  }
+  return (
+    <button
+      onClick={attach}
+      disabled={state === 'busy'}
+      title={state.length > 6 ? state : 'Attach your resume to the form as a PDF'}
+      className={cn('flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium transition [&_svg]:size-3.5', state === 'done' ? 'bg-success/15 text-success' : state.length > 6 ? 'bg-danger/10 text-danger' : 'bg-lemon text-lemon-foreground hover:brightness-95')}
+    >
+      {state === 'busy' ? <Loader2 className="animate-spin" /> : state === 'done' ? <Check /> : <Paperclip />}
+      {state === 'done' ? 'Resume attached' : state.length > 6 ? 'Couldn’t attach' : 'Attach resume'}
+    </button>
+  );
+}
+
 /** Everything you'd paste into an application form, one tap each. */
 function Materials({ jobId }: { jobId: string }) {
   const profile = useLiveQuery(() => getProfile(), []);
@@ -53,7 +89,9 @@ function Materials({ jobId }: { jobId: string }) {
   const linkedin = profile?.links?.find((l) => /linkedin/i.test(l.href));
   const chips: ReactNode[] = [];
   for (const d of docs) {
-    if (d.kind === 'resume') {
+    if (d.kind === 'resume' && isDesktop()) {
+      chips.push(<AttachChip key={d.id} docId={d.id} />);
+    } else if (d.kind === 'resume') {
       chips.push(
         <a key={d.id} href={`/print/${d.id}`} target="_blank" rel="noopener" className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-lemon px-3 text-[12.5px] font-medium text-lemon-foreground hover:brightness-95 [&_svg]:size-3.5">
           <FileDown /> Resume PDF
@@ -74,7 +112,16 @@ function Materials({ jobId }: { jobId: string }) {
   if (profile?.phone) chips.push(<CopyChip key="phone" label="Phone" text={profile.phone} />);
   if (linkedin) chips.push(<CopyChip key="li" label="LinkedIn" text={linkedin.href} />);
   if (profile?.location) chips.push(<CopyChip key="loc" label="Location" text={profile.location} />);
-  return <div className="scroll-thin flex gap-1.5 overflow-x-auto border-b bg-sunken/60 px-3 py-2">{chips}</div>;
+  return (
+    <div className="scroll-thin flex gap-1.5 overflow-x-auto border-b bg-sunken/60 px-3 py-2">
+      {isDesktop() && (
+        <button onClick={() => ask(`Fill out the application form for listing ${jobId}. Attach my resume for it, fill everything you can answer truthfully, and tell me what's left for me.`)} className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 text-[12.5px] font-medium text-primary-foreground hover:opacity-90 [&_svg]:size-3.5">
+          <Sparkles className="text-lemon" /> Fill it in for me
+        </button>
+      )}
+      {chips}
+    </div>
+  );
 }
 
 /**
@@ -99,7 +146,8 @@ export function ApplyPane({ jobId, mobile }: { jobId: string | null; mobile?: bo
   }
   if (!job) return null;
 
-  const frame = page && (page.embed !== 'no' || tryAnyway);
+  // The desktop app's webview loads any site; only a browser frame can be refused.
+  const frame = page && (isDesktop() || page.embed !== 'no' || tryAnyway);
 
   return (
     <div className="flex h-full min-w-0 flex-col bg-surface">
@@ -120,12 +168,22 @@ export function ApplyPane({ jobId, mobile }: { jobId: string | null; mobile?: bo
         </div>
       ) : frame ? (
         <>
-          {page.embed === 'maybe' && (
+          {page.embed === 'maybe' && !isDesktop() && (
             <p className="flex shrink-0 items-center gap-2 border-b px-3 py-1.5 text-[12px] text-muted-foreground">
               <Info className="size-3.5 shrink-0" />
               <span>Some career sites refuse to load inside other apps. If this stays blank, use <b>Open in a new tab</b>.</span>
             </p>
           )}
+          {isDesktop() ? (
+            <webview
+              key={`${job.id}:${reload}`}
+              src={page.url}
+              partition="persist:apply"
+              // @ts-expect-error React passes it through as the attribute the webview reads.
+              allowpopups="true"
+              className="min-h-0 w-full flex-1 bg-white"
+            />
+          ) : (
           <iframe
             key={`${job.id}:${reload}`}
             src={page.url}
@@ -136,6 +194,7 @@ export function ApplyPane({ jobId, mobile }: { jobId: string | null; mobile?: bo
             referrerPolicy="strict-origin-when-cross-origin"
             className="min-h-0 w-full flex-1 bg-white"
           />
+          )}
         </>
       ) : (
         <div className="grid flex-1 place-items-center p-6">

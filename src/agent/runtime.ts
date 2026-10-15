@@ -2,7 +2,8 @@ import { createAgent, type AgentRun, type ChatMessage } from '@porygon/core';
 import { openaiModel } from '@porygon/core/openai';
 import { useSyncExternalStore } from 'react';
 import { db, getProfile, getSettings, now, uid } from '@/lib/db';
-import type { Chat } from '@/lib/types';
+import { desktop, type ConfigOption, type EngineId, type PermissionAsk, type ToolUpdate } from '@/lib/desktop';
+import type { Chat, Settings } from '@/lib/types';
 import { systemPrompt, type ViewContext } from './prompt';
 import { buildTools, type ToolHost } from './tools';
 
@@ -16,6 +17,8 @@ export interface Live {
   text: string;
   tool?: { name: string; args: unknown };
   error?: string;
+  /** An external agent wants to use one of its own tools and is waiting for the user. */
+  permission?: PermissionAsk;
 }
 
 let live: Live | null = null;
@@ -36,6 +39,13 @@ export function useLive(): Live | null {
 
 export function stop() {
   run?.cancel();
+  if (live && acpChat === live.chatId) void desktop()?.agent.cancel(live.chatId);
+}
+
+/** The engine that runs the agent: the built-in one, or a coding agent in the desktop app. */
+export function engineOf(settings: Settings | undefined): EngineId | null {
+  const e = settings?.engine;
+  return desktop() && e && e !== 'builtin' ? e : null;
 }
 
 export async function newChat(): Promise<string> {
@@ -70,6 +80,12 @@ export async function send(chatId: string, text: string, view: ViewContext, host
   const title = chat.messages.length ? chat.title : text.replace(/\s+/g, ' ').slice(0, 60);
   const save = (patch: Partial<Chat>) => db.chats.update(chatId, { ...patch, updatedAt: now() });
   await save({ messages, title });
+
+  const engine = engineOf(settings);
+  if (engine) {
+    await sendAcp(chatId, engine, settings, messages, view, save);
+    return;
+  }
 
   if (!provider?.model) {
     set({ chatId, text: '', error: 'Connect an AI provider and pick a model in Settings first.' });
@@ -123,6 +139,124 @@ export async function send(chatId: string, text: string, view: ViewContext, host
   } finally {
     run = null;
   }
+}
+
+let acpChat: string | null = null;
+
+/** The session options (model, effort) each chat's external agent offers, as it last reported them. */
+const sessionOptions = new Map<string, ConfigOption[]>();
+const optionListeners = new Set<() => void>();
+desktop()?.agent.onSession(({ chatId, configOptions }) => {
+  sessionOptions.set(chatId, configOptions);
+  optionListeners.forEach((l) => l());
+});
+
+export function useSessionOptions(chatId: string | null): ConfigOption[] | undefined {
+  return useSyncExternalStore(
+    (l) => (optionListeners.add(l), () => optionListeners.delete(l)),
+    () => (chatId ? sessionOptions.get(chatId) : undefined),
+  );
+}
+
+export async function setSessionOption(chatId: string, engine: EngineId, configId: string, value: string) {
+  const s = await getSettings();
+  await db.settings.put({ ...s, engineOptions: { ...s.engineOptions, [engine]: { ...s.engineOptions?.[engine], [configId]: value } } });
+  const opts = await desktop()?.agent.setOption(chatId, configId, value);
+  if (opts) {
+    sessionOptions.set(chatId, opts);
+    optionListeners.forEach((l) => l());
+  }
+}
+
+/** Tool names as the engines report them ("mcp__offerdex__save_job", "offerdex.save_job") back to Offerdex's own. */
+const toolName = (title: string) => title.replace(/^(mcp__)?offerdex(__|_|\.|\/|: ?)/i, '').trim();
+
+function toolText(u: ToolUpdate): string {
+  const parts = (u.content ?? []).map((c) => c.content?.text ?? '').filter(Boolean);
+  if (parts.length) return parts.join('\n');
+  if (u.rawOutput !== undefined) return typeof u.rawOutput === 'string' ? u.rawOutput : JSON.stringify(u.rawOutput);
+  return u.status === 'failed' ? 'Error' : 'Done.';
+}
+
+/**
+ * One turn with an external agent over ACP. Its stream of updates is folded
+ * into the same messages the built-in agent writes, so the panel, history and
+ * links all work the same.
+ */
+async function sendAcp(chatId: string, engine: EngineId, settings: Settings, messages: ChatMessage[], view: ViewContext, save: (p: Partial<Chat>) => Promise<unknown>) {
+  const d = desktop()!;
+  acpChat = chatId;
+  set({ chatId, text: '' });
+  const calls = new Map<string, { name: string; args: unknown; msg: ChatMessage }>();
+  const flush = () => {
+    if (live?.text.trim()) messages.push({ role: 'assistant', content: live.text });
+    if (live) set({ ...live, text: '' });
+  };
+  const offUpdate = d.agent.onUpdate(({ chatId: c, update: u }) => {
+    if (c !== chatId || !live) return;
+    if (u.sessionUpdate === 'agent_message_chunk') {
+      const t = (u as { content: { text?: string } }).content.text;
+      if (t) set({ ...live, text: live.text + t });
+    } else if (u.sessionUpdate === 'tool_call' || u.sessionUpdate === 'tool_call_update') {
+      const t = u as ToolUpdate;
+      let call = calls.get(t.toolCallId);
+      if (!call) {
+        flush();
+        const name = toolName(t.title ?? t.kind ?? 'tool');
+        const msg: ChatMessage = { role: 'assistant', content: '', toolCalls: [{ id: t.toolCallId, name, arguments: JSON.stringify(t.rawInput ?? {}) }] };
+        call = { name, args: t.rawInput ?? {}, msg };
+        calls.set(t.toolCallId, call);
+        messages.push(msg);
+        void save({ messages: [...messages] });
+      } else if (t.rawInput !== undefined || t.title) {
+        // Engines often send the arguments, or a better title, in a later update.
+        if (t.rawInput !== undefined) call.args = t.rawInput;
+        if (t.title) call.name = toolName(t.title);
+        call.msg.toolCalls = [{ id: t.toolCallId, name: call.name, arguments: JSON.stringify(call.args) }];
+      }
+      if (t.status === 'completed' || t.status === 'failed') {
+        messages.push({ role: 'tool', toolCallId: t.toolCallId, content: t.status === 'failed' ? `Error: ${toolText(t)}` : toolText(t) });
+        set({ ...live, tool: undefined });
+        void save({ messages: [...messages] });
+      } else set({ ...live, tool: { name: call.name, args: call.args } });
+    }
+  });
+  const offAsk = d.agent.onPermission((p) => {
+    if (p.chatId === chatId && live) set({ ...live, permission: p });
+  });
+  try {
+    const last = messages.at(-1)?.content ?? '';
+    const where = view.label ? `[The user is looking at ${view.label}, at ${view.path} in Offerdex.]` : `[The user is at ${view.path} in Offerdex.]`;
+    const res = await d.agent.prompt({
+      chatId,
+      engine,
+      text: `${where}\n\n${last}`,
+      system: systemPrompt(await getProfile(), view),
+      options: settings.engineOptions?.[engine],
+    });
+    flush();
+    await save({ messages: closeDangling(messages) });
+    if (res.error) {
+      const hint = res.auth || /auth|log ?in|credential/i.test(res.error) ? ' Log in to it in a terminal first (e.g. run `claude` or `codex login`), then try again.' : '';
+      set({ chatId, text: '', error: `${res.error}${hint}` });
+    } else set(null);
+  } catch (err) {
+    flush();
+    await save({ messages: closeDangling(messages) });
+    set({ chatId, text: '', error: err instanceof Error ? err.message : String(err) });
+  } finally {
+    offUpdate();
+    offAsk();
+    acpChat = null;
+  }
+}
+
+/** Answer an external agent's request to use one of its own tools. */
+export function answerPermission(optionId: string | null) {
+  const p = live?.permission;
+  if (!p) return;
+  void desktop()?.agent.answer(p.id, optionId);
+  set({ ...live!, permission: undefined });
 }
 
 export function clearError() {

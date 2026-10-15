@@ -5,9 +5,9 @@ import type { ChatMessage } from '@porygon/core';
 import {
   ArrowUp, ArrowUpRight, BriefcaseBusiness, Check, ChevronRight, ClipboardPen, FileText, History, Loader2, MessageSquarePlus, PanelRightClose, Plug, Sparkles, Square, Trash2, UserRound, X,
 } from 'lucide-react';
-import { isDesktop } from '@/lib/desktop';
+import { desktop, isDesktop, type ConfigOption, type Engine, type PermissionAsk } from '@/lib/desktop';
 import { db, getSettings } from '@/lib/db';
-import { clearError, newChat, onAsk, send, stop, useLive } from '@/agent/runtime';
+import { answerPermission, clearError, engineOf, newChat, onAsk, send, setSessionOption, stop, useLive, useSessionOptions } from '@/agent/runtime';
 import { Button } from '@/components/ui/button';
 import { Markdown } from '@/components/Markdown';
 import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from '@/components/ui/menu';
@@ -42,6 +42,12 @@ function describe(name: string, args: Record<string, unknown>): string {
     case 'set_design': return a('css').trim() ? 'Redesigned the page' : 'Restored the default design';
     case 'copy_design': return 'Copied the design';
     case 'show': return `Opened ${a('path')}`;
+    case 'open_application': return 'Opened the application';
+    case 'read_form': return 'Read the form';
+    case 'fill_form': return `Filled ${Array.isArray(args?.fields) ? args.fields.length : ''} fields`.replace(/\s+/g, ' ');
+    case 'attach_document': return 'Attached a document';
+    case 'click_form': return 'Clicked on the form';
+    case 'read_page': return 'Read the page';
     default: return name;
   }
 }
@@ -123,6 +129,46 @@ function Transcript({ messages }: { messages: ChatMessage[] }) {
   );
 }
 
+/** An external agent asking to use one of its own tools (not Offerdex's), with the choices it offers. */
+function PermissionCard({ ask }: { ask: PermissionAsk }) {
+  const input = ask.input === undefined ? '' : typeof ask.input === 'string' ? ask.input : JSON.stringify(ask.input, null, 1);
+  return (
+    <div className="pop rounded-2xl border border-lemon/50 bg-lemon-soft/40 p-3.5 text-[13px]">
+      <p className="font-medium">The agent wants to {ask.title ? <span className="font-mono text-[12px]">{ask.title}</span> : 'use a tool'}</p>
+      {input && <pre className="scroll-thin mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-background/70 p-2 font-mono text-[11px] text-muted-foreground">{input.slice(0, 2000)}</pre>}
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {ask.options.map((o) => (
+          <Button key={o.optionId} size="sm" variant={o.kind === 'allow_once' ? 'lemon' : 'outline'} onClick={() => answerPermission(o.optionId)}>{o.name}</Button>
+        ))}
+        <Button size="sm" variant="ghost" onClick={() => answerPermission(null)}>Stop</Button>
+      </div>
+    </div>
+  );
+}
+
+/** Model and effort pickers for an external agent, from what its session offers. */
+function SessionPicker({ chatId, engine, options }: { chatId: string; engine: Engine['id']; options: ConfigOption[] }) {
+  const shown = options.filter((o) => o.type === 'select' && (o.category === 'model' || o.category === 'thought_level' || o.id === 'model' || o.id === 'effort'));
+  return (
+    <>
+      {shown.map((o) => {
+        const flat = (o.options ?? []).flatMap((x) => ('group' in x ? x.options : [x]));
+        return (
+          <select
+            key={o.id}
+            value={String(o.currentValue)}
+            onChange={(e) => void setSessionOption(chatId, engine, o.id, e.target.value)}
+            title={o.name}
+            className="h-7 max-w-[130px] truncate rounded-md bg-transparent px-1 font-mono text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground focus:outline-none"
+          >
+            {flat.map((x) => <option key={x.value} value={x.value}>{x.name}</option>)}
+          </select>
+        );
+      })}
+    </>
+  );
+}
+
 function useViewContext() {
   const { pathname } = useLocation();
   const { behind, applyJobId } = useWorkspace();
@@ -148,6 +194,11 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
   const chats = useLiveQuery(() => db.chats.orderBy('updatedAt').reverse().limit(30).toArray(), []);
   const settings = useLiveQuery(() => getSettings(), []);
   const provider = settings?.providers.find((p) => p.id === settings.activeProviderId) ?? settings?.providers[0];
+  const engine = engineOf(settings);
+  const [engines, setEngines] = useState<Engine[]>([]);
+  useEffect(() => void desktop()?.agent.engines().then(setEngines), []);
+  const engineLabel = engines.find((e) => e.id === engine)?.label ?? engine;
+  const sessionOpts = useSessionOptions(chatId);
   const [draft, setDraft] = useState('');
   const scroller = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
@@ -292,6 +343,7 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
                     ))}
                   </div>
                 )}
+                {live.permission && <PermissionCard ask={live.permission} />}
                 {live.error && (
                   <div className="rounded-xl border border-danger/30 bg-danger/5 px-3 py-2 text-[13px] text-danger">
                     {live.error}
@@ -307,10 +359,10 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
       </div>
 
       <div className="shrink-0 p-3 pt-0">
-        {settings && !provider?.model && (
+        {settings && !engine && !provider?.model && (
           <Link to="/settings" className="mb-2 flex items-center gap-2 rounded-xl bg-lemon-soft px-3 py-2 text-[12.5px] ring-1 ring-lemon/50 hover:brightness-[0.98]">
             <Plug className="size-3.5" />
-            Connect an AI provider to start. Meridian works out of the box.
+            {isDesktop() ? 'Pick who runs the agent: Claude Code, Codex, OpenCode, or an AI provider.' : 'Connect an AI provider to start. Meridian works out of the box.'}
           </Link>
         )}
         <div className="rounded-[20px] border border-border/80 bg-background shadow-card transition-[border-color,box-shadow] duration-300 focus-within:border-lemon/50 focus-within:shadow-[0_0_0_4px_hsl(var(--lemon)/0.12),0_10px_30px_-12px_hsl(var(--lemon)/0.4)]">
@@ -336,9 +388,12 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
             className="block max-h-48 min-h-[44px] w-full resize-none bg-transparent px-3.5 py-3 text-[13.5px] leading-relaxed max-lg:text-[16px] placeholder:text-muted-foreground/70 focus:outline-none [field-sizing:content]"
           />
           <div className="flex items-center justify-between px-2 pb-2">
-            <Link to="/settings" className="truncate rounded-md px-1.5 py-1 font-mono text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground">
-              {provider ? `${provider.name} · ${provider.model ?? 'no model'}` : 'No provider'}
-            </Link>
+            <div className="flex min-w-0 items-center gap-0.5">
+              <Link to="/settings" className="truncate rounded-md px-1.5 py-1 font-mono text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground">
+                {engine ? engineLabel : provider ? `${provider.name} · ${provider.model ?? 'no model'}` : 'No provider'}
+              </Link>
+              {engine && chatId && sessionOpts && <SessionPicker chatId={chatId} engine={engine} options={sessionOpts} />}
+            </div>
             {running ? (
               <Button size="icon" variant="primary" onClick={stop} className="rounded-full max-lg:size-10" aria-label="Stop">
                 <Square className="!size-3 fill-current" />

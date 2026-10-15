@@ -8,6 +8,8 @@ import { analysisPrompt } from '@/lib/analysis';
 import { ask } from '@/agent/runtime';
 import { PageHeader } from '@/components/common';
 import { companyDomain, setLogos, useLogos } from '@/lib/logo';
+import { desktop, isDesktop, type Engine } from '@/lib/desktop';
+import type { EngineChoice } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import type { Profile, Provider } from '@/lib/types';
@@ -298,6 +300,39 @@ function DataTools() {
   );
 }
 
+/**
+ * Desktop only: who runs the agent. A coding agent you already use brings its
+ * own login and models; the built-in one uses the provider set below.
+ */
+function EnginePicker() {
+  const settings = useLiveQuery(() => getSettings(), []);
+  const [engines, setEngines] = useState<Engine[]>([]);
+  useEffect(() => void desktop()?.agent.engines().then(setEngines), []);
+  const current = settings?.engine ?? 'builtin';
+  const choose = async (engine: EngineChoice) => {
+    const s = await getSettings();
+    await db.settings.put({ ...s, engine });
+  };
+  const rows: { id: EngineChoice; label: string; note: string; available: boolean; missing?: string; login?: string }[] = [
+    ...engines,
+    { id: 'builtin', label: 'Built-in agent', note: 'Runs in Offerdex with the AI provider below, on any device.', available: true },
+  ];
+  return (
+    <div className="mb-8 space-y-2">
+      {rows.map((e) => (
+        <label key={e.id} className={cn('flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition', current === e.id ? 'border-lemon/60 bg-lemon-soft/40' : 'hover:bg-accent/40', !e.available && 'cursor-not-allowed opacity-60')}>
+          <input type="radio" name="engine" checked={current === e.id} disabled={!e.available} onChange={() => choose(e.id)} className="mt-1 accent-[hsl(var(--lemon))]" />
+          <span className="min-w-0">
+            <span className="block text-[14px] font-medium">{e.label}</span>
+            <span className="block text-[12.5px] text-muted-foreground">{e.available ? e.note : `Not found: ${e.missing}.`}</span>
+            {e.login && <span className="mt-1 block text-[12.5px] font-medium text-warning">Not logged in: {e.login}, then come back.</span>}
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
 function LogoSettings() {
   const on = useLogos();
   const missing = useLiveQuery(async () => new Set((await db.jobs.toArray()).filter((j) => !companyDomain(j)).map((j) => j.company.trim().toLowerCase())).size, []);
@@ -325,8 +360,9 @@ function LogoSettings() {
 export default function Settings() {
   return (
     <>
-      <PageHeader eyebrow="Settings" title="Settings" sub="Everything is stored in this browser's IndexedDB. There's no account and no server." />
-      <Section icon={<Plug />} title="AI provider" sub="Bring your own model. Any OpenAI-compatible endpoint works, including Meridian for a Claude subscription.">
+      <PageHeader eyebrow="Settings" title="Settings" sub={isDesktop() ? 'Everything is stored on this computer. There\'s no account and no server.' : "Everything is stored in this browser's IndexedDB. There's no account and no server."} />
+      <Section icon={<Plug />} title={isDesktop() ? 'Agent' : 'AI provider'} sub={isDesktop() ? 'Who does the work. Claude Code, Codex and OpenCode use the login you already have; the built-in agent uses any OpenAI-compatible provider.' : 'Bring your own model. Any OpenAI-compatible endpoint works, including Meridian for a Claude subscription.'}>
+        {isDesktop() && <EnginePicker />}
         <ProviderEditor />
       </Section>
       <Section icon={<User />} title="Profile" sub="What the agent knows about you and the rules it applies to every listing.">
