@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { Chat, Doc, Job, Profile, Settings, SourceFile } from './types';
+import { STAGE_LABEL, type Chat, type Doc, type Job, type Profile, type Settings, type SourceFile, type Stage } from './types';
 import { SAMPLE_RESUME } from './sheet';
 
 /** Everything lives in this one IndexedDB database, on this device only. */
@@ -88,6 +88,16 @@ export async function logJob(id: string, text: string) {
   const job = await db.jobs.get(id);
   if (!job) return;
   await db.jobs.update(id, { log: [...(job.log ?? []), { at: today(), text }], updatedAt: now() });
+}
+
+/** Move a listing to a stage, stamping the applied date the first time it's sent. */
+export async function moveJob(job: Job, stage: Stage, note?: string) {
+  await db.jobs.update(job.id, {
+    stage,
+    ...(stage === 'applied' && !job.appliedAt ? { appliedAt: today(), outcome: 'in_progress' as const } : {}),
+    updatedAt: now(),
+  });
+  await logJob(job.id, note ?? `Moved to ${STAGE_LABEL[stage]}`);
 }
 
 /** Everything, as one JSON file the user owns. */
