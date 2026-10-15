@@ -2,19 +2,18 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
-  AlertTriangle, ArrowLeft, Check, ClipboardPen, ExternalLink, FilePlus2, FileText, Layers, MapPin, MessageSquareText, MoreHorizontal, Rocket, Sparkles, ThumbsDown, ThumbsUp, Trash2, Wallet,
+  AlertTriangle, ArrowLeft, Check, ChevronDown, ClipboardPen, Clock, ExternalLink, FilePlus2, FileText, Layers, MapPin, MessageSquareText, MoreHorizontal, Rocket, Sparkles, ThumbsDown, ThumbsUp, Trash2, Wallet,
 } from 'lucide-react';
 import { db, logJob, now, today, uid } from '@/lib/db';
 import { ask } from '@/agent/runtime';
 import { applicationPage, openApplication } from '@/lib/workspace';
-import { Card, CardHeader, CompanyMark, Empty, STAGE_DOT, STAGE_VAR } from '@/components/common';
+import { Card, CompanyMark, Empty, STAGE_DOT, STAGE_VAR } from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input, Textarea } from '@/components/ui/input';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { INTERVIEW_STEPS, STAGES, STAGE_LABEL, type Job, type Outcome, type Stage } from '@/lib/types';
 import { cn, timeAgo } from '@/lib/utils';
-import { useSlidingHighlight } from '@/lib/motion';
 
 const OUTCOMES: [Outcome, string][] = [
   ['in_progress', 'In progress'],
@@ -25,6 +24,8 @@ const OUTCOMES: [Outcome, string][] = [
   ['hired', 'Hired'],
   ['skipped', 'Skipped'],
 ];
+
+const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
 
 function Fact({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground [&_svg]:size-3.5">{icon}{children}</span>;
@@ -57,33 +58,45 @@ function useAutosave(job: Job | undefined, key: 'notes' | 'batch') {
   return [value, edit] as const;
 }
 
-/** The stages as one segmented control; the highlight slides and takes the stage's color. */
-function StageStepper({ stage, onChange }: { stage: Stage; onChange: (s: Stage) => void }) {
-  const { container, highlight } = useSlidingHighlight<HTMLDivElement, HTMLSpanElement>('[aria-pressed="true"]', stage);
+/** The stage as one small control: the current stage, and a menu to change it. */
+function StagePicker({ stage, onChange }: { stage: Stage; onChange: (s: Stage) => void }) {
   const c = STAGE_VAR[stage];
   return (
-    <div ref={container} className="rise scroll-none relative mb-8 flex gap-1 overflow-x-auto rounded-[20px] border border-border/70 bg-surface p-1.5 shadow-card" style={{ '--i': 1 } as CSSProperties}>
-      <span
-        ref={highlight}
-        aria-hidden="true"
-        className="absolute left-0 top-0 rounded-[14px] opacity-0 transition-[transform,width,background-color,box-shadow] duration-500 ease-spring"
-        style={{ background: `hsl(var(${c}) / 0.16)`, boxShadow: `inset 0 0 0 1px hsl(var(${c}) / 0.45), 0 6px 20px -8px hsl(var(${c}) / 0.6)` }}
-      />
-      {STAGES.map((s) => (
+    <Menu>
+      <MenuTrigger asChild>
         <button
-          key={s}
-          aria-pressed={stage === s}
-          onClick={() => onChange(s)}
-          className={cn(
-            'relative z-[1] flex h-10 flex-1 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[14px] px-3.5 text-[13.5px] font-medium transition-colors duration-200',
-            stage === s ? 'text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
-          )}
+          className="flex h-9 items-center gap-2 rounded-full px-3.5 text-[13.5px] font-medium transition hover:brightness-110"
+          style={{ background: `hsl(var(${c}) / 0.14)`, boxShadow: `inset 0 0 0 1px hsl(var(${c}) / 0.4)` }}
         >
-          <span className={cn('size-1.5 rounded-full transition-transform duration-300', STAGE_DOT[s], stage === s && 'scale-150')} />
-          {STAGE_LABEL[s]}
+          <span className={cn('size-2 rounded-full', STAGE_DOT[stage])} />
+          {STAGE_LABEL[stage]}
+          <ChevronDown className="size-3.5 text-muted-foreground" />
         </button>
-      ))}
-    </div>
+      </MenuTrigger>
+      <MenuContent align="start">
+        {STAGES.map((s) => (
+          <MenuItem key={s} onSelect={() => onChange(s)}>
+            <span className={cn('size-2 rounded-full', STAGE_DOT[s])} /> {STAGE_LABEL[s]}
+            {s === stage && <Check className="ml-auto" />}
+          </MenuItem>
+        ))}
+      </MenuContent>
+    </Menu>
+  );
+}
+
+/** A section kept closed until you want it, with a one-line hint of what's inside. */
+function Fold({ title, icon, hint, open, children }: { title: string; icon: ReactNode; hint?: ReactNode; open?: boolean; children: ReactNode }) {
+  return (
+    <details open={open} className="group/fold">
+      <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 transition-colors hover:bg-accent/40 sm:px-6 [&::-webkit-details-marker]:hidden [&_svg]:size-4">
+        <span className="text-muted-foreground">{icon}</span>
+        <span className="text-[14.5px] font-medium">{title}</span>
+        <span className="ml-auto min-w-0 truncate text-[13px] text-muted-foreground">{hint}</span>
+        <ChevronDown className="shrink-0 text-muted-foreground transition-transform duration-300 group-open/fold:rotate-180" />
+      </summary>
+      <div className="px-5 pb-6 sm:px-6">{children}</div>
+    </details>
   );
 }
 
@@ -120,13 +133,17 @@ export default function JobView() {
 
   const longPosting = (job.description?.length ?? 0) > 1400;
 
+  const words = job.description ? job.description.trim().split(/\s+/).length : 0;
+  const resume = docs.find((d) => d.kind === 'resume');
+  const evaluate = () => ask(`Evaluate listing ${job.id} against my rules and profile. Read the posting if needed, then save strengths, gaps, flags and a one-sentence verdict on it.`);
+
   return (
-    <>
+    <div className="mx-auto max-w-[760px]">
       <Link to="/listings" className="mb-5 inline-flex max-lg:hidden items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-3.5" /> Jobs
       </Link>
 
-      <div className="rise mb-8 flex flex-wrap items-start gap-5">
+      <div className="rise mb-6 flex items-start gap-5">
         <CompanyMark name={job.company} size={64} className="rounded-[20px] max-sm:hidden" />
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-medium text-muted-foreground">{job.company}</p>
@@ -134,24 +151,30 @@ export default function JobView() {
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
             {job.location && <Fact icon={<MapPin />}>{job.location}</Fact>}
             {job.pay && <Fact icon={<Wallet />}><span className="font-mono text-[12.5px]">{job.pay}</span></Fact>}
-            {job.posted && <Fact icon={<FileText />}>Posted {job.posted}</Fact>}
             {job.moonshot && <Badge tone="violet"><Rocket /> Moonshot{job.moonshotRank ? ` #${job.moonshotRank}` : ''}</Badge>}
           </div>
         </div>
-        <div className="flex w-full items-center gap-2 sm:w-auto">
-          {applicationPage(job) && (
-            <Button variant="lemon" className="flex-1 sm:flex-none" onClick={() => openApplication(job.id)}>
-              <ClipboardPen /> Apply here
-            </Button>
-          )}
-          {job.url && (
-            <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => window.open(job.url, '_blank', 'noopener')}>
-              Posting <ExternalLink />
-            </Button>
-          )}
+      </div>
+
+      <div className="rise mb-6 flex flex-wrap items-center gap-2" style={{ '--i': 1 } as CSSProperties}>
+        {applicationPage(job) ? (
+          <Button variant="lemon" size="lg" onClick={() => openApplication(job.id)}><ClipboardPen /> Apply here</Button>
+        ) : job.url ? (
+          <Button variant="lemon" size="lg" onClick={() => window.open(job.url, '_blank', 'noopener')}><ExternalLink /> Apply on their site</Button>
+        ) : null}
+        {resume ? (
+          <Button size="lg" variant="outline" onClick={() => navigate(`/documents/${resume.id}`)}><FileText /> Your resume for this</Button>
+        ) : (
+          <Button size="lg" variant="outline" onClick={() => ask(`Tailor a resume for listing ${job.id}. Start from the best base resume, keep it to one page, and save it linked to the listing.`)}>
+            <Sparkles className="text-lemon" /> Tailor resume
+          </Button>
+        )}
+        <div className="flex items-center gap-2 sm:ml-auto">
+          <StagePicker stage={job.stage} onChange={setStage} />
           <Menu>
-            <MenuTrigger asChild><Button variant="outline" size="icon" className="size-9" aria-label="More"><MoreHorizontal /></Button></MenuTrigger>
-            <MenuContent>
+            <MenuTrigger asChild><Button variant="ghost" size="icon" className="size-9" aria-label="More"><MoreHorizontal /></Button></MenuTrigger>
+            <MenuContent align="end">
+              {job.url && <MenuItem onSelect={() => window.open(job.url, '_blank', 'noopener')}><ExternalLink /> Open the posting</MenuItem>}
               <MenuItem onSelect={() => update({ moonshot: !job.moonshot })}><Rocket /> {job.moonshot ? 'Not a moonshot' : 'Mark as moonshot'}</MenuItem>
               <MenuItem danger onSelect={async () => { await db.jobs.delete(job.id); navigate('/listings'); }}><Trash2 /> Delete listing</MenuItem>
             </MenuContent>
@@ -159,154 +182,138 @@ export default function JobView() {
         </div>
       </div>
 
-      <StageStepper stage={job.stage} onChange={setStage} />
+      <Card className="rise mb-6 p-5 sm:p-6" style={{ '--i': 2 } as CSSProperties}>
+        {job.verdict || job.strengths?.length || job.gaps?.length ? (
+          <>
+            {job.verdict && <p className="text-[16px] leading-relaxed">{job.verdict}</p>}
+            {(job.strengths?.length || job.gaps?.length) ? (
+              <ul className={cn('space-y-1.5 text-[14px]', job.verdict && 'mt-4')}>
+                {job.strengths?.slice(0, 2).map((x, i) => <li key={`s${i}`} className="flex gap-2.5"><ThumbsUp className="mt-0.5 size-4 shrink-0 text-success" />{x}</li>)}
+                {job.gaps?.slice(0, 2).map((x, i) => <li key={`g${i}`} className="flex gap-2.5"><ThumbsDown className="mt-0.5 size-4 shrink-0 text-warning" />{x}</li>)}
+              </ul>
+            ) : null}
+            {job.flags?.length ? <div className="mt-4 flex flex-wrap gap-1.5">{job.flags.map((f) => <Badge key={f} tone="warning"><AlertTriangle /> {f}</Badge>)}</div> : null}
+          </>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-[14.5px] text-muted-foreground">No read on this one yet.</p>
+            <Button size="sm" variant="outline" onClick={evaluate}><Sparkles className="text-lemon" /> Is it a fit?</Button>
+          </div>
+        )}
+      </Card>
 
-      <div className="grid grid-cols-1 gap-6 @[880px]:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="min-w-0 space-y-6">
-          <Card>
-            <CardHeader title="Fit" icon={<Sparkles />} action={
-              <Button size="sm" variant="ghost" onClick={() => ask(`Evaluate listing ${job.id} against my rules and profile. Read the posting if needed, then save strengths, gaps and flags on it.`)}>
-                <Sparkles className="text-lemon" /> {job.strengths?.length ? 'Re-evaluate' : 'Evaluate'}
-              </Button>
-            } />
-            <div className="grid gap-5 px-6 pb-6 pt-1 @[640px]:grid-cols-2">
-              <div>
-                <p className="eyebrow-label mb-2 flex items-center gap-1.5 !text-success"><ThumbsUp className="size-3" /> Strengths</p>
-                {job.strengths?.length ? (
-                  <ul className="space-y-1.5 text-[13.5px] leading-snug">
-                    {job.strengths.map((s, i) => <li key={i} className="flex gap-2"><Check className="mt-0.5 size-3.5 shrink-0 text-success" />{s}</li>)}
-                  </ul>
-                ) : <p className="text-[13px] text-muted-foreground">Not evaluated yet.</p>}
+      <Card className="rise divide-y divide-border/60 overflow-hidden" style={{ '--i': 3 } as CSSProperties}>
+        <Fold title="Fit in full" icon={<Sparkles />} hint={job.strengths?.length || job.gaps?.length ? `${plural(job.strengths?.length ?? 0, 'strength')}, ${plural(job.gaps?.length ?? 0, 'gap')}` : 'Not evaluated'}>
+          <div className="grid gap-5 @[640px]:grid-cols-2">
+            <div>
+              <p className="eyebrow-label mb-2 flex items-center gap-1.5 !text-success"><ThumbsUp className="size-3" /> Strengths</p>
+              {job.strengths?.length ? (
+                <ul className="space-y-1.5 text-[13.5px] leading-snug">
+                  {job.strengths.map((x, i) => <li key={i} className="flex gap-2"><Check className="mt-0.5 size-3.5 shrink-0 text-success" />{x}</li>)}
+                </ul>
+              ) : <p className="text-[13px] text-muted-foreground">Not evaluated yet.</p>}
+            </div>
+            <div>
+              <p className="eyebrow-label mb-2 flex items-center gap-1.5 !text-warning"><ThumbsDown className="size-3" /> Gaps</p>
+              {job.gaps?.length ? (
+                <ul className="space-y-1.5 text-[13.5px] leading-snug">
+                  {job.gaps.map((x, i) => <li key={i} className="flex gap-2"><span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-warning" />{x}</li>)}
+                </ul>
+              ) : <p className="text-[13px] text-muted-foreground">None recorded.</p>}
+            </div>
+          </div>
+          <Button size="sm" variant="ghost" className="mt-4 -ml-2" onClick={evaluate}><Sparkles className="text-lemon" /> {job.strengths?.length ? 'Re-evaluate' : 'Evaluate'}</Button>
+        </Fold>
+
+        <Fold title="Posting" icon={<FileText />} hint={words ? `${words.toLocaleString()} words${job.posted ? ` · posted ${job.posted}` : ''}` : 'Not saved'}>
+          {job.description ? (
+            <div className="relative">
+              <div className={cn('whitespace-pre-wrap text-[13.5px] leading-relaxed text-foreground/85', !showPosting && longPosting && 'max-h-[340px] overflow-hidden')}>
+                {job.description}
               </div>
-              <div>
-                <p className="eyebrow-label mb-2 flex items-center gap-1.5 !text-warning"><ThumbsDown className="size-3" /> Gaps</p>
-                {job.gaps?.length ? (
-                  <ul className="space-y-1.5 text-[13.5px] leading-snug">
-                    {job.gaps.map((s, i) => <li key={i} className="flex gap-2"><span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-warning" />{s}</li>)}
-                  </ul>
-                ) : <p className="text-[13px] text-muted-foreground">None recorded.</p>}
-              </div>
-              {job.flags?.length ? (
-                <div className="flex flex-wrap gap-1.5 md:col-span-2">
-                  {job.flags.map((f) => <Badge key={f} tone="warning"><AlertTriangle /> {f}</Badge>)}
+              {longPosting && (
+                <div className={cn('flex justify-center', !showPosting && 'absolute inset-x-0 bottom-0 bg-gradient-to-t from-surface via-surface/90 to-transparent pb-1 pt-16')}>
+                  <Button size="sm" variant="outline" onClick={() => setShowPosting(!showPosting)}>{showPosting ? 'Show less' : 'Show full posting'}</Button>
                 </div>
-              ) : null}
-              {job.verdict && <p className="text-[13px] text-muted-foreground md:col-span-2">Verdict: <span className="text-foreground">{job.verdict}</span></p>}
-            </div>
-          </Card>
-
-          <Card>
-            <CardHeader title="Posting" icon={<FileText />} action={job.description ? null : (
-              <Button size="sm" variant="ghost" onClick={() => ask(`Read the posting for listing ${job.id}${job.url ? ` (${job.url})` : ''} and save its text as the description.`)}>
-                <Sparkles className="text-lemon" /> Fetch posting
-              </Button>
-            )} />
-            <div className="px-5 pb-5">
-              {job.description ? (
-                <div className="relative">
-                  <div className={cn('whitespace-pre-wrap text-[13.5px] leading-relaxed text-foreground/85', !showPosting && longPosting && 'max-h-[340px] overflow-hidden')}>
-                    {job.description}
-                  </div>
-                  {longPosting && (
-                    <div className={cn('flex justify-center', !showPosting && 'absolute inset-x-0 bottom-0 bg-gradient-to-t from-surface via-surface/90 to-transparent pb-1 pt-16')}>
-                      <Button size="sm" variant="outline" onClick={() => setShowPosting(!showPosting)}>{showPosting ? 'Show less' : 'Show full posting'}</Button>
-                    </div>
-                  )}
-                </div>
-              ) : <p className="text-[13px] text-muted-foreground">No posting text saved.</p>}
-            </div>
-          </Card>
-
-          <Card>
-            <CardHeader title="Notes" icon={<MessageSquareText />} />
-            <div className="px-5 pb-5">
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Recruiter names, what to mention, questions to ask…" className="min-h-[110px] bg-background" />
-            </div>
-          </Card>
-        </div>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader title="Documents" icon={<FileText />} count={docs.length} />
-            <div className="space-y-1 px-2 pb-2">
-              {docs.map((d) => (
-                <Link key={d.id} to={`/documents/${d.id}`} className="flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-accent/70">
-                  <div className="grid h-9 w-7 shrink-0 place-items-center rounded-[4px] border bg-background shadow-sm"><span className="h-0.5 w-3 rounded bg-lemon" /></div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13.5px] font-medium">{d.title}</p>
-                    <p className="text-[12px] capitalize text-muted-foreground">{d.kind} · {timeAgo(d.updatedAt)}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-            <div className="space-y-2 border-t p-3">
-              <Button variant="lemon" className="w-full" onClick={() => ask(`Tailor a resume for listing ${job.id}. Start from the best base resume, keep it to one page, and save it linked to the listing.`)}>
-                <Sparkles /> Tailor resume with assistant
-              </Button>
-              <div className="grid grid-cols-2 gap-2">
-                <Button size="sm" variant="outline" onClick={() => ask(`Write a cover letter for listing ${job.id}, matching my tailored or base resume. Save it linked to the listing.`)}>Cover letter</Button>
-                <Button size="sm" variant="outline" onClick={() => ask(`Draft a short answer for the optional "Additional information" box on listing ${job.id}, in my voice. Save it linked to the listing.`)}>Short answer</Button>
-              </div>
-              {bases.length > 0 && (
-                <Menu>
-                  <MenuTrigger asChild><Button size="sm" variant="ghost" className="w-full text-muted-foreground"><FilePlus2 /> Copy a base resume by hand</Button></MenuTrigger>
-                  <MenuContent align="center">
-                    {bases.map((b) => <MenuItem key={b.id} onSelect={() => newFromBase(b.id)}>{b.title}</MenuItem>)}
-                  </MenuContent>
-                </Menu>
               )}
             </div>
-          </Card>
-
-          <Card>
-            <CardHeader title="Batch" icon={<Layers />} />
-            <div className="px-5 pb-5">
-              <Input value={batch} onChange={(e) => setBatch(e.target.value)} placeholder="e.g. spring push, remote" className="bg-background" />
-              <p className="mt-1.5 text-[12px] text-muted-foreground">Roles in the same batch are grouped on Today.</p>
-            </div>
-          </Card>
-
-          {(['applied', 'interviewing', 'offer', 'closed'] as Stage[]).includes(job.stage) && (
-            <Card>
-              <CardHeader title="Outcome" />
-              <div className="space-y-4 px-5 pb-5">
-                {job.appliedAt && <p className="text-[13px] text-muted-foreground">Applied {job.appliedAt}</p>}
-                <div className="space-y-1">
-                  {INTERVIEW_STEPS.map((s) => {
-                    const on = job.steps?.includes(s);
-                    return (
-                      <button key={s} onClick={() => toggleStep(s)} className="flex w-full items-center gap-2.5 rounded-lg px-1 py-1 text-left text-[13.5px] hover:bg-accent/60">
-                        <span className={cn('grid size-[18px] place-items-center rounded-md border transition', on ? 'border-violet bg-violet text-white' : 'border-input')}>
-                          {on && <Check className="size-3" strokeWidth={3} />}
-                        </span>
-                        {s}
-                      </button>
-                    );
-                  })}
-                </div>
-                <select value={job.outcome ?? 'in_progress'} onChange={(e) => update({ outcome: e.target.value as Outcome })} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm">
-                  {OUTCOMES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
-              </div>
-            </Card>
+          ) : (
+            <Button size="sm" variant="outline" onClick={() => ask(`Read the posting for listing ${job.id}${job.url ? ` (${job.url})` : ''} and save its text as the description.`)}>
+              <Sparkles className="text-lemon" /> Fetch the posting
+            </Button>
           )}
+        </Fold>
 
-          {job.log?.length ? (
-            <Card>
-              <CardHeader title="History" />
-              <ol className="relative mx-5 mb-5 space-y-2.5 border-l pl-4">
-                {[...job.log].reverse().map((l, i) => (
-                  <li key={i} className="relative text-[13px]">
-                    <span className="absolute -left-[21px] top-1.5 size-2 rounded-full border-2 border-surface bg-muted-foreground/50" />
-                    {l.text}
-                    <p className="font-mono text-[11px] text-muted-foreground">{l.at}</p>
-                  </li>
-                ))}
-              </ol>
-            </Card>
-          ) : null}
-        </div>
-      </div>
-    </>
+        <Fold title="Documents" icon={<FilePlus2 />} hint={docs.length ? `${docs.length} for this role` : 'None yet'}>
+          <div className="space-y-1">
+            {docs.map((d) => (
+              <Link key={d.id} to={`/documents/${d.id}`} className="-mx-3 flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-accent/70">
+                <div className="grid h-9 w-7 shrink-0 place-items-center rounded-[4px] border bg-background shadow-sm"><span className="h-0.5 w-3 rounded bg-lemon" /></div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13.5px] font-medium">{d.title}</p>
+                  <p className="text-[12px] capitalize text-muted-foreground">{d.kind} · {timeAgo(d.updatedAt)}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+          <div className={cn('flex flex-wrap gap-2', docs.length > 0 && 'mt-3')}>
+            <Button size="sm" variant="outline" onClick={() => ask(`Write a cover letter for listing ${job.id}, matching my tailored or base resume. Save it linked to the listing.`)}>Cover letter</Button>
+            <Button size="sm" variant="outline" onClick={() => ask(`Draft a short answer for the optional "Additional information" box on listing ${job.id}, in my voice. Save it linked to the listing.`)}>Short answer</Button>
+            {bases.length > 0 && (
+              <Menu>
+                <MenuTrigger asChild><Button size="sm" variant="ghost" className="text-muted-foreground">Copy a base resume by hand</Button></MenuTrigger>
+                <MenuContent align="start">
+                  {bases.map((b) => <MenuItem key={b.id} onSelect={() => newFromBase(b.id)}>{b.title}</MenuItem>)}
+                </MenuContent>
+              </Menu>
+            )}
+          </div>
+        </Fold>
+
+        <Fold title="Notes" icon={<MessageSquareText />} hint={notes.trim() ? notes.trim().split('\n')[0] : 'Empty'}>
+          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Recruiter names, what to mention, questions to ask…" className="min-h-[110px] bg-background" />
+          <label className="mt-4 block space-y-1.5">
+            <span className="eyebrow-label">Batch</span>
+            <Input value={batch} onChange={(e) => setBatch(e.target.value)} placeholder="e.g. spring push, remote" className="bg-background" />
+          </label>
+          <p className="mt-1.5 text-[12px] text-muted-foreground">Roles in the same batch are offered together on Today.</p>
+        </Fold>
+
+        {(['applied', 'interviewing', 'offer', 'closed'] as Stage[]).includes(job.stage) && (
+          <Fold title="Outcome" icon={<Layers />} hint={job.appliedAt ? `Applied ${job.appliedAt}` : OUTCOMES.find(([v]) => v === (job.outcome ?? 'in_progress'))?.[1]}>
+            <div className="space-y-1">
+              {INTERVIEW_STEPS.map((x) => {
+                const on = job.steps?.includes(x);
+                return (
+                  <button key={x} onClick={() => toggleStep(x)} className="flex w-full items-center gap-2.5 rounded-lg px-1 py-1 text-left text-[13.5px] hover:bg-accent/60">
+                    <span className={cn('grid size-[18px] place-items-center rounded-md border transition', on ? 'border-violet bg-violet text-white' : 'border-input')}>
+                      {on && <Check className="size-3" strokeWidth={3} />}
+                    </span>
+                    {x}
+                  </button>
+                );
+              })}
+            </div>
+            <select value={job.outcome ?? 'in_progress'} onChange={(e) => update({ outcome: e.target.value as Outcome })} className="mt-4 h-9 w-full rounded-lg border border-input bg-background px-3 text-sm">
+              {OUTCOMES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </Fold>
+        )}
+
+        {job.log?.length ? (
+          <Fold title="History" icon={<Clock />} hint={job.log.at(-1)?.text}>
+            <ol className="relative ml-1 space-y-2.5 border-l pl-4">
+              {[...job.log].reverse().map((l, i) => (
+                <li key={i} className="relative text-[13px]">
+                  <span className="absolute -left-[21px] top-1.5 size-2 rounded-full border-2 border-surface bg-muted-foreground/50" />
+                  {l.text}
+                  <p className="font-mono text-[11px] text-muted-foreground">{l.at}</p>
+                </li>
+              ))}
+            </ol>
+          </Fold>
+        ) : null}
+      </Card>
+    </div>
   );
 }
