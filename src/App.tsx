@@ -46,7 +46,7 @@ function Logo() {
   );
 }
 
-function NavItem({ to, icon, label, count, end, standalone }: { to: string; icon: ReactNode; label: string; count?: number; end?: boolean; standalone?: boolean }) {
+function NavItem({ to, icon, label, end, standalone }: { to: string; icon: ReactNode; label: string; end?: boolean; standalone?: boolean }) {
   return (
     <NavLink
       to={to}
@@ -62,7 +62,6 @@ function NavItem({ to, icon, label, count, end, standalone }: { to: string; icon
     >
       {icon}
       <span className="flex-1">{label}</span>
-      {count ? <span className="rounded-full bg-muted/80 px-1.5 py-px font-mono text-[10.5px] tabular-nums text-muted-foreground">{count}</span> : null}
     </NavLink>
   );
 }
@@ -95,19 +94,6 @@ function ThemeSwitch() {
   );
 }
 
-function useCounts() {
-  return useLiveQuery(async () => {
-    const jobs = await db.jobs.toArray();
-    return {
-      next: jobs.filter((j) => j.stage === 'next').length,
-      listings: jobs.filter((j) => j.stage !== 'closed').length,
-      moonshots: jobs.filter((j) => j.moonshot && j.stage !== 'closed').length,
-      active: jobs.filter((j) => j.stage === 'applied' || j.stage === 'interviewing' || j.stage === 'offer').length,
-      docs: await db.docs.count(),
-    };
-  }, []);
-}
-
 /** The highlight behind the current page, sliding between items as you navigate. */
 function useNavIndicator() {
   const list = useRef<HTMLDivElement>(null);
@@ -132,7 +118,6 @@ function useNavIndicator() {
 }
 
 function NavContents({ className }: { className?: string }) {
-  const counts = useCounts();
   const { list, pill } = useNavIndicator();
   return (
     <nav className={cn('flex flex-col gap-8 px-3.5 py-5', className)}>
@@ -143,12 +128,12 @@ function NavContents({ className }: { className?: string }) {
           aria-hidden="true"
           className="absolute inset-x-0 top-0 rounded-xl bg-surface opacity-0 shadow-card ring-1 ring-border/80 transition-[transform,height] duration-500 ease-spring before:absolute before:inset-y-2.5 before:-left-3.5 before:w-[3px] before:rounded-r-full before:bg-lemon before:shadow-[0_0_12px_hsl(var(--lemon))]"
         />
-        <NavItem to="/" end icon={<Sunrise />} label="Today" count={counts?.next} />
-        <NavItem to="/listings" icon={<LayoutList />} label="Listings" count={counts?.listings} />
+        <NavItem to="/" end icon={<Sunrise />} label="Today" />
+        <NavItem to="/listings" icon={<LayoutList />} label="Listings" />
         <NavItem to="/map" icon={<Globe2 />} label="Map" />
-        <NavItem to="/moonshots" icon={<Rocket />} label="Moonshots" count={counts?.moonshots} />
-        <NavItem to="/pipeline" icon={<KanbanSquare />} label="Pipeline" count={counts?.active} />
-        <NavItem to="/documents" icon={<FileText />} label="Documents" count={counts?.docs} />
+        <NavItem to="/moonshots" icon={<Rocket />} label="Moonshots" />
+        <NavItem to="/pipeline" icon={<KanbanSquare />} label="Pipeline" />
+        <NavItem to="/documents" icon={<FileText />} label="Documents" />
       </div>
       <div className="mt-auto space-y-3">
         <NavItem to="/settings" icon={<SettingsIcon />} label="Settings" standalone />
