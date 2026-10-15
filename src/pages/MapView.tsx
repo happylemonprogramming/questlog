@@ -7,14 +7,13 @@ import type { GeometryCollection, Topology } from 'topojson-specification';
 import type { Geometry, Position } from 'geojson';
 import { Globe2, Home, Loader2, Map as MapIcon, MapPinOff, Navigation, Wifi, X } from 'lucide-react';
 import { db } from '@/lib/db';
-import { Card, CardHeader, Empty, JobRow, PageHeader, STAGE_DOT } from '@/components/common';
+import { Card, CardHeader, Empty, JobRow, PageHeader, STAGE_DOT, StageChips, type StageFilter } from '@/components/common';
 import { Tip } from '@/components/ui/tooltip';
 import { bestView, loadGazetteer, loadShapes, locateAll, type Gazetteer, type Place } from '@/lib/geo';
-import { STAGES, STAGE_LABEL, type Job, type Stage } from '@/lib/types';
+import { STAGES, type Job, type Stage } from '@/lib/types';
 import { useIsMobile } from '@/lib/useMedia';
 import { cn } from '@/lib/utils';
 
-type Filter = Stage | 'all';
 
 interface Pin {
   place: Place;
@@ -189,7 +188,7 @@ function fit(map: maplibregl.Map, places: Place[], mobile: boolean, animate = tr
 export default function MapView() {
   const jobs = useLiveQuery(() => db.jobs.toArray(), []);
   const mobile = useIsMobile();
-  const [stage, setStage] = useState<Filter>('all');
+  const [stage, setStage] = useState<StageFilter>('all');
   const [data, setData] = useState<{ g: Gazetteer; shapes: Shapes }>();
   const [error, setError] = useState('');
   const [selected, setSelected] = useState<string>();
@@ -333,7 +332,6 @@ export default function MapView() {
     if (selected && !pick) setSelected(undefined);
   }, [selected, pick]);
 
-  const chips: Filter[] = ['all', ...STAGES];
 
   return (
     <>
@@ -343,22 +341,7 @@ export default function MapView() {
         sub={jobs ? `${placed} on the map in ${pins.length} place${pins.length === 1 ? '' : 's'}, ${remote.length} remote` : undefined}
       />
 
-      <div className="scroll-thin mb-4 flex gap-1 overflow-x-auto pb-1">
-        {chips.map((c) => (
-          <button
-            key={c}
-            onClick={() => setStage(c)}
-            className={cn(
-              'flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition',
-              stage === c ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-            )}
-          >
-            {c !== 'all' && <span className={cn('size-1.5 rounded-full', STAGE_DOT[c])} />}
-            {c === 'all' ? 'Open' : STAGE_LABEL[c]}
-            <span className="font-mono text-[11px] opacity-60">{c === 'all' ? (jobs?.length ?? 0) - (counts.closed ?? 0) : counts[c]}</span>
-          </button>
-        ))}
-      </div>
+      <StageChips value={stage} onChange={setStage} counts={counts} open={(jobs?.length ?? 0) - (counts.closed ?? 0)} />
 
       <Card className="relative mb-5 overflow-hidden bg-sunken p-0">
         <div ref={box} className={cn('w-full', mobile ? 'h-[58dvh] min-h-[340px]' : 'h-[min(66dvh,660px)] min-h-[420px]')} />
@@ -429,7 +412,7 @@ export default function MapView() {
           {jobs.length ? 'Pick another stage above.' : 'Listings you add show up here by where they are.'}
         </Empty>
       ) : (
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-5 @[760px]:grid-cols-2">
           {pins.length > 0 && (
             <Card className="pb-3 lg:col-span-2">
               <CardHeader title="Places" count={pins.length} />

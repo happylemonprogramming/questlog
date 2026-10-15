@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -7,13 +7,14 @@ import {
 import { db, logJob, now, today, uid } from '@/lib/db';
 import { ask } from '@/agent/runtime';
 import { applicationPage, openApplication } from '@/lib/workspace';
-import { Card, CardHeader, CompanyMark, Empty, STAGE_DOT } from '@/components/common';
+import { Card, CardHeader, CompanyMark, Empty, STAGE_DOT, STAGE_VAR } from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input, Textarea } from '@/components/ui/input';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { INTERVIEW_STEPS, STAGES, STAGE_LABEL, type Job, type Outcome, type Stage } from '@/lib/types';
 import { cn, timeAgo } from '@/lib/utils';
+import { useSlidingHighlight } from '@/lib/motion';
 
 const OUTCOMES: [Outcome, string][] = [
   ['in_progress', 'In progress'],
@@ -56,6 +57,36 @@ function useAutosave(job: Job | undefined, key: 'notes' | 'batch') {
   return [value, edit] as const;
 }
 
+/** The stages as one segmented control; the highlight slides and takes the stage's color. */
+function StageStepper({ stage, onChange }: { stage: Stage; onChange: (s: Stage) => void }) {
+  const { container, highlight } = useSlidingHighlight<HTMLDivElement, HTMLSpanElement>('[aria-pressed="true"]', stage);
+  const c = STAGE_VAR[stage];
+  return (
+    <div ref={container} className="rise scroll-none relative mb-8 flex gap-1 overflow-x-auto rounded-[20px] border border-border/70 bg-surface p-1.5 shadow-card" style={{ '--i': 1 } as CSSProperties}>
+      <span
+        ref={highlight}
+        aria-hidden="true"
+        className="absolute left-0 top-0 rounded-[14px] opacity-0 transition-[transform,width,background-color,box-shadow] duration-500 ease-spring"
+        style={{ background: `hsl(var(${c}) / 0.16)`, boxShadow: `inset 0 0 0 1px hsl(var(${c}) / 0.45), 0 6px 20px -8px hsl(var(${c}) / 0.6)` }}
+      />
+      {STAGES.map((s) => (
+        <button
+          key={s}
+          aria-pressed={stage === s}
+          onClick={() => onChange(s)}
+          className={cn(
+            'relative z-[1] flex h-10 flex-1 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[14px] px-3.5 text-[13.5px] font-medium transition-colors duration-200',
+            stage === s ? 'text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+          )}
+        >
+          <span className={cn('size-1.5 rounded-full transition-transform duration-300', STAGE_DOT[s], stage === s && 'scale-150')} />
+          {STAGE_LABEL[s]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function JobView() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
@@ -95,12 +126,12 @@ export default function JobView() {
         <ArrowLeft className="size-3.5" /> Listings
       </Link>
 
-      <div className="mb-6 flex flex-wrap items-start gap-4">
-        <CompanyMark name={job.company} size={56} className="rounded-2xl max-sm:hidden" />
+      <div className="rise mb-8 flex flex-wrap items-start gap-5">
+        <CompanyMark name={job.company} size={64} className="rounded-[20px] max-sm:hidden" />
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-medium text-muted-foreground">{job.company}</p>
-          <h1 className="text-[21px] font-semibold leading-tight tracking-[-0.02em] sm:text-[24px]">{job.title}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+          <h1 className="mt-0.5 text-[24px] font-semibold leading-[1.1] tracking-[-0.03em] sm:text-[30px]">{job.title}</h1>
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
             {job.location && <Fact icon={<MapPin />}>{job.location}</Fact>}
             {job.pay && <Fact icon={<Wallet />}><span className="font-mono text-[12.5px]">{job.pay}</span></Fact>}
             {job.posted && <Fact icon={<FileText />}>Posted {job.posted}</Fact>}
@@ -109,7 +140,7 @@ export default function JobView() {
         </div>
         <div className="flex w-full items-center gap-2 sm:w-auto">
           {applicationPage(job) && (
-            <Button variant="primary" className="flex-1 sm:flex-none" onClick={() => openApplication(job.id)}>
+            <Button variant="lemon" className="flex-1 sm:flex-none" onClick={() => openApplication(job.id)}>
               <ClipboardPen /> Apply here
             </Button>
           )}
@@ -128,24 +159,9 @@ export default function JobView() {
         </div>
       </div>
 
-      {/* Stage stepper */}
-      <div className="scroll-thin mb-6 flex gap-1 overflow-x-auto rounded-2xl border bg-surface p-1 shadow-soft">
-        {STAGES.map((s) => (
-          <button
-            key={s}
-            onClick={() => setStage(s)}
-            className={cn(
-              'flex h-9 min-w-[96px] flex-1 items-center justify-center gap-2 rounded-xl text-[13px] font-medium transition',
-              job.stage === s ? 'bg-primary text-primary-foreground shadow-soft' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-            )}
-          >
-            <span className={cn('size-1.5 rounded-full', STAGE_DOT[s])} />
-            {STAGE_LABEL[s]}
-          </button>
-        ))}
-      </div>
+      <StageStepper stage={job.stage} onChange={setStage} />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 gap-6 @[880px]:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-6">
           <Card>
             <CardHeader title="Fit" icon={<Sparkles />} action={
@@ -153,7 +169,7 @@ export default function JobView() {
                 <Sparkles className="text-lemon" /> {job.strengths?.length ? 'Re-evaluate' : 'Evaluate'}
               </Button>
             } />
-            <div className="grid gap-5 px-5 pb-5 pt-1 md:grid-cols-2">
+            <div className="grid gap-5 px-6 pb-6 pt-1 @[640px]:grid-cols-2">
               <div>
                 <p className="eyebrow-label mb-2 flex items-center gap-1.5 !text-success"><ThumbsUp className="size-3" /> Strengths</p>
                 {job.strengths?.length ? (

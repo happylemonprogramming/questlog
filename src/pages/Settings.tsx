@@ -14,7 +14,7 @@ import { cn, download } from '@/lib/utils';
 
 function Section({ icon, title, sub, children }: { icon: ReactNode; title: string; sub: string; children: ReactNode }) {
   return (
-    <section className="grid grid-cols-1 gap-6 border-t py-8 first:border-t-0 first:pt-0 lg:grid-cols-[260px_minmax(0,1fr)]">
+    <section className="grid grid-cols-1 gap-6 border-t py-8 first:border-t-0 first:pt-0 @[860px]:grid-cols-[260px_minmax(0,1fr)]">
       <div>
         <div className="mb-2 grid size-9 place-items-center rounded-xl bg-muted text-muted-foreground [&_svg]:size-[18px]">{icon}</div>
         <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>

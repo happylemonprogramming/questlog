@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ChevronDown, ChevronUp, ExternalLink, Rocket } from 'lucide-react';
@@ -5,6 +6,7 @@ import { db, now } from '@/lib/db';
 import { Card, CompanyMark, Empty, PageHeader, StageBadge } from '@/components/common';
 import { Button } from '@/components/ui/button';
 import type { Job } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 /** Re-number ranks 1..n after a move so they stay dense. */
 async function move(list: Job[], i: number, dir: -1 | 1) {
@@ -35,25 +37,25 @@ export default function Moonshots() {
       {list.length === 0 ? (
         <Empty icon={<Rocket />} title="No moonshots yet">Mark a listing as a moonshot from its page, or ask the assistant to find some.</Empty>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {list.map((j, i) => (
-            <Card key={j.id} className="group flex items-stretch gap-0 overflow-hidden">
-              <div className="flex w-11 shrink-0 sm:w-14 flex-col items-center justify-center gap-0.5 border-r bg-sunken/50">
+            <Card key={j.id} className="rise group flex items-stretch gap-0 overflow-hidden transition-shadow duration-300 hover:shadow-lift" style={{ '--i': i } as CSSProperties}>
+              <div className="flex w-12 shrink-0 flex-col items-center justify-center gap-0.5 border-r border-border/60 bg-sunken/40 sm:w-16">
                 <Button variant="ghost" size="icon" className="size-6 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100" onClick={() => move(list, i, -1)} aria-label="Move up"><ChevronUp /></Button>
-                <span className="font-mono text-lg font-semibold">{i + 1}</span>
+                <span className={cn('text-[22px] font-semibold tabular-nums tracking-[-0.04em] sm:text-[26px]', i < 3 ? 'text-gradient' : 'text-muted-foreground')}>{i + 1}</span>
                 <Button variant="ghost" size="icon" className="size-6 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100" onClick={() => move(list, i, 1)} aria-label="Move down"><ChevronDown /></Button>
               </div>
-              <Link to={`/jobs/${encodeURIComponent(j.id)}`} className="flex min-w-0 flex-1 gap-4 p-4 hover:bg-accent/40">
-                <CompanyMark name={j.company} size={42} className="max-sm:hidden" />
+              <Link to={`/jobs/${encodeURIComponent(j.id)}`} className="flex min-w-0 flex-1 gap-4 p-5 transition-colors hover:bg-accent/30">
+                <CompanyMark name={j.company} size={46} className="rounded-xl max-sm:hidden" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium">{j.title}</p>
+                    <p className="text-[15.5px] font-semibold tracking-[-0.01em]">{j.title}</p>
                     <StageBadge stage={j.stage} />
                   </div>
-                  <p className="text-[13px] text-muted-foreground">
+                  <p className="mt-0.5 text-[13px] text-muted-foreground">
                     {j.company} · {j.location}{j.pay ? ` · ${j.pay}` : ''}
                   </p>
-                  <div className="mt-2.5 grid gap-x-6 gap-y-1 text-[13px] md:grid-cols-2">
+                  <div className="mt-3 grid gap-x-6 gap-y-1.5 text-[13.5px] @[640px]:grid-cols-2">
                     {j.strengths?.[0] && <p><span className="mr-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-success">Shot</span>{j.strengths[0]}</p>}
                     {j.gaps?.[0] && <p><span className="mr-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-warning">Gap</span>{j.gaps[0]}</p>}
                   </div>

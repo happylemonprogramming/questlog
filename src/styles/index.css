@@ -31,16 +31,21 @@
     --violet: 262 52% 56%;
     --shadow: 222 30% 20%;
     --radius: 0.75rem;
+    /* Ambient glow behind each page, and the accent gradient for display text. */
+    --glow-a: 46 100% 58% / 0.2;
+    --glow-b: 262 80% 70% / 0.14;
+    --grad-a: 32 95% 44%;
+    --grad-b: 262 60% 52%;
   }
 
   .dark {
-    --background: 222 22% 7%;
-    --foreground: 40 15% 92%;
-    --surface: 222 19% 10%;
-    --sunken: 222 22% 5.5%;
-    --muted: 222 15% 15%;
-    --muted-foreground: 220 9% 62%;
-    --border: 222 14% 17%;
+    --background: 224 26% 6%;
+    --foreground: 40 15% 93%;
+    --surface: 224 22% 9%;
+    --sunken: 225 26% 4.5%;
+    --muted: 224 16% 14%;
+    --muted-foreground: 222 10% 62%;
+    --border: 224 16% 15%;
     --input: 222 14% 21%;
     --ring: 50 100% 60%;
     --primary: 40 15% 92%;
@@ -56,6 +61,10 @@
     --info: 212 85% 66%;
     --violet: 262 70% 74%;
     --shadow: 0 0% 0%;
+    --glow-a: 50 100% 60% / 0.11;
+    --glow-b: 262 85% 66% / 0.16;
+    --grad-a: 50 100% 64%;
+    --grad-b: 280 90% 76%;
   }
 
   * {
@@ -98,11 +107,136 @@
     scrollbar-width: none;
   }
 
+  /* A soft, slowly drifting glow at the top of each page. Painted once as
+     gradients; only transform animates, so it stays on the compositor. */
+  .aurora {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 560px;
+    overflow: hidden;
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(to bottom, #000 30%, transparent);
+    mask-image: linear-gradient(to bottom, #000 30%, transparent);
+  }
+  .aurora::before,
+  .aurora::after {
+    content: '';
+    position: absolute;
+    top: -180px;
+    width: 720px;
+    height: 600px;
+    border-radius: 50%;
+    will-change: transform;
+    animation: drift 28s ease-in-out infinite alternate;
+  }
+  .aurora::before {
+    left: -160px;
+    background: radial-gradient(closest-side, hsl(var(--glow-a)), transparent);
+  }
+  .aurora::after {
+    right: -220px;
+    background: radial-gradient(closest-side, hsl(var(--glow-b)), transparent);
+    animation-duration: 34s;
+    animation-direction: alternate-reverse;
+  }
+
+  .text-gradient {
+    background: linear-gradient(100deg, hsl(var(--grad-a)) 10%, hsl(var(--grad-b)) 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Entrances. Set --i on list items for a short cascade (capped, so long lists don't drag). */
+  .rise {
+    animation: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: calc(min(var(--i, 0), 10) * 32ms);
+  }
+  .page-enter {
+    animation: rise 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  .pop {
+    animation: pop 0.38s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+  }
+
+  /* A light sweep across a button on hover. */
+  .shine {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .shine::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    width: 45%;
+    background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.55), transparent);
+    transform: translateX(-130%) skewX(-20deg);
+    pointer-events: none;
+  }
+  .shine:hover::after {
+    animation: sweep 0.85s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
   .paper-grid {
     background-image:
       linear-gradient(hsl(var(--foreground) / 0.035) 1px, transparent 1px),
       linear-gradient(90deg, hsl(var(--foreground) / 0.035) 1px, transparent 1px);
     background-size: 24px 24px;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes sweep {
+  to {
+    transform: translateX(260%) skewX(-20deg);
+  }
+}
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(0.85);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+@keyframes drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(90px, 40px, 0) scale(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

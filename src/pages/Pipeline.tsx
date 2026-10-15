@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, logJob, now, today } from '@/lib/db';
-import { CompanyMark, PageHeader, STAGE_DOT } from '@/components/common';
+import { CompanyMark, PageHeader, STAGE_DOT, STAGE_VAR } from '@/components/common';
 import { STAGE_LABEL, type Job, type Stage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -38,21 +38,27 @@ export default function Pipeline() {
                 const job = jobs.find((j) => j.id === e.dataTransfer.getData('text/plain'));
                 if (job) await moveTo(job, stage);
               }}
-              className={cn('flex w-[248px] shrink-0 snap-start flex-col max-sm:w-[78vw] rounded-2xl bg-sunken/70 p-2 ring-1 ring-border/60 transition', over === stage && 'bg-lemon-soft/60 ring-lemon/60')}
+              className={cn(
+                'relative flex w-[264px] shrink-0 snap-start flex-col overflow-hidden rounded-[22px] bg-sunken/50 p-2 ring-1 ring-border/50 transition-[background-color,box-shadow] duration-300 max-sm:w-[80vw]',
+                over === stage && 'bg-lemon-soft/50 ring-lemon/60',
+              )}
             >
-              <div className="flex items-center gap-2 px-2 pb-2 pt-1">
+              {/* A thin glow along the top in the stage's color. */}
+              <div className="absolute inset-x-6 top-0 h-px" style={{ background: `hsl(var(${STAGE_VAR[stage]}))`, boxShadow: `0 0 16px 1px hsl(var(${STAGE_VAR[stage]}) / 0.8)` }} />
+              <div className="flex items-center gap-2 px-2.5 pb-2.5 pt-2">
                 <span className={cn('size-2 rounded-full', STAGE_DOT[stage])} />
-                <p className="text-[13px] font-semibold">{STAGE_LABEL[stage]}</p>
-                <span className="ml-auto font-mono text-[11px] text-muted-foreground">{list.length}</span>
+                <p className="text-[14px] font-semibold tracking-tight">{STAGE_LABEL[stage]}</p>
+                <span className="ml-auto rounded-full bg-muted/80 px-2 py-px font-mono text-[11px] tabular-nums text-muted-foreground">{list.length}</span>
               </div>
               <div className="flex min-h-[120px] flex-col gap-2">
-                {list.map((j) => (
+                {list.map((j, i) => (
                   <Link
                     key={j.id}
                     to={`/jobs/${encodeURIComponent(j.id)}`}
                     draggable
                     onDragStart={(e) => e.dataTransfer.setData('text/plain', j.id)}
-                    className="block rounded-xl border bg-surface p-3 shadow-soft transition hover:-translate-y-0.5 hover:shadow-lift"
+                    className="rise block rounded-2xl border border-border/70 bg-surface p-3.5 shadow-card transition-[transform,box-shadow,border-color] duration-300 ease-out hover:-translate-y-0.5 hover:border-foreground/15 hover:shadow-lift active:scale-[0.98]"
+                    style={{ '--i': i } as CSSProperties}
                   >
                     <div className="flex items-center gap-2">
                       <CompanyMark name={j.company} size={24} className="rounded-md" />

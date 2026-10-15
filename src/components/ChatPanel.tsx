@@ -179,7 +179,7 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
 
   return (
     <aside className="flex h-full min-w-0 flex-col bg-surface">
-      <div className="flex h-14 shrink-0 items-center gap-1 border-b px-3 max-lg:[&_button]:size-10">
+      <div className="flex h-14 shrink-0 items-center gap-1 border-b border-border/60 px-3 max-lg:[&_button]:size-10">
         <Sparkles className="ml-1 size-4 text-lemon" />
         <p className="ml-1.5 min-w-0 flex-1 truncate text-[13.5px] font-semibold">{chat?.title ?? 'Assistant'}</p>
         <Menu>
@@ -209,19 +209,29 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
       <div ref={scroller} className="scroll-thin min-h-0 flex-1 overflow-y-auto px-4 py-5">
         {empty && !running ? (
           <div className="flex h-full flex-col justify-end pb-2">
-            <div className="mb-5">
-              <div className="mb-3 grid size-10 place-items-center rounded-xl bg-lemon-soft ring-1 ring-lemon/50">
-                <Sparkles className="size-5 text-foreground" />
+            <div className="rise mb-6">
+              {/* A slowly breathing glow behind the mark. */}
+              <div className="relative mb-5 size-12">
+                <div className="absolute -inset-4 animate-[breathe_4s_ease-in-out_infinite] rounded-full bg-[radial-gradient(closest-side,hsl(var(--lemon)/0.35),transparent)]" />
+                <div className="relative grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-lemon to-[hsl(36_100%_58%)] text-lemon-foreground shadow-[0_8px_24px_-8px_hsl(var(--lemon)/0.8)]">
+                  <Sparkles className="size-6" />
+                </div>
               </div>
-              <p className="text-[15px] font-semibold tracking-tight">How can I help with the search?</p>
-              <p className="mt-1 text-[13px] text-muted-foreground">
+              <p className="text-[19px] font-semibold tracking-[-0.02em]">How can I help with <span className="text-gradient">the search</span>?</p>
+              <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">
                 I can read job boards, sort your listings, and tailor resumes and letters. Nothing leaves this browser except calls to your AI provider and public job boards.
               </p>
             </div>
-            <div className="space-y-1.5">
-              {suggestions.map((s) => (
-                <button key={s} onClick={() => submit(s)} className="block w-full rounded-xl border bg-background px-3 py-2 text-left text-[13px] transition hover:border-foreground/20 hover:bg-accent/60">
-                  {s}
+            <div className="space-y-2">
+              {suggestions.map((s, i) => (
+                <button
+                  key={s}
+                  onClick={() => submit(s)}
+                  className="rise group flex w-full items-center gap-2 rounded-2xl border border-border/70 bg-background/60 px-3.5 py-2.5 text-left text-[13.5px] transition-[background-color,border-color,transform] duration-200 hover:-translate-y-px hover:border-lemon/40 hover:bg-accent/60 active:scale-[0.99]"
+                  style={{ '--i': i + 2 } as React.CSSProperties}
+                >
+                  <span className="flex-1">{s}</span>
+                  <ArrowUp className="size-3.5 rotate-45 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                 </button>
               ))}
             </div>
@@ -261,7 +271,7 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
             Connect an AI provider to start. Meridian works out of the box.
           </Link>
         )}
-        <div className="rounded-2xl border bg-background shadow-soft transition focus-within:border-foreground/25 focus-within:ring-4 focus-within:ring-lemon/15">
+        <div className="rounded-[20px] border border-border/80 bg-background shadow-card transition-[border-color,box-shadow] duration-300 focus-within:border-lemon/50 focus-within:shadow-[0_0_0_4px_hsl(var(--lemon)/0.12),0_10px_30px_-12px_hsl(var(--lemon)/0.4)]">
           {view.label && (
             <div className="flex items-center gap-1.5 px-3 pt-2.5 text-[11.5px] text-muted-foreground">
               <span className="size-1.5 rounded-full bg-lemon" />

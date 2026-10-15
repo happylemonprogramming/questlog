@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import * as D from '@radix-ui/react-dialog';
 import { BrowserRouter, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -32,35 +32,37 @@ const MapView = lazy(() => import('@/pages/MapView'));
 function Logo() {
   return (
     <div className="flex items-center gap-2.5 px-2">
-      <div className="relative grid size-8 place-items-center rounded-[9px] bg-primary text-primary-foreground shadow-soft">
+      <div className="relative grid size-9 place-items-center rounded-[11px] bg-primary text-primary-foreground shadow-[0_6px_18px_-6px_hsl(var(--lemon)/0.55)] ring-1 ring-lemon/30">
         <svg viewBox="0 0 32 32" className="size-5" aria-hidden="true">
           <rect x="8" y="6" width="16" height="20" rx="2" fill="none" stroke="hsl(var(--lemon))" strokeWidth="2.4" />
           <path d="M12 12.5h8M12 16.5h8M12 20.5h5" stroke="hsl(var(--lemon))" strokeWidth="2.4" strokeLinecap="round" />
         </svg>
       </div>
       <div className="leading-none">
-        <p className="text-[15px] font-semibold tracking-[-0.02em]">Offerdex</p>
+        <p className="text-[16px] font-semibold tracking-[-0.025em]">Offerdex</p>
         <p className="mt-0.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground">job search</p>
       </div>
     </div>
   );
 }
 
-function NavItem({ to, icon, label, count, end }: { to: string; icon: ReactNode; label: string; count?: number; end?: boolean }) {
+function NavItem({ to, icon, label, count, end, standalone }: { to: string; icon: ReactNode; label: string; count?: number; end?: boolean; standalone?: boolean }) {
   return (
     <NavLink
       to={to}
       end={end}
       className={({ isActive }) =>
         cn(
-          'group flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] font-medium transition-colors [&_svg]:size-[17px]',
-          isActive ? 'bg-surface text-foreground shadow-soft ring-1 ring-border' : 'text-muted-foreground hover:bg-accent/70 hover:text-foreground',
+          'group relative z-[1] flex h-10 items-center gap-3 rounded-xl px-3 text-[14px] font-medium transition-colors duration-200 [&_svg]:size-[18px] [&_svg]:transition-transform [&_svg]:duration-300 [&_svg]:ease-spring hover:[&_svg]:scale-110',
+          isActive ? 'text-foreground [&_svg]:text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+          // Items outside the sliding highlight carry their own.
+          isActive && standalone && 'bg-surface shadow-card ring-1 ring-border/80',
         )
       }
     >
       {icon}
       <span className="flex-1">{label}</span>
-      {count ? <span className="font-mono text-[11px] text-muted-foreground">{count}</span> : null}
+      {count ? <span className="rounded-full bg-muted/80 px-1.5 py-px font-mono text-[10.5px] tabular-nums text-muted-foreground">{count}</span> : null}
     </NavLink>
   );
 }
@@ -106,12 +108,41 @@ function useCounts() {
   }, []);
 }
 
+/** The highlight behind the current page, sliding between items as you navigate. */
+function useNavIndicator() {
+  const list = useRef<HTMLDivElement>(null);
+  const pill = useRef<HTMLDivElement>(null);
+  const { pathname } = useLocation();
+  useLayoutEffect(() => {
+    const active = list.current?.querySelector<HTMLElement>('a[aria-current="page"]');
+    const el = pill.current;
+    if (!el) return;
+    if (!active) {
+      el.style.opacity = '0';
+      return;
+    }
+    const first = el.style.opacity !== '1';
+    // No slide on first show; just appear in place.
+    el.style.transition = first ? 'none' : '';
+    el.style.transform = `translateY(${active.offsetTop}px)`;
+    el.style.height = `${active.offsetHeight}px`;
+    el.style.opacity = '1';
+  }, [pathname]);
+  return { list, pill };
+}
+
 function NavContents({ className }: { className?: string }) {
   const counts = useCounts();
+  const { list, pill } = useNavIndicator();
   return (
-    <nav className={cn('flex flex-col gap-6 px-3 py-4', className)}>
+    <nav className={cn('flex flex-col gap-8 px-3.5 py-5', className)}>
       <Logo />
-      <div className="space-y-0.5">
+      <div ref={list} className="relative space-y-1">
+        <div
+          ref={pill}
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 rounded-xl bg-surface opacity-0 shadow-card ring-1 ring-border/80 transition-[transform,height] duration-500 ease-spring before:absolute before:inset-y-2.5 before:-left-3.5 before:w-[3px] before:rounded-r-full before:bg-lemon before:shadow-[0_0_12px_hsl(var(--lemon))]"
+        />
         <NavItem to="/" end icon={<Sunrise />} label="Today" count={counts?.next} />
         <NavItem to="/listings" icon={<LayoutList />} label="Listings" count={counts?.listings} />
         <NavItem to="/map" icon={<Globe2 />} label="Map" />
@@ -120,7 +151,7 @@ function NavContents({ className }: { className?: string }) {
         <NavItem to="/documents" icon={<FileText />} label="Documents" count={counts?.docs} />
       </div>
       <div className="mt-auto space-y-3">
-        <NavItem to="/settings" icon={<SettingsIcon />} label="Settings" />
+        <NavItem to="/settings" icon={<SettingsIcon />} label="Settings" standalone />
         <ThemeSwitch />
       </div>
     </nav>
@@ -128,7 +159,7 @@ function NavContents({ className }: { className?: string }) {
 }
 
 function Sidebar() {
-  return <NavContents className="h-full w-[232px] shrink-0 border-r bg-sunken/60" />;
+  return <NavContents className="h-full w-[244px] shrink-0 border-r border-border/60 bg-sunken/70" />;
 }
 
 /** The sidebar as a drawer, for phones. Closes itself when you pick a page. */
@@ -162,7 +193,10 @@ function Page() {
   return (
     <ErrorBoundary resetKey={pathname}>
       <Suspense fallback={<div className="grid h-40 place-items-center text-muted-foreground"><Loader2 className="size-5 animate-spin" /></div>}>
-        <Outlet />
+        {/* Keyed so each page fades up as you arrive. */}
+        <div key={pathname} className="page-enter @container">
+          <Outlet />
+        </div>
       </Suspense>
     </ErrorBoundary>
   );
@@ -260,14 +294,15 @@ function MobileShell() {
     <div className="flex h-dvh flex-col overflow-hidden">
       <div className="relative min-h-0 flex-1">
         <section className={cn('absolute inset-0 flex flex-col', pane !== 'page' && 'hidden')}>
-          <header className="shrink-0 border-b bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur">
+          <header className="shrink-0 border-b border-border/60 bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
             <div className="flex h-12 items-center gap-2 px-2">
               <Button variant="ghost" size="icon" className="size-10" onClick={() => setDrawer(true)} aria-label="Menu"><Menu className="!size-5" /></Button>
               <p className="flex-1 truncate text-[15px] font-semibold tracking-tight">{title}</p>
             </div>
           </header>
-          <main ref={page} className="scroll-thin min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            <div className="mx-auto w-full max-w-[860px] px-4 pb-10 pt-5 sm:px-6"><Page /></div>
+          <main ref={page} className="scroll-thin relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <div className="aurora" aria-hidden="true" />
+            <div className="relative mx-auto w-full max-w-[860px] px-5 pb-12 pt-7 sm:px-6"><Page /></div>
           </main>
         </section>
         <section
@@ -362,6 +397,7 @@ function DesktopShell() {
           </div>
         )}
         <main className={cn('scroll-thin relative min-h-0 flex-1 overflow-y-auto', showApply && 'hidden')}>
+          <div className="aurora" aria-hidden="true" />
           {!open && (
             <div className="sticky top-0 z-10 flex justify-end p-3">
               <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="shadow-soft">
@@ -369,7 +405,7 @@ function DesktopShell() {
               </Button>
             </div>
           )}
-          <div className={cn('mx-auto w-full max-w-[1120px] px-8 pb-16', open ? 'pt-8' : '-mt-4')}>
+          <div className={cn('relative mx-auto w-full max-w-[1100px] px-10 pb-20', open ? 'pt-11' : '-mt-4')}>
             <Page />
           </div>
         </main>
