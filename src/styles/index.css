@@ -1,0 +1,109 @@
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
+@import './sheet.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 20% 98%;
+    --foreground: 222 18% 12%;
+    --surface: 0 0% 100%;
+    --sunken: 40 14% 95%;
+    --muted: 40 10% 93%;
+    --muted-foreground: 220 9% 44%;
+    --border: 35 12% 88%;
+    --input: 35 12% 85%;
+    --ring: 48 96% 50%;
+    --primary: 222 18% 12%;
+    --primary-foreground: 40 20% 98%;
+    --accent: 40 14% 93%;
+    --accent-foreground: 222 18% 12%;
+    --lemon: 50 100% 60%;
+    --lemon-foreground: 222 18% 10%;
+    --lemon-soft: 50 100% 92%;
+    --success: 152 55% 36%;
+    --warning: 32 92% 46%;
+    --danger: 0 70% 52%;
+    --info: 214 72% 48%;
+    --violet: 262 52% 56%;
+    --shadow: 222 30% 20%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 222 22% 7%;
+    --foreground: 40 15% 92%;
+    --surface: 222 19% 10%;
+    --sunken: 222 22% 5.5%;
+    --muted: 222 15% 15%;
+    --muted-foreground: 220 9% 62%;
+    --border: 222 14% 17%;
+    --input: 222 14% 21%;
+    --ring: 50 100% 60%;
+    --primary: 40 15% 92%;
+    --primary-foreground: 222 22% 8%;
+    --accent: 222 15% 15%;
+    --accent-foreground: 40 15% 92%;
+    --lemon: 50 100% 62%;
+    --lemon-foreground: 222 22% 8%;
+    --lemon-soft: 50 40% 16%;
+    --success: 152 50% 52%;
+    --warning: 36 92% 58%;
+    --danger: 0 72% 64%;
+    --info: 212 85% 66%;
+    --violet: 262 70% 74%;
+    --shadow: 0 0% 0%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  ::selection {
+    background: hsl(var(--lemon) / 0.55);
+    color: hsl(var(--lemon-foreground));
+  }
+}
+
+@layer components {
+  .eyebrow-label {
+    @apply font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground;
+  }
+
+  /* Dragging the chat edge over the application frame shouldn't lose the pointer. */
+  body.resizing iframe {
+    pointer-events: none;
+  }
+
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  .paper-grid {
+    background-image:
+      linear-gradient(hsl(var(--foreground) / 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--foreground) / 0.035) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+}
+
+@media print {
+  body {
+    background: #fff !important;
+  }
+}

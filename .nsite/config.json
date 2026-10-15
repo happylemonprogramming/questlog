@@ -1,0 +1,20 @@
+{
+  "$schema": "https://nsyte.run/schemas/config.schema.json",
+  "relays": [
+    "wss://relay.ditto.pub",
+    "wss://relay.primal.net",
+    "wss://relay.dreamith.to",
+    "wss://nos.lol"
+  ],
+  "servers": [
+    "https://blossom.primal.net",
+    "https://blossom.ditto.pub",
+    "https://blossom.dreamith.to"
+  ],
+  "id": "offerdex",
+  "fallback": "/index.html",
+  "publishRelayList": false,
+  "publishServerList": false,
+  "title": "Offerdex",
+  "description": "A local-first job search with a bring-your-own-model assistant."
+}

@@ -1,0 +1,109 @@
+import Dexie, { type EntityTable } from 'dexie';
+import type { Chat, Doc, Job, Profile, Settings, SourceFile } from './types';
+import { SAMPLE_RESUME } from './sheet';
+
+/** Everything lives in this one IndexedDB database, on this device only. */
+export const db = new Dexie('offerdex') as Dexie & {
+  jobs: EntityTable<Job, 'id'>;
+  docs: EntityTable<Doc, 'id'>;
+  chats: EntityTable<Chat, 'id'>;
+  profile: EntityTable<Profile, 'id'>;
+  settings: EntityTable<Settings, 'id'>;
+  files: EntityTable<SourceFile, 'id'>;
+};
+
+db.version(1).stores({
+  jobs: 'id, stage, company, batch, moonshot, updatedAt',
+  docs: 'id, kind, jobId, updatedAt',
+  chats: 'id, updatedAt',
+  profile: 'id',
+  settings: 'id',
+});
+
+db.version(2).stores({
+  files: 'id, bundle, path',
+});
+
+export const uid = () => crypto.randomUUID().slice(0, 8);
+export const now = () => Date.now();
+export const today = () => new Date().toISOString().slice(0, 10);
+
+export const EMPTY_PROFILE: Profile = {
+  id: 'me',
+  name: '',
+  rules: '',
+  facts: '',
+  style: '',
+};
+
+export const DEFAULT_SETTINGS: Settings = {
+  id: 'settings',
+  providers: [],
+};
+
+export async function getProfile(): Promise<Profile> {
+  return (await db.profile.get('me')) ?? EMPTY_PROFILE;
+}
+
+export async function getSettings(): Promise<Settings> {
+  return (await db.settings.get('settings')) ?? DEFAULT_SETTINGS;
+}
+
+export const SAMPLE_ID = 'sample-resume';
+
+/** Give a fresh install something to look at: one base resume to tailor from. */
+export async function seedIfEmpty() {
+  if ((await db.docs.count()) > 0) return;
+  // put, not add: StrictMode runs this twice on first load.
+  await db.docs.put({
+    id: SAMPLE_ID,
+    kind: 'resume',
+    title: 'Base resume',
+    base: true,
+    data: SAMPLE_RESUME,
+    createdAt: 0,
+    updatedAt: 0,
+  });
+}
+
+export async function upsertJob(patch: Partial<Job> & { id: string }): Promise<Job> {
+  return db.transaction('rw', db.jobs, async () => {
+    const prev = await db.jobs.get(patch.id);
+    const next: Job = {
+      company: '',
+      title: '',
+      location: '',
+      stage: 'saved',
+      createdAt: now(),
+      ...prev,
+      ...patch,
+      updatedAt: now(),
+    };
+    await db.jobs.put(next);
+    return next;
+  });
+}
+
+export async function logJob(id: string, text: string) {
+  const job = await db.jobs.get(id);
+  if (!job) return;
+  await db.jobs.update(id, { log: [...(job.log ?? []), { at: today(), text }], updatedAt: now() });
+}
+
+/** Everything, as one JSON file the user owns. */
+export async function exportAll() {
+  return {
+    app: 'offerdex',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    jobs: await db.jobs.toArray(),
+    docs: await db.docs.toArray(),
+    chats: await db.chats.toArray(),
+    profile: await db.profile.toArray(),
+    files: await db.files.toArray(),
+    settings: (await db.settings.toArray()).map((s) => ({
+      ...s,
+      providers: s.providers.map(({ apiKey: _key, ...p }) => p),
+    })),
+  };
+}

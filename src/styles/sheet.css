@@ -1,0 +1,736 @@
+/*
+ * The drawing-sheet design for resumes and letters: ink on paper with a frame,
+ * title block and numbered balloons, a blueprint in dark mode. Everything is
+ * scoped under .resume-container.
+ */
+
+@page {
+  size: letter;
+  margin: 0;
+}
+
+/* ==========================================================================
+   Drawing sheet theme: the resume as an engineering drawing. Ink on paper
+   with a frame, title block, and item balloons; a blueprint in dark mode.
+   ========================================================================== */
+
+.resume-container {
+  --paper: #ffffff;
+  --ink: #16181d;
+  --text: #2b2f36;
+  --muted: #5d6470;
+  --rule: #c5cad3;
+  --link: #1f5fbf;
+  --link-hover: #0b3f8f;
+  --lemon: #ffe14d;
+  --lemon-ink: #16181d;
+  --card: #fafaf7;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', 'Noto Sans', 'Liberation Sans', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'JetBrainsMono NF', ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  position: relative;
+  max-width: 8.5in;
+  min-height: 11in;
+  margin: 0 auto;
+  background: var(--paper);
+  color: var(--text);
+  font-family: var(--font-sans);
+  box-shadow: 0 24px 70px rgba(10, 20, 35, 0.28);
+  padding: 0.42in 0.42in 0.3in;
+  display: flex;
+  flex-direction: column;
+  z-index: 1;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.dark .resume-container {
+  --paper: #0f2b4a;
+  --ink: #eaf3ff;
+  --text: #d3e2f4;
+  --muted: #94b3d4;
+  --rule: rgba(190, 220, 255, 0.28);
+  --link: #8fd0ff;
+  --link-hover: #ffe14d;
+  --card: #12355a;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  background-image:
+    linear-gradient(rgba(190, 220, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(190, 220, 255, 0.05) 1px, transparent 1px);
+  background-size: 0.25in 0.25in;
+}
+
+
+
+.ats-keywords {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  font-size: 0;
+  line-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Drawing frame, with zone ticks along the top and bottom edges */
+.resume-container::before {
+  content: '';
+  position: absolute;
+  inset: 0.16in;
+  border: 1.5px solid var(--ink);
+  pointer-events: none;
+}
+
+.resume-container::after {
+  content: '';
+  position: absolute;
+  left: 0.16in;
+  right: 0.16in;
+  top: 0.16in;
+  bottom: 0.16in;
+  background:
+    repeating-linear-gradient(90deg, var(--ink) 0 1px, transparent 1px 1.0225in) top / 100% 0.08in no-repeat,
+    repeating-linear-gradient(90deg, var(--ink) 0 1px, transparent 1px 1.0225in) bottom / 100% 0.08in no-repeat;
+  pointer-events: none;
+}
+
+/* Heavy corner brackets on the frame */
+.crop {
+  position: absolute;
+  width: 0.22in;
+  height: 0.22in;
+  border: 0 solid var(--ink);
+  pointer-events: none;
+}
+
+.crop-tl { top: 0.16in; left: 0.16in; border-top-width: 4px; border-left-width: 4px; }
+.crop-tr { top: 0.16in; right: 0.16in; border-top-width: 4px; border-right-width: 4px; }
+.crop-bl { bottom: 0.16in; left: 0.16in; border-bottom-width: 4px; border-left-width: 4px; }
+.crop-br { bottom: 0.16in; right: 0.16in; border-bottom-width: 4px; border-right-width: 4px; }
+
+/* --------------------------------------------------------------------------
+   Header and title block
+   -------------------------------------------------------------------------- */
+
+.sheet-header {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.45rem;
+  margin-bottom: 0.55rem;
+  border-bottom: 3px solid var(--ink);
+  box-shadow: 0 3px 0 -2px var(--paper), 0 4px 0 -2px var(--ink);
+}
+
+.header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.1rem;
+}
+
+.eyebrow-sep {
+  color: var(--ink);
+  padding: 0 0.15rem;
+}
+
+.name-title {
+  font-family: var(--font-sans);
+  font-weight: 900;
+  font-size: 2.05rem;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin-bottom: 0.3rem;
+}
+
+.contact-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.4rem;
+  font-size: 0.78rem;
+  color: var(--text);
+  align-items: center;
+}
+
+.contact-info a {
+  color: var(--link);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.contact-info a:hover {
+  color: var(--link-hover);
+}
+
+.divider {
+  color: var(--muted);
+  font-weight: 300;
+}
+
+.title-block {
+  flex-shrink: 0;
+  align-self: flex-end;
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  border: 1.5px solid var(--ink);
+  font-family: var(--font-mono);
+  margin: 0;
+}
+
+.tb-cell {
+  padding: 0.12rem 0.4rem 0.15rem;
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+}
+
+.tb-cell:nth-child(3) {
+  border-right: 0;
+}
+
+.title-block dt {
+  font-size: 0.48rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.title-block dd {
+  margin: 0;
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.title-block dd a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+.tb-download {
+  grid-column: 1 / -1;
+  display: block;
+  text-align: center;
+  padding: 0.22rem 0.4rem;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  background: var(--lemon);
+  color: var(--lemon-ink);
+  transition: background 0.15s;
+}
+
+.tb-download:hover,
+.tb-download:focus-visible {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* --------------------------------------------------------------------------
+   Sections: numbered balloon, title, and a dimension line out to the margin
+   -------------------------------------------------------------------------- */
+
+.resume-section {
+  margin-bottom: 0.5rem;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--font-sans);
+  font-weight: 900;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin-bottom: 0.3rem;
+}
+
+.section-title::after {
+  content: '';
+  flex: 1;
+  height: 0.4rem;
+  margin-left: 0.2rem;
+  border-left: 1px solid var(--muted);
+  border-right: 1px solid var(--muted);
+  background: linear-gradient(var(--muted), var(--muted)) center / 100% 1px no-repeat;
+}
+
+.balloon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  flex-shrink: 0;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  background: var(--lemon);
+  color: var(--lemon-ink);
+}
+
+.objective-text {
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+/* --------------------------------------------------------------------------
+   Side quests
+   -------------------------------------------------------------------------- */
+
+.skills-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-bottom: 0.3rem;
+}
+
+.skills-label {
+  flex: 0 0 5.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.skills-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.22rem;
+}
+
+.skill-badge {
+  display: inline-block;
+  padding: 0.08rem 0.3rem;
+  border: 1px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.project-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--ink);
+  padding: 0.45rem 0.5rem 0.4rem;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.project-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 var(--lemon);
+}
+
+.project-card-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.project-card-title {
+  flex: 1;
+  font-weight: 800;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.project-card-date {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.project-card-link {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--link);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.project-card-link:hover {
+  color: var(--link-hover);
+}
+
+.project-card-award {
+  align-self: flex-start;
+  margin-bottom: 0.3rem;
+  padding: 0.05rem 0.35rem;
+  background: var(--lemon);
+  color: var(--lemon-ink);
+  border: 1px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.project-card-desc {
+  flex: 1;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  color: var(--text);
+  margin: 0;
+}
+
+.project-card-stack {
+  margin-top: 0.35rem;
+  padding-top: 0.25rem;
+  border-top: 1px dashed var(--rule);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Experience and education
+   -------------------------------------------------------------------------- */
+
+.company-header {
+  margin: 0.15rem 0 0.15rem;
+}
+
+.company-info {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.company-info a {
+  color: var(--link);
+  text-decoration: none;
+  font-weight: 800;
+}
+
+.company-info a:hover {
+  color: var(--link-hover);
+}
+
+.job-item,
+.education-item {
+  margin-bottom: 0.3rem;
+}
+
+.job-header,
+.education-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 0.1rem;
+}
+
+.job-title,
+.degree-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--ink);
+}
+
+.job-title a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+.job-title a:hover {
+  color: var(--link-hover);
+}
+
+.active-badge {
+  display: inline-block;
+  margin-left: 0.45rem;
+  padding: 0.05rem 0.35rem;
+  background: var(--lemon);
+  color: var(--lemon-ink);
+  border: 1px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  vertical-align: 0.1em;
+}
+
+.school-name {
+  font-weight: 400;
+  font-style: italic;
+  color: var(--muted);
+}
+
+.job-date,
+.grad-date {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.job-duties {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.36;
+  color: var(--text);
+}
+
+.job-duties li {
+  position: relative;
+  padding-left: 0.95rem;
+  margin-bottom: 0.08rem;
+}
+
+.job-duties li::before {
+  content: '';
+  position: absolute;
+  left: 0.15rem;
+  top: 0.48em;
+  width: 0.36rem;
+  height: 0.36rem;
+  background: var(--lemon);
+  border: 1px solid var(--ink);
+}
+
+.job-duties a {
+  color: var(--link);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.job-duties a:hover {
+  color: var(--link-hover);
+}
+
+/* Drawing notes, pinned to the bottom of the sheet */
+.sheet-notes {
+  margin-top: auto;
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  padding-top: 0.3rem;
+  border-top: 1px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.notes-label {
+  white-space: nowrap;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+}
+
+.sheet-notes ol {
+  margin: 0;
+  padding-left: 1.1rem;
+  list-style: decimal;
+}
+
+/* --------------------------------------------------------------------------
+   Cover letter: the same sheet, with a transmittal block and callouts
+   -------------------------------------------------------------------------- */
+
+.transmittal {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  margin: 0.2rem 0 1.1rem;
+  border: 1.5px solid var(--ink);
+  font-family: var(--font-mono);
+}
+
+.tx-cell {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.3rem 0.55rem;
+  border-bottom: 1px solid var(--ink);
+}
+
+.tx-cell:first-child {
+  border-right: 1px solid var(--ink);
+}
+
+.tx-re {
+  grid-column: 1 / -1;
+  border-bottom: 0;
+  background: var(--lemon);
+}
+
+.transmittal dt {
+  min-width: 2.4rem;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.tx-re dt {
+  color: var(--lemon-ink);
+}
+
+.transmittal dd {
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.tx-re dd {
+  color: var(--lemon-ink);
+}
+
+.tx-sub {
+  font-weight: 500;
+}
+
+.letter-body {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.letter-body > p {
+  margin-bottom: 0.75rem;
+}
+
+.letter-salutation {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.letter-points {
+  list-style: none;
+  margin: 0 0 0.9rem;
+  padding: 0.65rem 0.75rem;
+  background: var(--card);
+  border: 1px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--lemon);
+}
+
+.letter-points li {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.letter-points li + li {
+  margin-top: 0.45rem;
+}
+
+.letter-points p {
+  margin: 0;
+}
+
+.letter-points strong {
+  color: var(--ink);
+}
+
+.letter-signoff {
+  margin-top: 1.1rem;
+}
+
+.letter-signoff p {
+  margin: 0;
+}
+
+.signature {
+  margin-top: 0.35rem;
+  font-weight: 900;
+  font-size: 1.15rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.letter-body a {
+  color: var(--link);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Print: always ink on white paper, exactly one letter sheet
+   ========================================================================== */
+
+@media print {
+  .resume-container,
+  .dark .resume-container {
+    --paper: #ffffff;
+    --ink: #16181d;
+    --text: #2b2f36;
+    --muted: #5d6470;
+    --rule: #c5cad3;
+    --link: #1f5fbf;
+    --card: #fafaf7;
+    max-width: 100%;
+    height: 11in;
+    min-height: 0;
+    margin: 0;
+    background: #ffffff;
+    box-shadow: none;
+  }
+
+  .tb-download {
+    display: none !important;
+  }
+
+  .projects-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  /* Paper has no hover, so print every card in its lifted hover state */
+  .project-card {
+    break-inside: avoid;
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0 var(--lemon);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* The download cell is hidden, so the top row is the block's last */
+  .tb-cell {
+    border-bottom: 0;
+  }
+}
