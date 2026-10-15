@@ -7,6 +7,7 @@ import type { LetterData, ResumeData } from '@/lib/sheet';
 import { measureSheet } from '@/lib/measure';
 import { letterSchema, resumeSchema } from '@/lib/sheetSchema';
 import { cleanCss, designOf, inheritedDesign, MARKUP_GUIDE } from '@/lib/design';
+import { getDesignGuide } from '@/lib/designGuide';
 import { companyDomain, normalizeWebsite } from '@/lib/logo';
 import { desktop, type ToolImage } from '@/lib/desktop';
 import { formTools } from './formTools';
@@ -268,6 +269,12 @@ function makeTools(host: ToolHost): Record<string, Tool> {
         const { css, ...rest } = d;
         return json(rest.kind === 'answer' ? rest : { ...rest, design: css ? 'custom (read it with get_design)' : 'default' });
       },
+    }),
+
+    design_guide: defineTool({
+      description: 'How to design a resume or cover letter: the rules, the process and the markup a stylesheet styles. Read it before making or changing a design.',
+      inputSchema: z.object({}),
+      run: async () => `${await getDesignGuide()}\n\n---\n${MARKUP_GUIDE}`,
     }),
 
     get_design: defineTool({

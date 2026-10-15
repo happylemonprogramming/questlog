@@ -166,4 +166,6 @@ export interface Settings {
   /** Per engine, preferred session options such as the model: { claude: { model: 'opus' } }. */
   engineOptions?: Partial<Record<EngineChoice, Record<string, string>>>;
   activeProviderId?: string;
+  /** The user's own design guide for the agent. Unset means DEFAULT_DESIGN_GUIDE. */
+  designGuide?: string;
 }

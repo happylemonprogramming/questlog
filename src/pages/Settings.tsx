@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { CheckCircle2, Building2, Download, ExternalLink, Loader2, Plug, RefreshCw, Sparkles, Trash2, Upload, User, Database, XCircle } from 'lucide-react';
+import { CheckCircle2, Building2, Download, ExternalLink, Loader2, Palette, Plug, RefreshCw, RotateCcw, Sparkles, Trash2, Upload, User, Database, XCircle } from 'lucide-react';
 import { db, exportAll, getProfile, getSettings, uid, DEFAULT_SETTINGS } from '@/lib/db';
 import { PRESETS, listModels } from '@/lib/providers';
 import { importFile, type ImportResult } from '@/lib/importers';
 import { analysisPrompt } from '@/lib/analysis';
+import { DEFAULT_DESIGN_GUIDE } from '@/lib/designGuide';
 import { ask } from '@/agent/runtime';
 import { PageHeader } from '@/components/common';
 import { companyDomain, setLogos, useLogos } from '@/lib/logo';
@@ -224,6 +225,41 @@ function ProfileEditor() {
   );
 }
 
+/** The agent's design guide, shown in full so it can be edited like any prompt. */
+function DesignGuideEditor() {
+  const stored = useLiveQuery(async () => (await getSettings()).designGuide ?? '', []);
+  const [text, setText] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  useEffect(() => {
+    if (stored !== undefined && !dirty) setText(stored.trim() ? stored : DEFAULT_DESIGN_GUIDE);
+  }, [stored, dirty]);
+  useEffect(() => {
+    if (!dirty || text === null) return;
+    const t = setTimeout(async () => {
+      const s = await getSettings();
+      // The default stays unsaved, so improvements to it reach anyone who hasn't changed it.
+      await db.settings.put({ ...s, designGuide: text.trim() && text.trim() !== DEFAULT_DESIGN_GUIDE.trim() ? text : undefined });
+      setDirty(false);
+    }, 500);
+    return () => clearTimeout(t);
+  }, [text, dirty]);
+  if (text === null) return null;
+  const custom = text.trim() !== DEFAULT_DESIGN_GUIDE.trim();
+  return (
+    <div className="space-y-3">
+      <Textarea value={text} onChange={(e) => { setText(e.target.value); setDirty(true); }} className="min-h-[360px] font-mono text-[12.5px]" />
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-[12px] text-muted-foreground">{custom ? 'Your own guide. Saved automatically.' : 'The default guide. Edit it to make it yours.'}</p>
+        {custom && (
+          <Button variant="ghost" size="sm" onClick={() => { setText(DEFAULT_DESIGN_GUIDE); setDirty(true); }}>
+            <RotateCcw /> Reset to default
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DataTools() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -367,6 +403,9 @@ export default function Settings() {
       </Section>
       <Section icon={<User />} title="Profile" sub="What the agent knows about you and the rules it applies to every listing.">
         <ProfileEditor />
+      </Section>
+      <Section icon={<Palette />} title="Design guide" sub="How the agent designs your resumes and letters. It reads this before every design, so change it to change how they look.">
+        <DesignGuideEditor />
       </Section>
       <Section icon={<Building2 />} title="Company logos" sub="Logos come from each company's own website, even when you found the job on LinkedIn or a job board.">
         <LogoSettings />
