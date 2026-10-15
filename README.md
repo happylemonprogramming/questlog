@@ -4,10 +4,11 @@ A job-search workspace that runs entirely in your browser: listings, a pipeline,
 
 ## What it does
 
-- **Today:** what to apply to next, grouped into batches, plus moonshots and recent activity.
-- **Listings and Pipeline:** every role you're tracking, with stage, pay, fit notes and flags. Drag cards between stages.
-- **Map:** your listings on a globe or flat map, merged into bubbles where they crowd together and colored by how far along each one is. It opens on the stretch of the world that holds the most listings. Chips name the countries left off screen, and tapping one flies there. Free-text locations like "Emeryville or Santa Clara, CA (on-site)" or "Greater Houston" are matched against a place list that ships with the app, so locations are never sent to a geocoding service. The map works offline after the first visit.
-- **Moonshots:** a separately ranked list of long shots.
+- **Today:** one application at a time, in three steps (tailor the resume, fill in the form, mark it sent), with a daily goal. Next up holds about five roles; a one-card review trims or refills it. Everything else waits behind "See everything".
+- **Jobs:** every role you're tracking, as a list, a pipeline you drag cards across, a map, or ranked moonshots. A listing leads with Apply and the verdict; fit, posting, documents and notes fold away.
+- **Company logos:** taken from each company's own website, even for jobs found on LinkedIn or a job board. Each logo is a request to Google's favicon service; turn them off in Settings to show initials instead.
+- **Map view:** your listings on a globe or flat map, merged into bubbles where they crowd together and colored by how far along each one is. It opens on the stretch of the world that holds the most listings. Chips name the countries left off screen, and tapping one flies there. Free-text locations like "Emeryville or Santa Clara, CA (on-site)" or "Greater Houston" are matched against a place list that ships with the app, so locations are never sent to a geocoding service. The map works offline after the first visit.
+- **Moonshots view:** a separately ranked list of long shots.
 - **Documents:** resumes, cover letters and short application answers, rendered as a one-page drawing sheet with a live page-fit check. Each resume and letter carries its own stylesheet, so you or the assistant can redesign it completely (type, color, layout, columns) in the Design tab, the way you'd edit a resume website's CSS. Export goes through the browser's print-to-PDF, which keeps the real text layer that applicant tracking systems read.
 - **Assistant:** a chat panel on every page, powered by [Porygon](https://jsr.io/@porygon/core). It can:
   - read public Greenhouse, Ashby and Lever job boards
