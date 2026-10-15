@@ -4,13 +4,13 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, logJob, now, today } from '@/lib/db';
 import { CompanyMark, STAGE_DOT, STAGE_VAR } from '@/components/common';
 import { JobsHeader } from '@/components/JobsHeader';
-import { STAGE_LABEL, type Job, type Stage } from '@/lib/types';
+import { STAGE_HINT, STAGE_LABEL, shownStage, type Job, type Stage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-const COLUMNS: Stage[] = ['saved', 'next', 'applied', 'interviewing', 'offer'];
+const COLUMNS: Stage[] = ['inbox', 'saved', 'next', 'applied'];
 
 async function moveTo(job: Job, stage: Stage) {
-  if (job.stage === stage) return;
+  if (shownStage(job.stage) === stage) return;
   await db.jobs.update(job.id, {
     stage,
     updatedAt: now(),
@@ -28,7 +28,7 @@ export default function Pipeline() {
       <JobsHeader sub={<>Where everything stands. <span className="[@media(hover:none)]:hidden">Drag a card to move it.</span><span className="hidden [@media(hover:none)]:inline">Open a card to change its stage.</span></>} />
       <div className="scroll-thin -mx-2 flex snap-x snap-mandatory gap-3 overflow-x-auto px-2 pb-4 max-sm:-mx-4 max-sm:scroll-px-4 max-sm:px-4">
         {COLUMNS.map((stage) => {
-          const list = jobs.filter((j) => j.stage === stage).sort((a, b) => b.updatedAt - a.updatedAt);
+          const list = jobs.filter((j) => shownStage(j.stage) === stage).sort((a, b) => b.updatedAt - a.updatedAt);
           return (
             <div
               key={stage}
@@ -48,7 +48,7 @@ export default function Pipeline() {
               <div className="absolute inset-x-6 top-0 h-px" style={{ background: `hsl(var(${STAGE_VAR[stage]}))`, boxShadow: `0 0 16px 1px hsl(var(${STAGE_VAR[stage]}) / 0.8)` }} />
               <div className="flex items-center gap-2 px-2.5 pb-2.5 pt-2">
                 <span className={cn('size-2 rounded-full', STAGE_DOT[stage])} />
-                <p className="text-[14px] font-semibold tracking-tight">{STAGE_LABEL[stage]}</p>
+                <p className="text-[14px] font-semibold tracking-tight" title={STAGE_HINT[stage]}>{STAGE_LABEL[stage]}</p>
                 <span className="ml-auto rounded-full bg-muted/80 px-2 py-px font-mono text-[11px] tabular-nums text-muted-foreground">{list.length}</span>
               </div>
               <div className="flex min-h-[120px] flex-col gap-2">

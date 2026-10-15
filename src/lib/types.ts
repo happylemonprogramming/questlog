@@ -5,13 +5,32 @@ export const STAGES = ['inbox', 'saved', 'next', 'applied', 'interviewing', 'off
 export type Stage = (typeof STAGES)[number];
 
 export const STAGE_LABEL: Record<Stage, string> = {
-  inbox: 'Inbox',
+  inbox: 'New',
   saved: 'Saved',
-  next: 'Next up',
+  next: 'Up next',
   applied: 'Applied',
   interviewing: 'Interviewing',
   offer: 'Offer',
   closed: 'Closed',
+};
+
+/**
+ * The stages the app shows. Interviewing and Offer are kept in the data but
+ * grouped under Applied for now, so there are fewer buckets to think about.
+ */
+export const SHOWN_STAGES = ['inbox', 'saved', 'next', 'applied', 'closed'] as const satisfies readonly Stage[];
+
+export const shownStage = (s: Stage): Stage => (s === 'interviewing' || s === 'offer' ? 'applied' : s);
+
+/** What each stage means, in a phrase. */
+export const STAGE_HINT: Record<Stage, string> = {
+  inbox: 'Found, not looked at yet',
+  saved: 'Worth keeping, not applying yet',
+  next: 'Applying soon; Today walks you through these',
+  applied: 'Sent',
+  interviewing: 'Talking with them',
+  offer: 'An offer is in',
+  closed: 'Passed on, or finished',
 };
 
 export const INTERVIEW_STEPS = ['Phone screen', 'Technical', 'Case', 'Final round', 'Offer received'] as const;

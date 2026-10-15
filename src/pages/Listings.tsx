@@ -6,7 +6,7 @@ import { Card, Empty, JobRow, StageChips, type StageFilter } from '@/components/
 import { JobsHeader } from '@/components/JobsHeader';
 import { AddJobButton } from '@/components/AddJob';
 import { Input } from '@/components/ui/input';
-import { STAGES } from '@/lib/types';
+import { SHOWN_STAGES, shownStage } from '@/lib/types';
 
 
 export default function Listings() {
@@ -17,12 +17,12 @@ export default function Listings() {
   const [sort, setSort] = useState<'recent' | 'pay' | 'company'>('recent');
 
   const batches = useMemo(() => [...new Set(jobs.map((j) => j.batch).filter(Boolean))] as string[], [jobs]);
-  const counts = useMemo(() => Object.fromEntries(STAGES.map((s) => [s, jobs.filter((j) => j.stage === s).length])), [jobs]);
+  const counts = useMemo(() => Object.fromEntries(SHOWN_STAGES.map((s) => [s, jobs.filter((j) => shownStage(j.stage) === s).length])), [jobs]);
 
   const shown = useMemo(() => {
     const needle = q.toLowerCase();
     return jobs
-      .filter((j) => (stage === 'all' ? j.stage !== 'closed' : j.stage === stage))
+      .filter((j) => (stage === 'all' ? j.stage !== 'closed' : shownStage(j.stage) === stage))
       .filter((j) => !batch || j.batch === batch)
       .filter((j) => !needle || `${j.company} ${j.title} ${j.location} ${j.batch ?? ''}`.toLowerCase().includes(needle))
       .sort((a, b) =>

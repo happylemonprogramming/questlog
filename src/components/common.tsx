@@ -2,7 +2,7 @@ import { useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, MapPin, Rocket, Wallet } from 'lucide-react';
 import { Badge, type Tone } from '@/components/ui/badge';
-import { STAGES, STAGE_LABEL, type Job, type Stage } from '@/lib/types';
+import { SHOWN_STAGES, STAGE_HINT, STAGE_LABEL, type Job, type Stage } from '@/lib/types';
 import { useSlidingHighlight } from '@/lib/motion';
 import { cn, hueFor } from '@/lib/utils';
 import { companyDomain, logoUrl, missingLogos, useLogos } from '@/lib/logo';
@@ -192,7 +192,7 @@ export type StageFilter = Stage | 'all';
 /** "Open" plus each stage, with counts. The highlight slides to the one you pick. */
 export function StageChips({ value, onChange, counts, open }: { value: StageFilter; onChange: (v: StageFilter) => void; counts: Record<string, number>; open: number }) {
   const { container, highlight } = useSlidingHighlight<HTMLDivElement, HTMLSpanElement>('[aria-pressed="true"]', value);
-  const chips: StageFilter[] = ['all', ...STAGES];
+  const chips: StageFilter[] = ['all', ...SHOWN_STAGES];
   return (
     <div ref={container} className="scroll-none relative mb-6 flex gap-1 overflow-x-auto pb-1">
       <span ref={highlight} aria-hidden="true" className="absolute left-0 top-0 rounded-full bg-primary opacity-0 shadow-soft transition-[transform,width] duration-500 ease-spring" />
@@ -201,13 +201,14 @@ export function StageChips({ value, onChange, counts, open }: { value: StageFilt
           key={c}
           aria-pressed={value === c}
           onClick={() => onChange(c)}
+          title={c === 'all' ? 'Everything not closed' : STAGE_HINT[c]}
           className={cn(
             'relative z-[1] flex h-9 shrink-0 items-center gap-2 rounded-full px-3.5 text-[13.5px] font-medium transition-colors duration-200',
             value === c ? 'text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
           )}
         >
           {c !== 'all' && <span className={cn('size-1.5 rounded-full', STAGE_DOT[c])} />}
-          {c === 'all' ? 'Open' : STAGE_LABEL[c]}
+          {c === 'all' ? 'All' : STAGE_LABEL[c]}
           <span className="font-mono text-[11px] tabular-nums opacity-60">{c === 'all' ? open : (counts[c] ?? 0)}</span>
         </button>
       ))}

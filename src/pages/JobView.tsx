@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input, Textarea } from '@/components/ui/input';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
-import { INTERVIEW_STEPS, STAGES, STAGE_LABEL, type Job, type Outcome, type Stage } from '@/lib/types';
+import { INTERVIEW_STEPS, SHOWN_STAGES, STAGE_HINT, STAGE_LABEL, type Job, type Outcome, type Stage } from '@/lib/types';
 import { cn, timeAgo } from '@/lib/utils';
 import { companyDomain } from '@/lib/logo';
 
@@ -75,9 +75,13 @@ function StagePicker({ stage, onChange }: { stage: Stage; onChange: (s: Stage) =
         </button>
       </MenuTrigger>
       <MenuContent align="start">
-        {STAGES.map((s) => (
+        {(SHOWN_STAGES.includes(stage as never) ? SHOWN_STAGES : [...SHOWN_STAGES, stage]).map((s) => (
           <MenuItem key={s} onSelect={() => onChange(s)}>
-            <span className={cn('size-2 rounded-full', STAGE_DOT[s])} /> {STAGE_LABEL[s]}
+            <span className={cn('size-2 shrink-0 rounded-full', STAGE_DOT[s])} />
+            <span className="flex flex-col">
+              <span>{STAGE_LABEL[s]}</span>
+              <span className="text-[11.5px] text-muted-foreground">{STAGE_HINT[s]}</span>
+            </span>
             {s === stage && <Check className="ml-auto" />}
           </MenuItem>
         ))}

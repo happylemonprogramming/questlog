@@ -11,7 +11,7 @@ import { JobsHeader } from '@/components/JobsHeader';
 import { Card, CardHeader, Empty, JobRow, STAGE_DOT, StageChips, type StageFilter } from '@/components/common';
 import { Tip } from '@/components/ui/tooltip';
 import { bestView, loadGazetteer, loadShapes, locateAll, type Gazetteer, type Place } from '@/lib/geo';
-import { STAGES, type Job, type Stage } from '@/lib/types';
+import { SHOWN_STAGES, STAGES, shownStage, type Job, type Stage } from '@/lib/types';
 import { useIsMobile } from '@/lib/useMedia';
 import { cn } from '@/lib/utils';
 
@@ -205,8 +205,8 @@ export default function MapView() {
       .catch((e) => setError(String(e?.message ?? e)));
   }, []);
 
-  const counts = useMemo(() => Object.fromEntries(STAGES.map((s) => [s, (jobs ?? []).filter((j) => j.stage === s).length])), [jobs]);
-  const shown = useMemo(() => (jobs ?? []).filter((j) => (stage === 'all' ? j.stage !== 'closed' : j.stage === stage)), [jobs, stage]);
+  const counts = useMemo(() => Object.fromEntries(SHOWN_STAGES.map((s) => [s, (jobs ?? []).filter((j) => shownStage(j.stage) === s).length])), [jobs]);
+  const shown = useMemo(() => (jobs ?? []).filter((j) => (stage === 'all' ? j.stage !== 'closed' : shownStage(j.stage) === stage)), [jobs, stage]);
 
   const { pins, remote, unplaced, placed } = useMemo(() => {
     const pins = new Map<string, Pin>();
