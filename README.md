@@ -46,8 +46,7 @@ The desktop app keeps its own copy of your data. Move it across with **Settings 
 
 ```bash
 npm --prefix desktop install
-npm run dev                 # the web app, which the desktop app loads in development
-npm run desktop             # build the shell and open it
+npm run desktop             # starts the web app's dev server and opens the window; closing it stops both
 npm run desktop:dist        # package it (AppImage, dmg or exe) into desktop/dist
 ```
 

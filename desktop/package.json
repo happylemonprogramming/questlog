@@ -25,7 +25,7 @@
     "build:main": "esbuild src/main.ts src/preload.ts src/mcp-bridge.ts --bundle --platform=node --target=node22 --format=cjs --outdir=build --out-extension:.js=.cjs --external:electron --log-level=warning",
     "build:web": "npm --prefix .. run build && rm -rf web && cp -r ../dist web",
     "typecheck": "tsc -p .",
-    "dev": "npm run build:main && OFFERDEX_DEV_URL=${OFFERDEX_DEV_URL:-http://localhost:5173} electron .",
+    "dev": "node scripts/dev.mjs",
     "start": "npm run build:main && electron .",
     "dist": "npm run build:web && npm run build:main && electron-builder"
   },
