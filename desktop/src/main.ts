@@ -168,6 +168,68 @@ async function previewDoc(docId: string): Promise<{ pages: number; image: string
   }, true);
 }
 
+/** Runs inside a company's page: its main colors, weighted by how much of the page they cover, and its typefaces. */
+const BRAND_SCAN = `(() => {
+  const hex = (c) => { const m = c.match(/rgba?\\(([\\d.]+), ([\\d.]+), ([\\d.]+)(?:, ([\\d.]+))?\\)/); if (!m || (m[4] !== undefined && +m[4] < 0.5)) return null; return '#' + [m[1], m[2], m[3]].map((x) => Math.round(+x).toString(16).padStart(2, '0')).join(''); };
+  const bg = new Map(), fg = new Map(), accents = new Map(), fonts = new Map();
+  const add = (map, k, w) => k && map.set(k, (map.get(k) || 0) + w);
+  const els = [...document.querySelectorAll('body *')].slice(0, 4000);
+  for (const el of els) {
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height || r.top > innerHeight * 3) continue;
+    const s = getComputedStyle(el);
+    if (s.visibility === 'hidden' || s.display === 'none' || +s.opacity === 0) continue;
+    const area = Math.min(r.width * r.height, innerWidth * innerHeight);
+    add(bg, hex(s.backgroundColor), area);
+    const text = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent.trim()).join('').length;
+    if (text) {
+      add(fg, hex(s.color), text);
+      const fam = s.fontFamily.split(',')[0].replace(/["']/g, '').trim();
+      const role = /^H[1-3]$/.test(el.tagName) || parseFloat(s.fontSize) >= 28 ? 'headings' : 'text';
+      add(fonts, role + ': ' + fam, text);
+    }
+    if (el.matches('a, button, [role=button]') && r.width < 500) add(accents, hex(s.backgroundColor) || hex(s.color), area);
+  }
+  const top = (m, n) => [...m].sort((a, b) => b[1] - a[1]).slice(0, n).map(([k]) => k);
+  return {
+    title: document.title,
+    url: location.href,
+    themeColor: document.querySelector('meta[name=theme-color]')?.content || null,
+    backgrounds: top(bg, 6), text: top(fg, 5), accents: top(accents, 6), fonts: top(fonts, 6),
+    height: document.documentElement.scrollHeight,
+  };
+})()`;
+
+/**
+ * A company's website as a person would see it, for designing a resume that
+ * fits the company: two screenshots plus the colors and type it uses. The page
+ * runs in its own throwaway session with no access to Offerdex.
+ */
+async function viewSite(url: string) {
+  if (!/^https?:\/\//i.test(url)) throw new Error('Give a full http(s) URL.');
+  const page = new BrowserWindow({ show: false, width: 1280, height: 800, webPreferences: { offscreen: true, sandbox: true, contextIsolation: true, partition: 'sites', javascript: true } });
+  const wc = page.webContents;
+  wc.setWindowOpenHandler(() => ({ action: 'deny' }));
+  wc.session.on('will-download', (e) => e.preventDefault());
+  wc.setAudioMuted(true);
+  try {
+    await Promise.race([wc.loadURL(url).catch(() => {}), new Promise((r) => setTimeout(r, 25_000))]);
+    // Let client-side apps draw and fonts arrive.
+    await new Promise((r) => setTimeout(r, 2500));
+    const brand = await wc.executeJavaScript(BRAND_SCAN);
+    const shot = async () => (await wc.capturePage()).resize({ width: 1024 }).toJPEG(75).toString('base64');
+    const images = [await shot()];
+    if (brand.height > 1300) {
+      await wc.executeJavaScript('window.scrollTo(0, Math.min(innerHeight * 1.5, document.documentElement.scrollHeight - innerHeight))');
+      await new Promise((r) => setTimeout(r, 1200));
+      images.push(await shot());
+    }
+    return { ...brand, images, mimeType: 'image/jpeg' };
+  } finally {
+    page.destroy();
+  }
+}
+
 function handle(channel: string, fn: (...args: any[]) => unknown) {
   ipcMain.handle(channel, async (_e, ...args) => fn(...args));
 }
@@ -184,6 +246,7 @@ handle('pdf:save', async (docId: string, fileName?: string) => {
 });
 handle('pdf:reveal', (file: string) => shell.showItemInFolder(file));
 handle('logs:open', () => shell.openPath(logDir()));
+handle('site:view', (url: string) => viewSite(url));
 
 handle('form:status', () => forms.status());
 handle('form:read', () => forms.read());

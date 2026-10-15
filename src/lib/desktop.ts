@@ -71,6 +71,18 @@ export interface PermissionAsk {
 
 type Off = () => void;
 
+export interface SiteLook {
+  title: string;
+  url: string;
+  themeColor: string | null;
+  backgrounds: string[];
+  text: string[];
+  accents: string[];
+  fonts: string[];
+  images: string[];
+  mimeType: string;
+}
+
 export interface ToolImage {
   data: string;
   mimeType: string;
@@ -81,6 +93,8 @@ export interface DesktopBridge {
   platform: string;
   /** Open the folder with the desktop app's log. */
   openLogs(): Promise<string>;
+  /** A website's look: screenshots (base64) plus the colors and fonts it uses. */
+  viewSite(url: string): Promise<SiteLook>;
   pdf: {
     make(docId: string, fileName?: string): Promise<{ path: string; name: string }>;
     save(docId: string, fileName?: string): Promise<string | null>;

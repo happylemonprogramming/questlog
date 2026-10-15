@@ -286,7 +286,9 @@ function makeTools(host: ToolHost): Record<string, Tool> {
       run: async ({ id }) => {
         const d = await sheetDoc(id);
         if (typeof d === 'string') return { content: d, isError: true };
-        return `Design of ${d.kind} "${d.title}" (${d.css ? 'custom' : 'the default design'}):\n\n${designOf(d.css)}\n\n---\n${MARKUP_GUIDE}`;
+        // A new document shows the default design until it has its own; showing that stylesheet only invites copying it.
+        if (!d.css) return `"${d.title}" has no design of its own yet, so it shows a plain fallback. Write a new one from scratch with set_design, following design_guide.\n\n---\n${MARKUP_GUIDE}`;
+        return `Design of ${d.kind} "${d.title}":\n\n${d.css}\n\n---\n${MARKUP_GUIDE}`;
       },
     }),
 
@@ -303,7 +305,8 @@ function makeTools(host: ToolHost): Record<string, Tool> {
       run: async ({ id, edits }) => {
         const d = await sheetDoc(id);
         if (typeof d === 'string') return { content: d, isError: true };
-        let css = designOf(d.css);
+        if (!d.css) return { content: `"${d.title}" has no design of its own yet. Write one from scratch with set_design.`, isError: true };
+        let css = d.css;
         for (const [i, e] of edits.entries()) {
           const count = e.find ? css.split(e.find).length - 1 : 0;
           if (!count) return { content: `Edit ${i + 1}: \`find\` is not in the stylesheet. Nothing was saved; read it again with get_design.`, isError: true };
@@ -324,6 +327,29 @@ function makeTools(host: ToolHost): Record<string, Tool> {
         const d = await sheetDoc(id);
         if (typeof d === 'string') return { content: d, isError: true };
         return saveDesign(d, css, host);
+      },
+    }),
+
+    view_website: defineTool({
+      description:
+        "Look at a website the way a person sees it: screenshots of the top of the page and further down, plus its main colors in hex and its typefaces. " +
+        "Use it on the company's own site before designing for them, so the design starts from their real brand rather than a guess. Desktop app only.",
+      inputSchema: z.object({ url: z.string().describe('Full URL, e.g. "https://strike.me".') }),
+      timeoutMs: 60_000,
+      run: async ({ url }) => {
+        const d = desktop();
+        if (!d) return { content: "Only the desktop app can look at websites. Use your own web tools if you have them, or ask the user about the company's look.", isError: true };
+        const site = await d.viewSite(/^https?:/i.test(url) ? url : `https://${url}`);
+        for (const data of site.images) host.attachImage?.({ data, mimeType: site.mimeType });
+        return [
+          `${site.title} (${site.url})`,
+          `Backgrounds, most used first: ${site.backgrounds.join(', ') || 'none found'}`,
+          `Text colors: ${site.text.join(', ') || 'none found'}`,
+          `Buttons and links: ${site.accents.join(', ') || 'none found'}`,
+          site.themeColor && `Theme color: ${site.themeColor}`,
+          `Typefaces: ${site.fonts.join('; ') || 'none found'}`,
+          host.attachImage ? `${site.images.length} screenshot${site.images.length > 1 ? 's' : ''} attached.` : "(This engine can't see images; go by the colors and fonts.)",
+        ].filter(Boolean).join('\n');
       },
     }),
 

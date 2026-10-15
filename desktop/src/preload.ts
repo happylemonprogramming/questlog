@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('offerdexDesktop', {
   version: process.env.npm_package_version ?? '0.1.0',
   platform: process.platform,
   openLogs: () => invoke('logs:open'),
+  viewSite: (url: string) => invoke('site:view', url),
   pdf: {
     make: (docId: string, fileName?: string) => invoke('pdf:make', docId, fileName),
     save: (docId: string, fileName?: string) => invoke('pdf:save', docId, fileName),

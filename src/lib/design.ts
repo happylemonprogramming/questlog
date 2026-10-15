@@ -177,6 +177,7 @@ export async function inheritedDesign(kind: DocKind, jobId?: string): Promise<st
 
 /** How the sheet's markup is built, so a design can target it. Shown to the assistant with get_design. */
 export const MARKUP_GUIDE = `Markup the stylesheet styles. It renders in its own shadow root after a small reset (like Tailwind's preflight: no margins, unstyled lists and links), so no app styles apply.
+Some elements exist for one particular look (an engineering drawing sheet): the crop marks, the title block (DOC/REV/SHEET), the numbered balloons in headings, the eyebrow separator and the notes footer. They are not the house style. Hide them with display: none unless your concept uses them; otherwise the title block shows as loose text and balloons as stray numbers.
 <div class="dark">  (class only while the app is in dark mode; designs may ignore it)
  <div class="resume-container">  (letters: "resume-container letter-sheet"). One US letter page is 816 x 1056 px (8.5in x 11in); content taller than that spills onto page 2.
   <span class="crop crop-tl"/> crop-tr, crop-bl, crop-br  (corner marks)
