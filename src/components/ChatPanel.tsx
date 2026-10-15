@@ -3,8 +3,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { ChatMessage } from '@porygon/core';
 import {
-  ArrowUp, Check, ChevronRight, History, Loader2, MessageSquarePlus, PanelRightClose, Plug, Sparkles, Square, Trash2, X,
+  ArrowUp, ArrowUpRight, BriefcaseBusiness, Check, ChevronRight, ClipboardPen, FileText, History, Loader2, MessageSquarePlus, PanelRightClose, Plug, Sparkles, Square, Trash2, UserRound, X,
 } from 'lucide-react';
+import { isDesktop } from '@/lib/desktop';
 import { db, getSettings } from '@/lib/db';
 import { clearError, newChat, onAsk, send, stop, useLive } from '@/agent/runtime';
 import { Button } from '@/components/ui/button';
@@ -49,8 +50,20 @@ function parseArgs(raw: string): Record<string, unknown> {
   try { return JSON.parse(raw); } catch { return {}; }
 }
 
+/** The page a tool call changed or read, so each line in the log can take you there. */
+function target(name: string, args: Record<string, unknown>, result?: ChatMessage): string | undefined {
+  const id = typeof args?.id === 'string' ? args.id : undefined;
+  if (/job/.test(name) && id) return `/jobs/${encodeURIComponent(id)}`;
+  if (/document|design|resume|letter|answer/.test(name)) {
+    const made = result?.content.match(/\(id ([\w-]+)\)/)?.[1];
+    if (id || made) return `/documents/${id ?? made}`;
+  }
+  return undefined;
+}
+
 function ToolLine({ name, args, result, running }: { name: string; args: Record<string, unknown>; result?: ChatMessage; running?: boolean }) {
   const [open, setOpen] = useState(false);
+  const to = target(name, args, result);
   const failed = result?.content.startsWith('Error') || result?.content.startsWith('No ');
   return (
     <div className="text-[12.5px]">
@@ -62,7 +75,12 @@ function ToolLine({ name, args, result, running }: { name: string; args: Record<
           {running ? <Loader2 className="size-3 animate-spin" /> : failed ? <X className="size-2.5" /> : <Check className="size-2.5" strokeWidth={3} />}
         </span>
         <span className="truncate">{describe(name, args)}</span>
-        {result && <ChevronRight className={cn('ml-auto size-3.5 opacity-0 transition group-hover:opacity-100', open && 'rotate-90 opacity-100')} />}
+        {to && !/^(get|list)_/.test(name) && (
+          <Link to={to} onClick={(e) => e.stopPropagation()} className="shrink-0 rounded px-1 text-[11.5px] font-medium text-foreground/70 hover:bg-accent hover:text-foreground">
+            <ArrowUpRight className="inline size-3" /> view
+          </Link>
+        )}
+        {result && <ChevronRight className={cn('ml-auto size-3.5 shrink-0 opacity-0 transition group-hover:opacity-100', open && 'rotate-90 opacity-100')} />}
       </button>
       {open && result && (
         <pre className="scroll-thin ml-6 mt-1 max-h-60 overflow-auto whitespace-pre-wrap rounded-lg bg-sunken p-2.5 font-mono text-[11px] leading-relaxed text-muted-foreground">
@@ -175,12 +193,12 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
   const suggestions = view.applying && view.job
     ? ['Help me answer a question on this form', `Draft a short "Additional information" answer`, 'I submitted it. Mark it applied']
     : view.job
-    ? [`Is ${view.job.company} a fit for me?`, `Tailor my resume for this role`, `Draft a short "Additional information" answer`]
+    ? [`Is ${view.job.company} a fit for me?`, 'Tailor my resume for this role', isDesktop() ? 'Fill out this application for me' : 'Draft a short "Additional information" answer']
     : view.doc?.kind === 'resume'
       ? ['Tighten this resume to fit one page', 'Give this resume a fresh, modern design', 'Which listings is this resume best for?']
       : view.doc?.kind === 'letter'
       ? ['Match this letter’s design to my base resume', 'Tighten this letter']
-      : ["What should I apply to next?", 'Search Stripe’s Greenhouse board for remote engineering roles', 'Summarize my pipeline'];
+      : ['Sort my New roles: save the good ones, pass on the rest', 'Line up my best 5 roles for this week', 'Search Anduril’s job board for mechanical roles near me'];
 
   const empty = !chat || chat.messages.length === 0;
 
@@ -188,7 +206,10 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
     <aside className="flex h-full min-w-0 flex-col bg-surface">
       <div className="flex h-14 shrink-0 items-center gap-1 border-b border-border/60 px-3 max-lg:[&_button]:size-10">
         <Sparkles className="ml-1 size-4 text-lemon" />
-        <p className="ml-1.5 min-w-0 flex-1 truncate text-[13.5px] font-semibold">{chat?.title ?? 'Assistant'}</p>
+        <div className="ml-1.5 min-w-0 flex-1 leading-tight">
+          <p className="truncate text-[13.5px] font-semibold">{chat && chat.messages.length ? chat.title : 'Agent'}</p>
+          <p className="truncate text-[11px] text-muted-foreground">Runs everything in Offerdex</p>
+        </div>
         <Menu>
           <Tip label="History"><MenuTrigger asChild><Button variant="ghost" size="icon" aria-label="History"><History /></Button></MenuTrigger></Tip>
           <MenuContent className="w-72">
@@ -210,13 +231,13 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
           </MenuContent>
         </Menu>
         <Tip label="New chat"><Button variant="ghost" size="icon" onClick={startNew} aria-label="New chat"><MessageSquarePlus /></Button></Tip>
-        {onClose && <Tip label="Hide (⌘J)"><Button variant="ghost" size="icon" onClick={onClose} aria-label="Hide assistant"><PanelRightClose /></Button></Tip>}
+        {onClose && <Tip label="Hide (⌘J)"><Button variant="ghost" size="icon" onClick={onClose} aria-label="Hide agent"><PanelRightClose /></Button></Tip>}
       </div>
 
       <div ref={scroller} className="scroll-thin min-h-0 flex-1 overflow-y-auto px-4 py-5">
         {empty && !running ? (
           <div className="flex h-full flex-col justify-end pb-2">
-            <div className="rise mb-6">
+            <div className="rise mb-5">
               {/* A slowly breathing glow behind the mark. */}
               <div className="relative mb-5 size-12">
                 <div className="absolute -inset-4 animate-[breathe_4s_ease-in-out_infinite] rounded-full bg-[radial-gradient(closest-side,hsl(var(--lemon)/0.35),transparent)]" />
@@ -224,11 +245,25 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
                   <Sparkles className="size-6" />
                 </div>
               </div>
-              <p className="text-[19px] font-semibold tracking-[-0.02em]">How can I help with <span className="text-gradient">the search</span>?</p>
+              <p className="text-[19px] font-semibold tracking-[-0.02em]">Tell me what to <span className="text-gradient">get done</span>.</p>
               <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">
-                I can read job boards, sort your listings, and tailor resumes and letters. Nothing leaves this browser except calls to your AI provider and public job boards.
+                I’m not just a chat. I work the app for you, with the same controls you have, and each change shows up on the page as I make it.
               </p>
             </div>
+            <ul className="rise mb-5 space-y-2.5 rounded-2xl border border-border/70 bg-background/50 p-3.5 text-[13px]" style={{ '--i': 1 } as React.CSSProperties}>
+              {([
+                [<BriefcaseBusiness key="j" />, 'Jobs', 'search company job boards, sort what’s new, line up what to send'],
+                [<FileText key="d" />, 'Documents', 'tailor and redesign resumes, write letters and answers'],
+                [<UserRound key="p" />, 'Your profile', 'keep your rules, facts and notes current'],
+                [<ClipboardPen key="a" />, 'Applications', isDesktop() ? 'fill in forms and attach your resume; you press Submit' : 'draft your answers (the desktop app also fills in forms)'],
+              ] as const).map(([icon, title, text]) => (
+                <li key={title} className="flex gap-3">
+                  <span className="mt-0.5 text-muted-foreground [&_svg]:size-4">{icon}</span>
+                  <span><span className="font-medium">{title}:</span> <span className="text-muted-foreground">{text}</span></span>
+                </li>
+              ))}
+            </ul>
+            <p className="eyebrow-label mb-2 px-1">Try</p>
             <div className="space-y-2">
               {suggestions.map((s, i) => (
                 <button
@@ -297,7 +332,7 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
               }
             }}
             enterKeyHint={mobile ? 'enter' : 'send'}
-            placeholder="Ask, paste a posting link, or give an instruction…"
+            placeholder="Tell me what to do, or paste a posting link…"
             className="block max-h-48 min-h-[44px] w-full resize-none bg-transparent px-3.5 py-3 text-[13.5px] leading-relaxed max-lg:text-[16px] placeholder:text-muted-foreground/70 focus:outline-none [field-sizing:content]"
           />
           <div className="flex items-center justify-between px-2 pb-2">

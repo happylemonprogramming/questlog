@@ -34,7 +34,7 @@ function JsonEditor({ doc }: { doc: Doc }) {
   const [error, setError] = useState('');
   useEffect(() => {
     if (!error) setText(JSON.stringify(doc.data, null, 2));
-    // Only follow outside edits (e.g. the assistant's) when the draft is valid.
+    // Only follow outside edits (e.g. the agent's) when the draft is valid.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc.updatedAt]);
   useEffect(() => {
@@ -68,7 +68,7 @@ function JsonEditor({ doc }: { doc: Doc }) {
 function DesignEditor({ doc }: { doc: Doc }) {
   const [text, setText] = useState(() => designOf(doc.css));
   const [dirty, setDirty] = useState(false);
-  // Follow outside edits (the assistant's) until the user starts typing.
+  // Follow outside edits (the agent's) until the user starts typing.
   useEffect(() => {
     if (!dirty) setText(designOf(doc.css));
   }, [doc.css, dirty]);
@@ -143,7 +143,7 @@ function AnswerEditor({ doc }: { doc: Doc<AnswerData> }) {
   const [prompt, setPrompt] = useState(doc.data.prompt ?? '');
   const [dirty, setDirty] = useState(false);
   const [copied, setCopied] = useState(false);
-  // Follow outside edits (the assistant's) until the user starts typing.
+  // Follow outside edits (the agent's) until the user starts typing.
   useEffect(() => {
     if (dirty) return;
     setText(doc.data.text);

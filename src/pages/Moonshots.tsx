@@ -32,7 +32,7 @@ export default function Moonshots() {
     <>
       <JobsHeader sub="Long shots worth taking, ranked by how much you want them." />
       {list.length === 0 ? (
-        <Empty icon={<Rocket />} title="No moonshots yet">Mark a listing as a moonshot from its page, or ask the assistant to find some.</Empty>
+        <Empty icon={<Rocket />} title="No moonshots yet">Mark a listing as a moonshot from its page, or ask the agent to find some.</Empty>
       ) : (
         <div className="space-y-4">
           {list.map((j, i) => (

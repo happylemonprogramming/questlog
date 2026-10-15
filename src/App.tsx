@@ -10,6 +10,7 @@ import { ThemeProvider, useTheme, type Theme } from '@/lib/theme';
 import { TooltipProvider, Tip } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { ChatPanel } from '@/components/ChatPanel';
+import { CommandDock } from '@/components/CommandDock';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ApplyPane } from '@/components/ApplyPane';
 import { isJobsPath } from '@/components/JobsHeader';
@@ -166,7 +167,7 @@ function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
 const WIDTH_KEY = 'offerdex:chat-width';
 const OPEN_KEY = 'offerdex:assistant-open';
 
-/** Ask-from-page buttons bring the assistant forward. */
+/** Ask-from-page buttons bring the agent forward. */
 function useAskOpens(open: () => void) {
   const ref = useRef(open);
   ref.current = open;
@@ -225,7 +226,7 @@ function TabButton({ active, onClick, icon, label, dot }: { active: boolean; onC
 }
 
 /**
- * Phones: one pane at a time (the page, the assistant, or the application
+ * Phones: one pane at a time (the page, the agent, or the application
  * form) with a tab bar. Every pane stays mounted so nothing is lost when you
  * switch, which is the main difference from hiding them by routing.
  */
@@ -288,7 +289,10 @@ function MobileShell() {
           </header>
           <main ref={page} className="scroll-thin relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <div className="aurora" aria-hidden="true" />
-            <div className="relative mx-auto w-full max-w-[860px] px-5 pb-12 pt-7 sm:px-6"><Page /></div>
+            <div className="relative mx-auto w-full max-w-[860px] px-5 pb-6 pt-7 sm:px-6"><Page /></div>
+            <div className="pointer-events-none sticky bottom-0 z-20 bg-gradient-to-t from-background via-background/85 to-transparent px-4 pb-3 pt-8">
+              <CommandDock mobile />
+            </div>
           </main>
         </section>
         <section
@@ -307,7 +311,7 @@ function MobileShell() {
       <nav className={cn('shrink-0 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur', typing && 'hidden')}>
         <div className="flex">
           <TabButton active={pane === 'page'} onClick={() => setPane('page')} icon={<PanelsTopLeft />} label={title || 'Page'} dot={pageDot} />
-          <TabButton active={pane === 'chat'} onClick={() => setPane('chat')} icon={running ? <Loader2 className="animate-spin" /> : <Sparkles />} label="Assistant" dot={chatDot} />
+          <TabButton active={pane === 'chat'} onClick={() => setPane('chat')} icon={running ? <Loader2 className="animate-spin" /> : <Sparkles />} label="Agent" dot={chatDot} />
           <TabButton active={pane === 'apply'} onClick={() => setPane('apply')} icon={<ClipboardPen />} label="Apply" dot={!!applyJobId && pane !== 'apply'} />
         </div>
       </nav>
@@ -388,13 +392,18 @@ function DesktopShell() {
           {!open && (
             <div className="sticky top-0 z-10 flex justify-end p-3">
               <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="shadow-soft">
-                <Sparkles className="text-lemon" /> Assistant <PanelRightOpen className="text-muted-foreground" />
+                <Sparkles className="text-lemon" /> Agent <PanelRightOpen className="text-muted-foreground" />
               </Button>
             </div>
           )}
-          <div className={cn('relative mx-auto w-full max-w-[1100px] px-10 pb-20', open ? 'pt-11' : '-mt-4')}>
+          <div className={cn('relative mx-auto w-full max-w-[1100px] px-10', open ? 'pb-20 pt-11' : '-mt-4 pb-6')}>
             <Page />
           </div>
+          {!open && (
+            <div className="pointer-events-none sticky bottom-0 z-20 flex justify-center bg-gradient-to-t from-background via-background/80 to-transparent px-10 pb-5 pt-10">
+              <CommandDock className="max-w-[640px]" />
+            </div>
+          )}
         </main>
         {applyJobId && (
           <div className={cn('min-h-0 flex-1', !showApply && 'hidden')}>

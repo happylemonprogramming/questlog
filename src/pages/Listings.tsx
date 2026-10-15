@@ -65,7 +65,7 @@ export default function Listings() {
         </Card>
       ) : (
         <Empty icon={<LayoutList />} title={jobs.length ? 'No listings match' : 'No listings yet'}>
-          {jobs.length ? 'Try a different filter.' : 'Add one by link, import your data in Settings, or ask the assistant to search a company’s job board.'}
+          {jobs.length ? 'Try a different filter.' : 'Add one by link, import your data in Settings, or ask the agent to search a company’s job board.'}
         </Empty>
       )}
     </>

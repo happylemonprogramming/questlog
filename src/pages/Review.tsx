@@ -113,7 +113,7 @@ export default function Review() {
           <p className="mx-auto mt-1 max-w-sm text-[14px] text-muted-foreground">
             {rest.length
               ? `${rest.length} more ${rest.length === 1 ? 'role is' : 'roles are'} still in Next up. Set ${rest.length === 1 ? 'it' : 'them'} aside so Today stays short?`
-              : kept ? 'Today will walk you through them one at a time.' : 'No new roles to review. Ask the assistant to find some.'}
+              : kept ? 'Today will walk you through them one at a time.' : 'No new roles to review. Ask the agent to find some.'}
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             {rest.length > 0 && <Button variant="lemon" onClick={setAsideRest}>Set {rest.length} aside</Button>}

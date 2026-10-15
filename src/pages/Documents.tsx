@@ -122,7 +122,7 @@ export default function Documents() {
       {tab === 'sources' ? (
         <Sources />
       ) : shown.length === 0 ? (
-        <Empty icon={<FileText />} title="Nothing here yet">Create one, or open a listing and ask the assistant to tailor a resume for it.</Empty>
+        <Empty icon={<FileText />} title="Nothing here yet">Create one, or open a listing and ask the agent to tailor a resume for it.</Empty>
       ) : (
         <div className="space-y-10">
           {bases.length > 0 && (

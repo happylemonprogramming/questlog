@@ -14,14 +14,14 @@ function icon(f: SourceFile) {
   return <FileText className="text-muted-foreground" />;
 }
 
-/** Uploaded files, grouped by the upload they came in, so you can see what the assistant read. */
+/** Uploaded files, grouped by the upload they came in, so you can see what the agent read. */
 export function Sources() {
   const files = useLiveQuery(() => db.files.toArray(), []) ?? [];
   const [open, setOpen] = useState<SourceFile | null>(null);
   const bundles = [...new Set(files.map((f) => f.bundle))];
 
   if (!files.length) {
-    return <Empty icon={<FileArchive />} title="No uploaded files">Drop a .zip of your job-search folder on Settings → Data and the assistant will read it.</Empty>;
+    return <Empty icon={<FileArchive />} title="No uploaded files">Drop a .zip of your job-search folder on Settings → Data and the agent will read it.</Empty>;
   }
 
   return (

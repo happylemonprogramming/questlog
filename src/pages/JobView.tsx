@@ -34,7 +34,7 @@ function Fact({ icon, children }: { icon: ReactNode; children: ReactNode }) {
 
 /**
  * A field that saves itself a moment after you stop typing, and otherwise
- * follows the stored value, so the assistant's edits show up live and are
+ * follows the stored value, so the agent's edits show up live and are
  * never overwritten by a stale draft.
  */
 function useAutosave(job: Job | undefined, key: 'notes' | 'batch' | 'website') {

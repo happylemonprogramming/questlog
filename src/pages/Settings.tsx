@@ -182,7 +182,7 @@ function ProfileEditor() {
   const stored = useLiveQuery(() => getProfile(), []);
   const [p, setP] = useState<Profile | null>(null);
   const [dirty, setDirty] = useState(false);
-  // Follow outside changes (the assistant's) until the user starts typing.
+  // Follow outside changes (the agent's) until the user starts typing.
   useEffect(() => {
     if (stored && !dirty) setP(stored);
   }, [stored, dirty]);
@@ -205,13 +205,13 @@ function ProfileEditor() {
         <Field label="Name"><Input value={p.name} onChange={(e) => set({ name: e.target.value })} /></Field>
         <Field label="Location"><Input value={p.location ?? ''} onChange={(e) => set({ location: e.target.value })} /></Field>
       </div>
-      <Field label="Search rules" hint="Pay floors, locations, seniority, travel, deal-breakers. The assistant checks every listing against these.">
+      <Field label="Search rules" hint="Pay floors, locations, seniority, travel, deal-breakers. The agent checks every listing against these.">
         <Textarea value={p.rules} onChange={(e) => set({ rules: e.target.value })} className="min-h-[180px] font-mono text-[12.5px]" placeholder={'- Pay: $150k base or more\n- Location: remote, or within 30 minutes of home\n- No director-level roles'} />
       </Field>
-      <Field label="Confirmed facts" hint="Things the assistant may say about you in tailored documents. It won't use anything that isn't here or in a base resume.">
+      <Field label="Confirmed facts" hint="Things the agent may say about you in tailored documents. It won't use anything that isn't here or in a base resume.">
         <Textarea value={p.facts} onChange={(e) => set({ facts: e.target.value })} className="min-h-[160px] font-mono text-[12.5px]" />
       </Field>
-      <Field label="Working notes" hint="Open questions, decisions and next steps. Shown on Today, and the assistant keeps it current.">
+      <Field label="Working notes" hint="Open questions, decisions and next steps. Shown on Today, and the agent keeps it current.">
         <Textarea value={p.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} className="min-h-[120px] font-mono text-[12.5px]" />
       </Field>
       <Field label="Writing style">
@@ -239,13 +239,13 @@ function DataTools() {
     try {
       for (const f of Array.from(files)) {
         const r = await importFile(f);
-        const parts = [r.jobs && `${r.jobs} listings`, r.docs && `${r.docs} documents`, ...r.other, r.files && `${r.files.stored} files kept for the assistant`].filter(Boolean);
+        const parts = [r.jobs && `${r.jobs} listings`, r.docs && `${r.docs} documents`, ...r.other, r.files && `${r.files.stored} files kept for the agent`].filter(Boolean);
         lines.push(`${f.name}: ${parts.join(', ') || 'nothing recognized'}`);
         if (r.files) withFiles.push(r);
       }
       setMsg({ ok: true, text: `Imported ${lines.join('; ')}.` });
       setBundles(withFiles);
-      // Hand the rest to the assistant right away when it can run.
+      // Hand the rest to the agent right away when it can run.
       if (connected) withFiles.forEach((r) => ask(analysisPrompt(r)));
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : String(e) });
@@ -266,7 +266,7 @@ function DataTools() {
         {busy ? <Loader2 className="mx-auto mb-2 size-6 animate-spin text-muted-foreground" /> : <Upload className="mx-auto mb-2 size-6 text-muted-foreground" />}
         <p className="text-[14px] font-medium">Drop files to import</p>
         <p className="mx-auto mt-1 max-w-md text-[12.5px] text-muted-foreground">
-          A <b>.zip</b> of your job-search folder, an Offerdex backup, a <code className="font-mono">seen_jobs.json</code>, or a tracker <code className="font-mono">.csv</code>. Known formats import directly. The assistant reads everything else in a zip and fills in your profile, listings and documents.
+          A <b>.zip</b> of your job-search folder, an Offerdex backup, a <code className="font-mono">seen_jobs.json</code>, or a tracker <code className="font-mono">.csv</code>. Known formats import directly. The agent reads everything else in a zip and fills in your profile, listings and documents.
         </p>
         <input ref={fileRef} type="file" accept=".zip,.json,.csv" multiple hidden onChange={(e) => onFiles(e.target.files)} />
       </div>
@@ -275,7 +275,7 @@ function DataTools() {
         <div className="flex flex-wrap items-center gap-3 rounded-xl bg-lemon-soft/60 px-4 py-3 text-[13px] ring-1 ring-lemon/50">
           <Sparkles className="size-4 text-foreground" />
           <span className="flex-1">
-            {connected ? 'The assistant is reading your files now. Follow along in the chat panel.' : 'Connect an AI provider above, then let the assistant read your files.'}
+            {connected ? 'The agent is reading your files now. Follow along in the chat panel.' : 'Connect an AI provider above, then let the agent read your files.'}
           </span>
           {!connected ? null : (
             <Button size="sm" variant="outline" onClick={() => bundles.forEach((r) => ask(analysisPrompt(r)))}>Run again</Button>
@@ -315,7 +315,7 @@ function LogoSettings() {
           <Button variant="outline" size="sm" onClick={() => ask('Find the website of every company in my listings that has none (list_jobs with noWebsite), then save them all with set_company_websites. Only include ones you are sure of.')}>
             <Sparkles className="text-lemon" /> Find the missing ones
           </Button>
-          <span className="text-[12.5px] text-muted-foreground">{missing} {missing === 1 ? 'company has' : 'companies have'} no website yet. The assistant can look them up.</span>
+          <span className="text-[12.5px] text-muted-foreground">{missing} {missing === 1 ? 'company has' : 'companies have'} no website yet. The agent can look them up.</span>
         </div>
       )}
     </div>
@@ -329,7 +329,7 @@ export default function Settings() {
       <Section icon={<Plug />} title="AI provider" sub="Bring your own model. Any OpenAI-compatible endpoint works, including Meridian for a Claude subscription.">
         <ProviderEditor />
       </Section>
-      <Section icon={<User />} title="Profile" sub="What the assistant knows about you and the rules it applies to every listing.">
+      <Section icon={<User />} title="Profile" sub="What the agent knows about you and the rules it applies to every listing.">
         <ProfileEditor />
       </Section>
       <Section icon={<Building2 />} title="Company logos" sub="Logos come from each company's own website, even when you found the job on LinkedIn or a job board.">

@@ -91,7 +91,7 @@ export function ApplyPane({ jobId, mobile }: { jobId: string | null; mobile?: bo
     return (
       <div className="grid h-full place-items-center p-6">
         <Empty icon={<ExternalLink />} title="No application open">
-          Open a listing and tap <b>Apply here</b> to fill its form next to your documents and the assistant.
+          Open a listing and tap <b>Apply here</b> to fill its form next to your documents and the agent.
           <div className="mt-4"><Button variant="outline" onClick={() => setPane('page')}>Back to the app</Button></div>
         </Empty>
       </div>
@@ -116,7 +116,7 @@ export function ApplyPane({ jobId, mobile }: { jobId: string | null; mobile?: bo
       <Materials jobId={job.id} />
       {!page ? (
         <div className="grid flex-1 place-items-center p-6">
-          <Empty icon={<Info />} title="No link for this listing">Add the posting link to the listing, or ask the assistant to find it.</Empty>
+          <Empty icon={<Info />} title="No link for this listing">Add the posting link to the listing, or ask the agent to find it.</Empty>
         </div>
       ) : frame ? (
         <>

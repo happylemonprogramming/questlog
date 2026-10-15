@@ -25,7 +25,7 @@ function momentum(c: Record<Stage, number>, sentThisWeek: number) {
   if (c.interviewing) return `${c.interviewing} interview${c.interviewing === 1 ? '' : 's'} in motion and ${c.next} more lined up.${week}`;
   if (c.applied) return `${c.applied} application${c.applied === 1 ? '' : 's'} out and ${c.next} lined up.${week}`;
   if (c.next) return `${c.next} role${c.next === 1 ? '' : 's'} lined up. A good day to send the first one.`;
-  return 'Add a listing or ask the assistant to search a job board to get started.';
+  return 'Add a listing or ask the agent to search a job board to get started.';
 }
 
 const GOAL_KEY = 'offerdex:daily-goal';
@@ -252,10 +252,10 @@ export default function Today() {
               {counts.applied || counts.interviewing ? <PartyPopper /> : <CalendarClock />}
             </div>
             <p className="text-[17px] font-semibold">Nothing lined up right now</p>
-            <p className="mx-auto mt-1 max-w-sm text-[14px] text-muted-foreground">Pick a few roles you’d like to send next, or ask the assistant to find some.</p>
+            <p className="mx-auto mt-1 max-w-sm text-[14px] text-muted-foreground">Pick a few roles you’d like to send next, or ask the agent to find some.</p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
               {candidates(list).length > 0 && <Button variant="lemon" onClick={() => navigate('/review')}><Layers /> Pick from your saved roles</Button>}
-              <Button variant={candidates(list).length ? 'outline' : 'lemon'} onClick={() => ask(`What should I apply to next? Pick up to ${QUEUE_SIZE} and line them up.`)}><Sparkles /> Ask the assistant</Button>
+              <Button variant={candidates(list).length ? 'outline' : 'lemon'} onClick={() => ask(`What should I apply to next? Pick up to ${QUEUE_SIZE} and line them up.`)}><Sparkles /> Ask the agent</Button>
             </div>
           </Card>
         ) : null}
@@ -279,7 +279,7 @@ export default function Today() {
             <CardHeader title="Lined up" icon={<CalendarClock />} count={next.length} action={<Link to="/listings" className="text-[12.5px] font-medium text-muted-foreground transition hover:text-foreground">All jobs</Link>} />
             <div className="px-3 pb-4">
               {next.length === 0 ? (
-                <div className="p-3"><Empty icon={<CalendarClock />} title="Nothing lined up yet">Open a listing and set its stage to Next up, or ask the assistant what to apply to.</Empty></div>
+                <div className="p-3"><Empty icon={<CalendarClock />} title="Nothing lined up yet">Open a listing and set its stage to Next up, or ask the agent what to apply to.</Empty></div>
               ) : (
                 [...batches].map(([batch, l], i) => <Batch key={batch} name={batch} list={l} offset={offsets[i]} />)
               )}
