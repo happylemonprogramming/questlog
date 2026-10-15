@@ -1,4 +1,4 @@
-import { db, getProfile } from './db';
+import { db, getProfile, SAMPLE_ID } from './db';
 import type { Doc } from './types';
 import type { Company, ProjectCard, ResumeData } from './sheet';
 
@@ -93,6 +93,8 @@ export function careerFromResumes(resumes: ResumeData[]): string {
  * old documents stay, as ordinary documents.
  */
 export async function adoptBaseResumes() {
+  // Older versions put a sample "Base resume" in every new install; drop it if it was never edited.
+  if ((await db.docs.get(SAMPLE_ID))?.updatedAt === 0) await db.docs.delete(SAMPLE_ID);
   const p = await getProfile();
   if (p.history !== undefined) return;
   const bases = (await db.docs.where('kind').equals('resume').toArray()).filter((d: Doc) => d.base && d.updatedAt > 0);
