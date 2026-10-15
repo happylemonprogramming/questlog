@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { CheckCircle2, Building2, Download, ExternalLink, Loader2, Palette, Plug, RefreshCw, RotateCcw, Sparkles, Trash2, Upload, User, Database, XCircle } from 'lucide-react';
+import { CheckCircle2, Building2, Download, ExternalLink, Loader2, Palette, Plug, RefreshCw, RotateCcw, ScrollText, Sparkles, Trash2, Upload, User, Database, XCircle } from 'lucide-react';
 import { db, exportAll, getProfile, getSettings, uid, DEFAULT_SETTINGS } from '@/lib/db';
 import { PRESETS, listModels } from '@/lib/providers';
 import { importFile, type ImportResult } from '@/lib/importers';
@@ -368,6 +368,9 @@ function EnginePicker() {
           </span>
         </label>
       ))}
+      <button onClick={() => void desktop()?.openLogs()} className="flex items-center gap-1.5 px-1 text-[12.5px] text-muted-foreground hover:text-foreground">
+        <ScrollText className="size-3.5" /> Open the log, for when the agent stalls or stops
+      </button>
     </div>
   );
 }

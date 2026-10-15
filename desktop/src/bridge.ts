@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { WebContents } from 'electron';
+import { log } from './log';
 
 export interface ToolSpec {
   name: string;
@@ -72,8 +73,16 @@ export class ToolBridge {
     return this.ask('list', null, 15_000) as Promise<ToolSpec[]>;
   }
 
-  call(name: string, args: unknown) {
-    return this.ask('call', { name, args }, 180_000) as Promise<ToolOutcome>;
+  async call(name: string, args: unknown) {
+    const started = Date.now();
+    try {
+      const out = (await this.ask('call', { name, args }, 180_000)) as ToolOutcome;
+      log('offerdex-tool', { name, ms: Date.now() - started, error: out.isError ? out.text.slice(0, 300) : undefined });
+      return out;
+    } catch (e) {
+      log('offerdex-tool:failed', { name, ms: Date.now() - started, error: (e as Error).message });
+      throw e;
+    }
   }
 
   /** The window's answer to a request. */

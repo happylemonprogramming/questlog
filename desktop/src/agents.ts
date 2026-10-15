@@ -7,6 +7,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { Readable, Writable } from 'node:stream';
 import type { ToolBridge } from './bridge';
+import { log } from './log';
 import { which } from './paths';
 
 /**
@@ -154,6 +155,8 @@ export class Agents {
   private sessions = new Map<string, Session>();
   private chatOf = new Map<string, string>();
   private asks = new Map<string, (optionId: string | null) => void>();
+  /** When each session last sent an update, so a turn isn't closed while its last words are in flight. */
+  private lastUpdate = new Map<string, number>();
   private workdir: string;
 
   constructor(private bridge: ToolBridge, private window: () => WebContents | undefined) {
@@ -190,13 +193,15 @@ export class Agents {
     const def = ENGINES.find((e) => e.id === engine)!;
     const l = def.launch();
     if ('missing' in l) throw new Error(`${def.label} can't start: ${l.missing}.`);
+    log('engine:start', { engine, command: l.command });
     const proc = spawn(l.command, l.args, { cwd: this.workdir, env: { ...agentEnv(), ...l.env }, stdio: ['pipe', 'pipe', 'pipe'] });
     const stderr: string[] = [];
     proc.stderr!.on('data', (d) => {
       stderr.push(String(d));
       if (stderr.length > 40) stderr.shift();
     });
-    proc.on('exit', (code) => {
+    proc.on('exit', (code, signal) => {
+      log('engine:exit', { engine, code, signal, stderr: code ? stderr.join('').slice(-2000) : undefined });
       this.running.delete(engine);
       for (const [key, s] of this.sessions) if (s.engine === engine) this.sessions.delete(key);
       if (code) this.send('agent:exit', { engine, code, stderr: stderr.join('').slice(-2000) });
@@ -214,24 +219,33 @@ export class Agents {
   private client(): Client {
     return {
       sessionUpdate: async (n) => {
+        this.lastUpdate.set(n.sessionId, Date.now());
         const chatId = this.chatOf.get(n.sessionId);
+        const u = n.update as { sessionUpdate: string; title?: string; kind?: string; status?: string };
+        if (u.status === 'completed' || u.status === 'failed') log('tool', { chatId, title: u.title, kind: u.kind, status: u.status });
         if (chatId) this.send('agent:update', { chatId, update: n.update });
       },
       requestPermission: async (req) => {
         const chatId = this.chatOf.get(req.sessionId);
         const allow = req.options.find((o) => o.kind === 'allow_once') ?? req.options.find((o) => o.kind === 'allow_always');
-        // Offerdex's own tools are what the agent is for; they run without asking.
         const tc = req.toolCall;
-        if (allow && /offerdex/i.test(`${tc.title ?? ''} ${(tc as { name?: string }).name ?? ''} ${JSON.stringify(tc._meta ?? {})}`)) {
+        // Offerdex's own tools are what the agent is for, and reading the web
+        // changes nothing; both run without asking.
+        const ours = /offerdex/i.test(`${tc.title ?? ''} ${(tc as { name?: string }).name ?? ''} ${JSON.stringify(tc._meta ?? {})}`);
+        const readOnly = ['read', 'search', 'fetch', 'think'].includes(tc.kind ?? '');
+        if (allow && (ours || readOnly)) {
+          if (!ours) log('permission:auto', { chatId, title: tc.title, kind: tc.kind });
           return { outcome: { outcome: 'selected', optionId: allow.optionId } };
         }
         if (!chatId) return { outcome: { outcome: 'cancelled' } };
         const id = randomUUID();
+        log('permission:ask', { chatId, title: tc.title, kind: tc.kind });
         const choice = await new Promise<string | null>((resolve) => {
           this.asks.set(id, resolve);
           this.send('agent:permission', { id, chatId, title: tc.title, kind: tc.kind, input: tc.rawInput, options: req.options });
         });
         this.asks.delete(id);
+        log('permission:answer', { chatId, choice });
         return choice ? { outcome: { outcome: 'selected', optionId: choice } } : { outcome: { outcome: 'cancelled' } };
       },
     };
@@ -289,22 +303,38 @@ export class Agents {
   }
 
   async prompt(req: PromptRequest) {
+    const started = Date.now();
+    log('prompt:start', { chatId: req.chatId, engine: req.engine, text: req.text.slice(0, 300) });
     try {
       const { run, s } = await this.session(req);
       // Engines without a system prompt option get Offerdex's instructions up front.
       const text = s.primed ? req.text : `<offerdex_instructions>\n${req.system}\n</offerdex_instructions>\n\n${req.text}`;
       s.primed = true;
       const res = await run.conn.prompt({ sessionId: s.id, prompt: [{ type: 'text', text }] });
+      await this.settle(s.id);
+      log('prompt:end', { chatId: req.chatId, stopReason: res.stopReason, seconds: Math.round((Date.now() - started) / 1000) });
       return { stopReason: res.stopReason };
     } catch (e) {
       const err = e as { message?: string; data?: unknown; code?: number };
       const detail = typeof err.data === 'object' && err.data ? JSON.stringify(err.data) : '';
+      log('prompt:error', { chatId: req.chatId, error: err.message ?? String(e), detail, seconds: Math.round((Date.now() - started) / 1000) });
       return { error: `${err.message ?? String(e)}${detail ? ` ${detail}` : ''}`, auth: err.code === -32000 };
     }
   }
 
+  /**
+   * The answer to a prompt can arrive before the last few updates of the
+   * reply have been handed on, which used to cut the final sentence off.
+   * Wait until the session has been quiet briefly.
+   */
+  private async settle(sessionId: string) {
+    const until = Date.now() + 3000;
+    while (Date.now() < until && Date.now() - (this.lastUpdate.get(sessionId) ?? 0) < 250) await new Promise((r) => setTimeout(r, 50));
+  }
+
   async cancel(chatId: string) {
     const s = this.sessions.get(chatId);
+    log('prompt:cancel', { chatId });
     if (!s) return;
     for (const [id, resolve] of this.asks) {
       resolve(null);

@@ -79,6 +79,8 @@ export interface ToolImage {
 export interface DesktopBridge {
   version: string;
   platform: string;
+  /** Open the folder with the desktop app's log. */
+  openLogs(): Promise<string>;
   pdf: {
     make(docId: string, fileName?: string): Promise<{ path: string; name: string }>;
     save(docId: string, fileName?: string): Promise<string | null>;

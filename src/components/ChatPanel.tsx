@@ -132,8 +132,11 @@ function Transcript({ messages }: { messages: ChatMessage[] }) {
 /** An external agent asking to use one of its own tools (not Offerdex's), with the choices it offers. */
 function PermissionCard({ ask }: { ask: PermissionAsk }) {
   const input = ask.input === undefined ? '' : typeof ask.input === 'string' ? ask.input : JSON.stringify(ask.input, null, 1);
+  // The agent waits on this, so it must not sit unseen below the fold.
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => ref.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), [ask.id]);
   return (
-    <div className="pop rounded-2xl border border-lemon/50 bg-lemon-soft/40 p-3.5 text-[13px]">
+    <div ref={ref} className="pop rounded-2xl border border-lemon/50 bg-lemon-soft/40 p-3.5 text-[13px]">
       <p className="font-medium">The agent wants to {ask.title ? <span className="font-mono text-[12px]">{ask.title}</span> : 'use a tool'}</p>
       {input && <pre className="scroll-thin mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-background/70 p-2 font-mono text-[11px] text-muted-foreground">{input.slice(0, 2000)}</pre>}
       <div className="mt-3 flex flex-wrap gap-1.5">

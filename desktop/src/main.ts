@@ -7,6 +7,7 @@ import { Agents } from './agents';
 import { Forms } from './forms';
 import { loginPath } from './paths';
 import { ToolBridge } from './bridge';
+import { log, logDir } from './log';
 
 /**
  * Offerdex on the desktop: the same web app in a window, plus what a browser
@@ -87,6 +88,14 @@ function createWindow() {
     forms.watch(guest);
     // Sign-in pop-ups (Apply with LinkedIn, Google) need a real window.
     guest.setWindowOpenHandler(() => ({ action: 'allow', overrideBrowserWindowOptions: { autoHideMenuBar: true } }));
+  });
+
+  // A frozen or crashed page is the likeliest cause of "it just stopped"; keep a record.
+  wc.on('render-process-gone', (_e, d) => log('window:gone', d));
+  wc.on('unresponsive', () => log('window:unresponsive'));
+  wc.on('responsive', () => log('window:responsive'));
+  wc.on('console-message', (e) => {
+    if (e.level === 'error') log('window:error', e.message.slice(0, 1000));
   });
 
   void win.loadURL(DEV_URL ?? `${ORIGIN}/`);
@@ -174,6 +183,7 @@ handle('pdf:save', async (docId: string, fileName?: string) => {
   return res.filePath;
 });
 handle('pdf:reveal', (file: string) => shell.showItemInFolder(file));
+handle('logs:open', () => shell.openPath(logDir()));
 
 handle('form:status', () => forms.status());
 handle('form:read', () => forms.read());
@@ -197,7 +207,11 @@ ipcMain.on('tools:result', (_e, msg) => bridge.resolve(msg));
 // Tests take screenshots of the hidden window from here; the page can't capture its own webview.
 if (HIDDEN) handle('test:capture', async (file: string) => writeFile(file, (await win!.webContents.capturePage(undefined, { stayHidden: true })).toPNG()));
 
+process.on('uncaughtException', (e) => log('main:exception', e.stack ?? String(e)));
+process.on('unhandledRejection', (e) => log('main:rejection', (e as Error)?.stack ?? String(e)));
+
 app.whenReady().then(async () => {
+  log('app:start', { version: app.getVersion(), dev: !!DEV_URL });
   // Apps opened from a dock or launcher don't get the shell's PATH, which is
   // where claude, codex and opencode usually live.
   process.env.PATH = await loginPath();
