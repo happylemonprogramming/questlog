@@ -107,6 +107,22 @@ const ENGINES: EngineDef[] = [
   },
 ];
 
+/**
+ * The environment engines start with. A shell that routes Anthropic calls
+ * through a local proxy (ANTHROPIC_BASE_URL=http://127.0.0.1:…, as Meridian
+ * setups do) would send Claude Code there instead of to the login it has, so
+ * those settings are left out. A real API endpoint and key are kept.
+ */
+function agentEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  if (/^https?:\/\/(localhost|127\.|\[?::1\]?)/i.test(env.ANTHROPIC_BASE_URL ?? '')) {
+    delete env.ANTHROPIC_BASE_URL;
+    delete env.ANTHROPIC_API_KEY;
+    delete env.ANTHROPIC_AUTH_TOKEN;
+  }
+  return env;
+}
+
 export interface PromptRequest {
   chatId: string;
   engine: EngineId;
@@ -174,7 +190,7 @@ export class Agents {
     const def = ENGINES.find((e) => e.id === engine)!;
     const l = def.launch();
     if ('missing' in l) throw new Error(`${def.label} can't start: ${l.missing}.`);
-    const proc = spawn(l.command, l.args, { cwd: this.workdir, env: { ...process.env, ...l.env }, stdio: ['pipe', 'pipe', 'pipe'] });
+    const proc = spawn(l.command, l.args, { cwd: this.workdir, env: { ...agentEnv(), ...l.env }, stdio: ['pipe', 'pipe', 'pipe'] });
     const stderr: string[] = [];
     proc.stderr!.on('data', (d) => {
       stderr.push(String(d));
