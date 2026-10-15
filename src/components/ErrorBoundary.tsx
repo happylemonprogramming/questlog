@@ -25,7 +25,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode; resetKey?: u
         ) : (
           <>
             <p className="flex items-center gap-2 font-medium text-danger"><AlertTriangle className="size-4" /> This couldn’t be displayed.</p>
-            <p className="mt-1 text-muted-foreground">{this.state.error.message}. Open the Data view or ask the assistant to fix it.</p>
+            <p className="mt-1 text-muted-foreground">{this.state.error.message}. Open the Content view or ask the assistant to fix it.</p>
           </>
         )}
       </div>

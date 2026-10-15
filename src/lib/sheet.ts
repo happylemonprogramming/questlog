@@ -30,12 +30,26 @@ export interface ProjectCard {
   stack?: string;
 }
 
-export type Section =
-  | { kind: 'text'; title: string; text: string }
-  | { kind: 'skills'; title: string; rows: { label: string; items: string[] }[] }
-  | { kind: 'experience'; title: string; companies: Company[] }
-  | { kind: 'projects'; title: string; cards: ProjectCard[] }
-  | { kind: 'education'; title: string; items: { degree: string; school: string; date: string }[] };
+/**
+ * An empty title leaves the heading out. `class` gives the design a hook, and
+ * `column` groups sections into side-by-side columns for multi-column layouts.
+ */
+interface SectionBase {
+  title: string;
+  class?: string;
+  column?: string;
+}
+
+export type Section = SectionBase &
+  (
+    | { kind: 'text'; text: string }
+    | { kind: 'skills'; rows: { label: string; items: string[] }[] }
+    | { kind: 'experience'; companies: Company[] }
+    | { kind: 'projects'; cards: ProjectCard[] }
+    | { kind: 'education'; items: { degree: string; school: string; date: string }[] }
+    /** Free-form markup for anything the other kinds can't express. */
+    | { kind: 'html'; html: string }
+  );
 
 export interface SheetHeader {
   /** Shown above the name, e.g. ["Mechanical Engineer", "Software Developer"]. */

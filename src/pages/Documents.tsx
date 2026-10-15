@@ -5,10 +5,11 @@ import { db, now, uid } from '@/lib/db';
 import { Empty, PageHeader } from '@/components/common';
 import { Sources } from '@/components/Sources';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { LetterSheet, ResumeSheet, ScaledSheet } from '@/components/Sheet';
+import { DocSheet, ScaledSheet } from '@/components/Sheet';
+import { inheritedDesign } from '@/lib/design';
 import { Button } from '@/components/ui/button';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
-import { SAMPLE_RESUME, sampleLetter, type LetterData, type ResumeData } from '@/lib/sheet';
+import { SAMPLE_RESUME, sampleLetter, type ResumeData } from '@/lib/sheet';
 import type { AnswerData, Doc, DocKind, Job } from '@/lib/types';
 import { cn, timeAgo } from '@/lib/utils';
 import { useMedia } from '@/lib/useMedia';
@@ -38,7 +39,7 @@ export function DocThumb({ doc, width = 212 }: { doc: Doc; width?: number }) {
     <div style={{ width, height: width * 1.294 }} className="pointer-events-none overflow-hidden">
       <ScaledSheet width={width}>
         <ErrorBoundary compact resetKey={doc.updatedAt}>
-          {doc.kind === 'resume' ? <ResumeSheet data={doc.data as ResumeData} /> : <LetterSheet data={doc.data as LetterData} />}
+          <DocSheet doc={doc} />
         </ErrorBoundary>
       </ScaledSheet>
     </div>
@@ -80,9 +81,10 @@ export default function Documents() {
 
   async function create(kind: DocKind) {
     const base = docs.find((d) => d.kind === 'resume' && d.base)?.data as ResumeData | undefined;
+    const css = await inheritedDesign(kind);
     const data = kind === 'resume' ? (base ?? SAMPLE_RESUME) : kind === 'letter' ? sampleLetter((base ?? SAMPLE_RESUME).header) : ({ text: '' } satisfies AnswerData);
     const id = uid();
-    await db.docs.add({ id, kind, title: kind === 'resume' ? 'Untitled resume' : kind === 'letter' ? 'Untitled letter' : 'Untitled answer', data, createdAt: now(), updatedAt: now() });
+    await db.docs.add({ id, kind, title: kind === 'resume' ? 'Untitled resume' : kind === 'letter' ? 'Untitled letter' : 'Untitled answer', data, css, createdAt: now(), updatedAt: now() });
     navigate(`/documents/${id}`);
   }
 

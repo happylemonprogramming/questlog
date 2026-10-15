@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { AlertTriangle, ArrowLeft, Braces, CheckCircle2, ClipboardPen, Copy, Eye, FileText, MoreHorizontal, Printer, Sparkles, Star, Trash2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Braces, CheckCircle2, ClipboardPen, Copy, Eye, FileText, MoreHorizontal, Paintbrush, Printer, RotateCcw, Sparkles, Star, Trash2 } from 'lucide-react';
 import { db, now, uid } from '@/lib/db';
 import { ask } from '@/agent/runtime';
 import { applicationPage, openApplication } from '@/lib/workspace';
 import { Empty } from '@/components/common';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { LetterSheet, ResumeSheet, ScaledSheet, SHEET_H } from '@/components/Sheet';
+import { DocSheet, ScaledSheet, SHEET_H } from '@/components/Sheet';
+import { DEFAULT_CSS, designOf } from '@/lib/design';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/input';
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from '@/components/ui/menu';
-import type { LetterData, ResumeData } from '@/lib/sheet';
 import type { AnswerData, Doc } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -64,6 +64,80 @@ function JsonEditor({ doc }: { doc: Doc }) {
   );
 }
 
+/** The document's stylesheet, saved as you type. Tab indents instead of leaving the box. */
+function DesignEditor({ doc }: { doc: Doc }) {
+  const [text, setText] = useState(() => designOf(doc.css));
+  const [dirty, setDirty] = useState(false);
+  // Follow outside edits (the assistant's) until the user starts typing.
+  useEffect(() => {
+    if (!dirty) setText(designOf(doc.css));
+  }, [doc.css, dirty]);
+  useEffect(() => {
+    if (!dirty) return;
+    const t = setTimeout(async () => {
+      await db.docs.update(doc.id, { css: text.trim() && text !== DEFAULT_CSS ? text : undefined, updatedAt: now() });
+      setDirty(false);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [text, dirty, doc.id]);
+  const custom = !!doc.css;
+  return (
+    <div className="flex h-full flex-col">
+      <textarea
+        value={text}
+        onChange={(e) => { setText(e.target.value); setDirty(true); }}
+        onKeyDown={(e) => {
+          if (e.key !== 'Tab' || e.shiftKey) return;
+          e.preventDefault();
+          const el = e.currentTarget;
+          el.setRangeText('  ', el.selectionStart, el.selectionEnd, 'end');
+          setText(el.value);
+          setDirty(true);
+        }}
+        spellCheck={false}
+        aria-label="Design stylesheet"
+        className="scroll-thin min-h-0 flex-1 resize-none rounded-xl border bg-sunken p-4 font-mono text-[12px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-ring/40"
+      />
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <p className="text-[12px] text-muted-foreground">
+          {custom ? 'Custom design, saved as you type.' : 'The default design. Edit it to make it this document’s own.'}
+        </p>
+        {custom && (
+          <Button size="sm" variant="ghost" onClick={() => { if (confirm('Restore the default design? This document’s custom stylesheet will be lost.')) { setDirty(false); void db.docs.update(doc.id, { css: undefined, updatedAt: now() }); } }}>
+            <RotateCcw /> Restore default
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** The sheet scaled to its column, with a marker where page 1 ends. */
+function SheetPreview({ doc, onFit, className }: { doc: Doc; onFit: (fits: boolean, height: number) => void; className?: string }) {
+  const [box, width] = useWidth();
+  const [fit, setFit] = useState<boolean>(true);
+  const sheetWidth = Math.min(width, 860);
+  const report = useCallback((fits: boolean, height: number) => { setFit(fits); onFit(fits, height); }, [onFit]);
+  return (
+    <div ref={box} className={cn('paper-grid flex justify-center rounded-2xl border bg-sunken px-2 py-8', className)}>
+      {width > 0 && (
+        <div className="relative" style={{ width: sheetWidth }}>
+          <ScaledSheet width={sheetWidth} onFit={report}>
+            <ErrorBoundary resetKey={doc.updatedAt}>
+              <DocSheet doc={doc} />
+            </ErrorBoundary>
+          </ScaledSheet>
+          {!fit && (
+            <div className="pointer-events-none absolute inset-x-0 border-t-2 border-dashed border-danger" style={{ top: SHEET_H * (sheetWidth / 816) }}>
+              <span className="absolute right-0 top-1 rounded bg-danger px-1.5 py-0.5 font-mono text-[10px] font-bold text-white">PAGE 1 ENDS</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AnswerEditor({ doc }: { doc: Doc<AnswerData> }) {
   const [text, setText] = useState(doc.data.text);
   const [prompt, setPrompt] = useState(doc.data.prompt ?? '');
@@ -108,10 +182,9 @@ export default function DocumentView() {
   const navigate = useNavigate();
   const doc = useLiveQuery(() => db.docs.get(id), [id]);
   const job = useLiveQuery(() => (doc?.jobId ? db.jobs.get(doc.jobId) : undefined), [doc?.jobId]);
-  const [mode, setMode] = useState<'preview' | 'data'>('preview');
+  const [mode, setMode] = useState<'preview' | 'data' | 'design'>('preview');
   const [fit, setFit] = useState<{ fits: boolean; height: number }>();
   const [title, setTitle] = useState('');
-  const [box, width] = useWidth();
   const onFit = useCallback((fits: boolean, height: number) => setFit((f) => (f?.height === height ? f : { fits, height })), []);
 
   useEffect(() => {
@@ -123,7 +196,6 @@ export default function DocumentView() {
 
   const isSheet = doc.kind !== 'answer';
   const saveTitle = () => title.trim() && title !== doc.title && db.docs.update(doc.id, { title: title.trim(), updatedAt: now() });
-  const sheetWidth = Math.min(width, 860);
   const overflowPct = fit && !fit.fits ? Math.round(((fit.height - SHEET_H) / SHEET_H) * 100) : 0;
 
   return (
@@ -155,7 +227,7 @@ export default function DocumentView() {
         <div className="flex flex-wrap items-center gap-2">
           {isSheet && (
             <div className="flex rounded-lg bg-muted p-0.5">
-              {([['preview', <Eye key="e" />, 'Preview'], ['data', <Braces key="b" />, 'Data']] as const).map(([m, icon, label]) => (
+              {([['preview', <Eye key="e" />, 'Preview'], ['data', <Braces key="b" />, 'Content'], ['design', <Paintbrush key="p" />, 'Design']] as const).map(([m, icon, label]) => (
                 <button key={m} onClick={() => setMode(m)} className={cn('flex h-8 items-center gap-1.5 rounded-md px-3 text-[13px] font-medium [&_svg]:size-3.5', mode === m ? 'bg-surface shadow-soft' : 'text-muted-foreground hover:text-foreground')}>
                   {icon}{label}
                 </button>
@@ -179,6 +251,14 @@ export default function DocumentView() {
             <MenuTrigger asChild><Button variant="outline" size="icon" className="size-9" aria-label="More"><MoreHorizontal /></Button></MenuTrigger>
             <MenuContent>
               <MenuItem onSelect={() => db.docs.update(doc.id, { base: !doc.base, updatedAt: now() })}><Star /> {doc.base ? 'Unmark as base' : 'Mark as base'}</MenuItem>
+              {isSheet && (
+                <MenuItem onSelect={async () => {
+                  const others = (await db.docs.toArray()).filter((d) => d.kind !== 'answer' && d.id !== doc.id);
+                  if (others.length && confirm(`Give all ${others.length} other resumes and letters this document’s design?`)) {
+                    await db.docs.bulkUpdate(others.map((d) => ({ key: d.id, changes: { css: doc.css, updatedAt: now() } })));
+                  }
+                }}><Paintbrush /> Use this design everywhere</MenuItem>
+              )}
               <MenuItem onSelect={async () => { const nid = uid(); await db.docs.add({ ...doc, id: nid, base: false, title: `${doc.title} (copy)`, createdAt: now(), updatedAt: now() }); navigate(`/documents/${nid}`); }}><Copy /> Duplicate</MenuItem>
               <MenuSeparator />
               <MenuItem danger onSelect={async () => { await db.docs.delete(doc.id); navigate('/documents'); }}><Trash2 /> Delete</MenuItem>
@@ -192,23 +272,13 @@ export default function DocumentView() {
         <AnswerEditor doc={doc as Doc<AnswerData>} />
       ) : mode === 'data' ? (
         <div className="h-[calc(100vh-230px)] min-h-[420px]"><JsonEditor doc={doc} /></div>
-      ) : (
-        <div ref={box} className="paper-grid -mx-2 flex justify-center rounded-2xl border bg-sunken px-2 py-8 max-sm:-mx-4 max-sm:rounded-none max-sm:border-x-0 max-sm:px-0 max-sm:py-4">
-          {width > 0 && (
-            <div className="relative" style={{ width: sheetWidth }}>
-              <ScaledSheet width={sheetWidth} onFit={onFit}>
-                <ErrorBoundary resetKey={doc.updatedAt}>
-                  {doc.kind === 'resume' ? <ResumeSheet data={doc.data as ResumeData} /> : <LetterSheet data={doc.data as LetterData} />}
-                </ErrorBoundary>
-              </ScaledSheet>
-              {fit && !fit.fits && (
-                <div className="pointer-events-none absolute inset-x-0 border-t-2 border-dashed border-danger" style={{ top: SHEET_H * (sheetWidth / 816) }}>
-                  <span className="absolute right-0 top-1 rounded bg-danger px-1.5 py-0.5 font-mono text-[10px] font-bold text-white">PAGE 1 ENDS</span>
-                </div>
-              )}
-            </div>
-          )}
+      ) : mode === 'design' ? (
+        <div className="grid gap-4 @[1000px]:grid-cols-2">
+          <div className="h-[calc(100vh-230px)] min-h-[420px]"><DesignEditor doc={doc} /></div>
+          <SheetPreview doc={doc} onFit={onFit} className="py-4 @[1000px]:h-[calc(100vh-230px)] @[1000px]:overflow-auto" />
         </div>
+      ) : (
+        <SheetPreview doc={doc} onFit={onFit} className="-mx-2 max-sm:-mx-4 max-sm:rounded-none max-sm:border-x-0 max-sm:px-0 max-sm:py-4" />
       )}
     </>
   );

@@ -1,7 +1,7 @@
 /*
  * The drawing-sheet design for resumes and letters: ink on paper with a frame,
- * title block and numbered balloons, a blueprint in dark mode. Everything is
- * scoped under .resume-container.
+ * title block and numbered balloons, a blueprint in dark mode. This is the
+ * default design; each document can carry its own copy to change.
  */
 
 @page {

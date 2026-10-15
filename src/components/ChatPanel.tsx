@@ -35,6 +35,10 @@ function describe(name: string, args: Record<string, unknown>): string {
     case 'save_letter': return `Wrote letter “${a('title')}”`;
     case 'save_answer': return `Wrote answer “${a('title')}”`;
     case 'delete_document': return 'Deleted a document';
+    case 'get_design': return 'Read the design';
+    case 'edit_design': return 'Restyled the page';
+    case 'set_design': return a('css').trim() ? 'Redesigned the page' : 'Restored the default design';
+    case 'copy_design': return 'Copied the design';
     case 'show': return `Opened ${a('path')}`;
     default: return name;
   }
@@ -172,7 +176,9 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
     : view.job
     ? [`Is ${view.job.company} a fit for me?`, `Tailor my resume for this role`, `Draft a short "Additional information" answer`]
     : view.doc?.kind === 'resume'
-      ? ['Tighten this resume to fit one page', 'Which listings is this resume best for?']
+      ? ['Tighten this resume to fit one page', 'Give this resume a fresh, modern design', 'Which listings is this resume best for?']
+      : view.doc?.kind === 'letter'
+      ? ['Match this letter’s design to my base resume', 'Tighten this letter']
       : ["What should I apply to next?", 'Search Stripe’s Greenhouse board for remote engineering roles', 'Summarize my pipeline'];
 
   const empty = !chat || chat.messages.length === 0;

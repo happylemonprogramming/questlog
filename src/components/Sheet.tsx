@@ -1,5 +1,8 @@
-import { Fragment, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import type { LetterData, ResumeData, Section, SheetHeader } from '@/lib/sheet';
+import type { Doc } from '@/lib/types';
+import { cleanHtml, sheetStyles } from '@/lib/design';
 import { parseLinks } from '@/lib/utils';
 
 const ext = { target: '_blank', rel: 'noopener noreferrer' } as const;
@@ -20,14 +23,48 @@ export function Rich({ text }: { text: string }) {
   );
 }
 
-function Frame({ children, className }: { children: ReactNode; className?: string }) {
+const isDark = () => document.documentElement.classList.contains('dark');
+
+function useDark() {
+  const [dark, setDark] = useState(isDark);
+  useEffect(() => {
+    const mo = new MutationObserver(() => setDark(isDark()));
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => mo.disconnect();
+  }, []);
+  return dark;
+}
+
+/**
+ * The sheet inside its own shadow root, styled only by the document's design.
+ * A design can restyle the page however it likes without touching the app.
+ */
+function Frame({ children, className, css }: { children: ReactNode; className?: string; css?: string }) {
+  const host = useRef<HTMLDivElement>(null);
+  const [root, setRoot] = useState<ShadowRoot | null>(null);
+  const dark = useDark();
+  useLayoutEffect(() => {
+    const el = host.current!;
+    setRoot(el.shadowRoot ?? el.attachShadow({ mode: 'open' }));
+  }, []);
+  useLayoutEffect(() => {
+    if (root) root.adoptedStyleSheets = sheetStyles(css);
+  }, [root, css]);
   return (
-    <div className={`resume-container ${className ?? ''}`}>
-      <span className="crop crop-tl" aria-hidden="true" />
-      <span className="crop crop-tr" aria-hidden="true" />
-      <span className="crop crop-bl" aria-hidden="true" />
-      <span className="crop crop-br" aria-hidden="true" />
-      {children}
+    <div ref={host}>
+      {root &&
+        createPortal(
+          <div className={dark ? 'dark' : undefined}>
+            <div className={`resume-container ${className ?? ''}`}>
+              <span className="crop crop-tl" aria-hidden="true" />
+              <span className="crop crop-tr" aria-hidden="true" />
+              <span className="crop crop-bl" aria-hidden="true" />
+              <span className="crop crop-br" aria-hidden="true" />
+              {children}
+            </div>
+          </div>,
+          root,
+        )}
     </div>
   );
 }
@@ -140,25 +177,46 @@ function SectionBody({ s }: { s: Section }) {
           ))}
         </>
       );
+    case 'html':
+      return <HtmlBlock html={s.html} />;
   }
 }
 
-export function ResumeSheet({ data }: { data: ResumeData }) {
+function HtmlBlock({ html }: { html: string }) {
+  const clean = useMemo(() => cleanHtml(html ?? ''), [html]);
+  return <div className="html-block" dangerouslySetInnerHTML={{ __html: clean }} />;
+}
+
+export function ResumeSheet({ data, css }: { data: ResumeData; css?: string }) {
+  let n = 0;
+  const sections = list(data.sections).map((s, i) => (
+    <section key={i} className={s.class ? `resume-section ${s.class}` : 'resume-section'} data-kind={s.kind}>
+      {s.title ? (
+        <h2 className="section-title">
+          <span className="balloon" aria-hidden="true">{++n}</span>
+          {s.title}
+        </h2>
+      ) : null}
+      <SectionBody s={s} />
+    </section>
+  ));
+  // Columns appear in the order their first section does.
+  const columns = new Map<string, ReactNode[]>();
+  if (list(data.sections).some((s) => s.column)) {
+    list(data.sections).forEach((s, i) => {
+      const c = s.column || 'main';
+      columns.set(c, [...(columns.get(c) ?? []), sections[i]]);
+    });
+  }
   return (
-    <Frame>
+    <Frame css={css}>
       {data.keywords && (
         <div className="ats-keywords" aria-hidden="true"><span>{data.keywords}</span></div>
       )}
       <Header h={data.header ?? EMPTY_HEADER} doc="RESUME" />
-      {list(data.sections).map((s, i) => (
-        <section key={i} className="resume-section">
-          <h2 className="section-title">
-            <span className="balloon" aria-hidden="true">{i + 1}</span>
-            {s.title}
-          </h2>
-          <SectionBody s={s} />
-        </section>
-      ))}
+      {columns.size
+        ? [...columns].map(([c, nodes]) => <div key={c} className="sheet-column" data-column={c}>{nodes}</div>)
+        : sections}
       {list(data.footer?.items).length ? (
         <footer className="sheet-notes">
           <span className="notes-label">{data.footer?.label}</span>
@@ -169,9 +227,9 @@ export function ResumeSheet({ data }: { data: ResumeData }) {
   );
 }
 
-export function LetterSheet({ data }: { data: LetterData }) {
+export function LetterSheet({ data, css }: { data: LetterData; css?: string }) {
   return (
-    <Frame className="letter-sheet">
+    <Frame className="letter-sheet" css={css}>
       <Header h={data.header ?? EMPTY_HEADER} doc="LETTER" />
       <dl className="transmittal">
         <div className="tx-cell"><dt>DATE</dt><dd>{data.date}</dd></div>
@@ -215,6 +273,11 @@ export function LetterSheet({ data }: { data: LetterData }) {
       ) : null}
     </Frame>
   );
+}
+
+/** A resume or letter in its design. `css` overrides the saved design, for live previews. */
+export function DocSheet({ doc, css = doc.css }: { doc: Pick<Doc, 'kind' | 'data' | 'css'>; css?: string }) {
+  return doc.kind === 'letter' ? <LetterSheet data={doc.data as LetterData} css={css} /> : <ResumeSheet data={doc.data as ResumeData} css={css} />;
 }
 
 const EMPTY_HEADER: SheetHeader = { eyebrow: [], name: '', contact: [], rev: '' };

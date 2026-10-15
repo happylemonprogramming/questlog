@@ -6,6 +6,7 @@ import { STAGES, type Doc, type Job } from '@/lib/types';
 import type { LetterData, ResumeData } from '@/lib/sheet';
 import { measureSheet } from '@/lib/measure';
 import { letterSchema, resumeSchema } from '@/lib/sheetSchema';
+import { cleanCss, designOf, inheritedDesign, MARKUP_GUIDE } from '@/lib/design';
 
 const json = (v: unknown) => JSON.stringify(v, null, 1);
 
@@ -234,7 +235,76 @@ function makeTools(host: ToolHost): Record<string, Tool> {
       inputSchema: z.object({ id: z.string() }),
       run: async ({ id }) => {
         const d = await db.docs.get(id);
-        return d ? json(d) : { content: `No document ${id}.`, isError: true };
+        if (!d) return { content: `No document ${id}.`, isError: true };
+        const { css, ...rest } = d;
+        return json(rest.kind === 'answer' ? rest : { ...rest, design: css ? 'custom (read it with get_design)' : 'default' });
+      },
+    }),
+
+    get_design: defineTool({
+      description:
+        "Read a resume's or letter's design: the whole stylesheet that lays out and styles its page, plus the markup it styles. " +
+        'Read it before changing the design.',
+      inputSchema: z.object({ id: z.string() }),
+      run: async ({ id }) => {
+        const d = await sheetDoc(id);
+        if (typeof d === 'string') return { content: d, isError: true };
+        return `Design of ${d.kind} "${d.title}" (${d.css ? 'custom' : 'the default design'}):\n\n${designOf(d.css)}\n\n---\n${MARKUP_GUIDE}`;
+      },
+    }),
+
+    edit_design: defineTool({
+      description:
+        "Change a resume's or letter's design by replacing exact text in its stylesheet, like editing a CSS file. " +
+        'Each `find` must appear exactly once unless `all` is set; copy it from get_design. Use for targeted changes: fonts, colors, spacing, layout. ' +
+        'The result says whether the page still fits.',
+      inputSchema: z.object({
+        id: z.string(),
+        edits: z.array(z.object({ find: z.string(), replace: z.string(), all: z.boolean().optional() })).min(1),
+      }),
+      write: true,
+      run: async ({ id, edits }) => {
+        const d = await sheetDoc(id);
+        if (typeof d === 'string') return { content: d, isError: true };
+        let css = designOf(d.css);
+        for (const [i, e] of edits.entries()) {
+          const count = e.find ? css.split(e.find).length - 1 : 0;
+          if (!count) return { content: `Edit ${i + 1}: \`find\` is not in the stylesheet. Nothing was saved; read it again with get_design.`, isError: true };
+          if (count > 1 && !e.all) return { content: `Edit ${i + 1}: \`find\` appears ${count} times. Include more surrounding text, or set all. Nothing was saved.`, isError: true };
+          css = e.all ? css.split(e.find).join(e.replace) : css.replace(e.find, () => e.replace);
+        }
+        return saveDesign(d, css, host);
+      },
+    }),
+
+    set_design: defineTool({
+      description:
+        "Replace a resume's or letter's whole stylesheet, for a new design from scratch. Style the markup described by get_design. " +
+        'An empty string restores the default design. The result says whether the page fits.',
+      inputSchema: z.object({ id: z.string(), css: z.string() }),
+      write: true,
+      run: async ({ id, css }) => {
+        const d = await sheetDoc(id);
+        if (typeof d === 'string') return { content: d, isError: true };
+        return saveDesign(d, css, host);
+      },
+    }),
+
+    copy_design: defineTool({
+      description: "Give other resumes and letters the same design as one document, e.g. so a cover letter matches its resume.",
+      inputSchema: z.object({ from: z.string(), to: z.array(z.string()).min(1) }),
+      write: true,
+      run: async ({ from, to }) => {
+        const src = await sheetDoc(from);
+        if (typeof src === 'string') return { content: src, isError: true };
+        const lines: string[] = [];
+        for (const id of to) {
+          const d = await sheetDoc(id);
+          if (typeof d === 'string') { lines.push(d); continue; }
+          await db.docs.update(id, { css: src.css, updatedAt: now() });
+          lines.push(`"${d.title}": ${await measureSheet({ ...d, css: src.css })}`);
+        }
+        return lines.join('\n');
       },
     }),
 
@@ -347,7 +417,7 @@ async function saveDoc<T>(kind: Doc['kind'], d: { id?: string; title: string; jo
   const prev = d.id ? await db.docs.get(d.id) : undefined;
   if (d.jobId && !(await db.jobs.get(d.jobId))) return { content: `No listing with id ${d.jobId}.`, isError: true };
   const id = prev?.id ?? uid();
-  await db.docs.put({
+  const doc: Doc = {
     ...prev,
     id,
     kind,
@@ -356,10 +426,30 @@ async function saveDoc<T>(kind: Doc['kind'], d: { id?: string; title: string; jo
     variant: d.variant ?? prev?.variant,
     base: d.base ?? prev?.base,
     data: d.data,
+    // New documents take the design of the base resume they were tailored from.
+    css: prev ? prev.css : await inheritedDesign(kind, d.variant),
     createdAt: prev?.createdAt ?? now(),
     updatedAt: now(),
-  });
-  const fit = kind === 'answer' ? '' : ` ${await measureSheet(kind, d.data)}`;
+  };
+  await db.docs.put(doc);
+  const fit = kind === 'answer' ? '' : ` ${await measureSheet(doc)}`;
   if (!prev) host.navigate(`/documents/${id}`);
   return `${prev ? 'Updated' : 'Created'} ${kind} "${d.title}" (id ${id}).${fit}`;
+}
+
+/** A resume or letter, or why it can't have a design. */
+async function sheetDoc(id: string): Promise<Doc | string> {
+  const d = await db.docs.get(id);
+  if (!d) return `No document ${id}.`;
+  if (d.kind === 'answer') return `${id} is a short answer, which is plain text with no design.`;
+  return d;
+}
+
+async function saveDesign(d: Doc, css: string, host: ToolHost) {
+  const custom = css.trim() && css !== designOf(undefined) ? css : undefined;
+  await db.docs.update(d.id, { css: custom, updatedAt: now() });
+  host.navigate(`/documents/${d.id}`);
+  const { blocked } = cleanCss(custom ?? '');
+  const note = blocked.length ? ` These URLs were blocked; only data: URLs and Google Fonts load: ${blocked.join(', ')}.` : '';
+  return `${custom ? 'Design saved' : 'Restored the default design'} for "${d.title}". ${await measureSheet({ ...d, css: custom })}${note}`;
 }

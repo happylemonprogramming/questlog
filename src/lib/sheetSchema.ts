@@ -16,12 +16,20 @@ const header = z.object({
   rev: str.describe('YYYY.MM'),
 });
 
+const base = {
+  title: str.describe('Heading. "" leaves the heading out.'),
+  class: str.optional().describe('Extra class on the <section> for the design to target.'),
+  column: str
+    .optional()
+    .describe('For multi-column designs: sections are grouped by column into <div class="sheet-column" data-column="{name}">, e.g. "side" and "main". Sections without one go in "main". Leave out everywhere for one column.'),
+};
+
 const section = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('text'), title: str, text: str }),
-  z.object({ kind: z.literal('skills'), title: str, rows: z.array(z.object({ label: str, items: z.array(str) })) }),
+  z.object({ kind: z.literal('text'), ...base, text: str }),
+  z.object({ kind: z.literal('skills'), ...base, rows: z.array(z.object({ label: str, items: z.array(str) })) }),
   z.object({
     kind: z.literal('experience'),
-    title: str,
+    ...base,
     companies: z.array(
       z.object({
         line: str.describe('Company line, e.g. "[Acme](https://acme.com) • Full-Time • Remote • 5 Years".'),
@@ -31,12 +39,17 @@ const section = z.discriminatedUnion('kind', [
   }),
   z.object({
     kind: z.literal('projects'),
-    title: str,
+    ...base,
     cards: z.array(
       z.object({ title: str, date: str.optional(), links: z.array(link).optional(), award: str.optional(), desc: str, stack: str.optional() }),
     ),
   }),
-  z.object({ kind: z.literal('education'), title: str, items: z.array(z.object({ degree: str, school: str, date: str })) }),
+  z.object({ kind: z.literal('education'), ...base, items: z.array(z.object({ degree: str, school: str, date: str })) }),
+  z.object({
+    kind: z.literal('html'),
+    ...base,
+    html: str.describe('Markup for anything the other kinds cannot express. Inert: no scripts, forms or embeds; images must be data: URLs.'),
+  }),
 ]);
 
 export const resumeSchema = z.object({

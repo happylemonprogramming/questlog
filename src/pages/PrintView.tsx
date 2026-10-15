@@ -2,8 +2,9 @@ import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import { LetterSheet, ResumeSheet } from '@/components/Sheet';
-import type { LetterData, ResumeData } from '@/lib/sheet';
+import { DocSheet } from '@/components/Sheet';
+import { fontsReady, pageRules } from '@/lib/design';
+import type { ResumeData } from '@/lib/sheet';
 
 /**
  * One sheet, nothing else, then the browser's print dialog. Printing to PDF
@@ -23,9 +24,13 @@ export default function PrintView() {
     if (!doc) return;
     const name = ((doc.data as ResumeData).header?.name || 'Document').replace(/\s+/g, '_');
     document.title = `${name}_${doc.kind === 'letter' ? 'Cover_Letter' : 'Resume'}`;
+    // @page only works at document level, so lift the design's paper settings out of its shadow root.
+    const page = document.createElement('style');
+    page.textContent = pageRules(doc.css);
+    document.head.appendChild(page);
     let cancelled = false;
-    void document.fonts.ready.then(() => setTimeout(() => !cancelled && window.print(), 300));
-    return () => { cancelled = true; };
+    void fontsReady().then(() => setTimeout(() => !cancelled && window.print(), 300));
+    return () => { cancelled = true; page.remove(); };
   }, [doc]);
 
   if (!doc) return null;
@@ -34,7 +39,7 @@ export default function PrintView() {
       <p className="py-3 text-center font-sans text-[13px] text-neutral-500 print:hidden">
         In the print dialog choose <b>Save as PDF</b>, paper <b>Letter</b>, margins <b>None</b>, and turn off headers and footers.
       </p>
-      {doc.kind === 'letter' ? <LetterSheet data={doc.data as LetterData} /> : <ResumeSheet data={doc.data as ResumeData} />}
+      <DocSheet doc={doc} />
     </div>
   );
 }

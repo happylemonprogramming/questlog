@@ -1,6 +1,5 @@
 @import '@fontsource-variable/inter';
 @import '@fontsource-variable/jetbrains-mono';
-@import './sheet.css';
 
 @tailwind base;
 @tailwind components;

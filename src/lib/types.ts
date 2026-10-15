@@ -72,6 +72,8 @@ export interface Doc<T = unknown> {
   /** Short tag such as "mechanical" or "software". */
   variant?: string;
   data: T;
+  /** The sheet's stylesheet. Without one it uses the default design. */
+  css?: string;
   createdAt: number;
   updatedAt: number;
 }
