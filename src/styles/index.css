@@ -94,6 +94,10 @@
     scrollbar-color: hsl(var(--border)) transparent;
   }
 
+  .scroll-none {
+    scrollbar-width: none;
+  }
+
   .paper-grid {
     background-image:
       linear-gradient(hsl(var(--foreground) / 0.035) 1px, transparent 1px),
@@ -106,4 +110,15 @@
   body {
     background: #fff !important;
   }
+}
+
+/* MapLibre's attribution badge, in the app's colors. */
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl.maplibregl-ctrl-attrib {
+  @apply rounded-md bg-surface/90 font-sans text-[10.5px] text-muted-foreground backdrop-blur;
+}
+.maplibregl-ctrl-attrib a {
+  @apply text-muted-foreground;
+}
+.dark .maplibregl-ctrl-attrib-button {
+  filter: invert(1);
 }

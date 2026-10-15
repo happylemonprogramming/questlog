@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readdirSync } from 'node:fs';
+import { readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -17,8 +17,10 @@ function serviceWorker(): Plugin {
         readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
           e.isDirectory() ? pub(path.join(dir, e.name)) : [path.relative('public', path.join(dir, e.name))],
         );
-      const files = ['/', ...Object.keys(bundle), ...pub('public')].map((f) => (f.startsWith('/') ? f : `/${f}`));
-      const version = createHash('sha256').update(files.join('\n')).update(JSON.stringify(Object.values(bundle).map((b) => ('code' in b ? b.code.length : 0)))).digest('hex').slice(0, 12);
+      // Map data is cached the first time the map opens, not on install.
+      const lazy = pub('public').filter((f) => f.startsWith('geo/'));
+      const files = ['/', ...Object.keys(bundle), ...pub('public').filter((f) => !lazy.includes(f))].map((f) => (f.startsWith('/') ? f : `/${f}`));
+      const version = createHash('sha256').update(files.join('\n')).update(lazy.map((f) => `${f}:${statSync(path.join('public', f)).size}`).join('\n')).update(JSON.stringify(Object.values(bundle).map((b) => ('code' in b ? b.code.length : 0)))).digest('hex').slice(0, 12);
       this.emitFile({
         type: 'asset',
         fileName: 'sw.js',
@@ -50,7 +52,19 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(fetch(req).catch(() => caches.match('/', { cacheName: CACHE })));
     return;
   }
-  e.respondWith(caches.match(req, { cacheName: CACHE }).then((hit) => hit || fetch(req)));
+  e.respondWith(
+    caches.match(req, { cacheName: CACHE }).then(
+      (hit) =>
+        hit ||
+        fetch(req).then((res) => {
+          if (res.ok && url.pathname.startsWith('/geo/')) {
+            const copy = res.clone();
+            void caches.open(CACHE).then((c) => c.put(req, copy));
+          }
+          return res;
+        }),
+    ),
+  );
 });
 `,
       });

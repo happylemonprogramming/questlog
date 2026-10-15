@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import * as D from '@radix-ui/react-dialog';
 import { BrowserRouter, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
-  ClipboardPen, FileText, KanbanSquare, LayoutList, Loader2, Menu, Monitor, Moon, PanelRightOpen, PanelsTopLeft, Rocket, Settings as SettingsIcon, Sparkles, Sun, Sunrise,
+  ClipboardPen, FileText, Globe2, KanbanSquare, LayoutList, Loader2, Menu, Monitor, Moon, PanelRightOpen, PanelsTopLeft, Rocket, Settings as SettingsIcon, Sparkles, Sun, Sunrise,
 } from 'lucide-react';
 import { db, seedIfEmpty } from '@/lib/db';
 import { ThemeProvider, useTheme, type Theme } from '@/lib/theme';
@@ -25,6 +25,9 @@ import Documents from '@/pages/Documents';
 import DocumentView from '@/pages/DocumentView';
 import Settings from '@/pages/Settings';
 import PrintView from '@/pages/PrintView';
+
+// The map library and its data are big; only load them when someone opens the map.
+const MapView = lazy(() => import('@/pages/MapView'));
 
 function Logo() {
   return (
@@ -111,6 +114,7 @@ function NavContents({ className }: { className?: string }) {
       <div className="space-y-0.5">
         <NavItem to="/" end icon={<Sunrise />} label="Today" count={counts?.next} />
         <NavItem to="/listings" icon={<LayoutList />} label="Listings" count={counts?.listings} />
+        <NavItem to="/map" icon={<Globe2 />} label="Map" />
         <NavItem to="/moonshots" icon={<Rocket />} label="Moonshots" count={counts?.moonshots} />
         <NavItem to="/pipeline" icon={<KanbanSquare />} label="Pipeline" count={counts?.active} />
         <NavItem to="/documents" icon={<FileText />} label="Documents" count={counts?.docs} />
@@ -155,12 +159,19 @@ function useAskOpens(open: () => void) {
 
 function Page() {
   const { pathname } = useLocation();
-  return <ErrorBoundary resetKey={pathname}><Outlet /></ErrorBoundary>;
+  return (
+    <ErrorBoundary resetKey={pathname}>
+      <Suspense fallback={<div className="grid h-40 place-items-center text-muted-foreground"><Loader2 className="size-5 animate-spin" /></div>}>
+        <Outlet />
+      </Suspense>
+    </ErrorBoundary>
+  );
 }
 
 const TITLES: Record<string, [string, string?]> = {
   '': ['Today'],
   listings: ['Listings'],
+  map: ['Map'],
   moonshots: ['Moonshots'],
   pipeline: ['Pipeline'],
   jobs: ['Listings', 'Listing'],
@@ -400,6 +411,7 @@ export default function App() {
             <Route element={<Shell />}>
               <Route index element={<Today />} />
               <Route path="listings" element={<Listings />} />
+              <Route path="map" element={<MapView />} />
               <Route path="moonshots" element={<Moonshots />} />
               <Route path="pipeline" element={<Pipeline />} />
               <Route path="jobs/:id" element={<JobView />} />
