@@ -6,6 +6,7 @@ import { SHOWN_STAGES, STAGE_HINT, STAGE_LABEL, type Job, type Stage } from '@/l
 import { useSlidingHighlight } from '@/lib/motion';
 import { cn, hueFor } from '@/lib/utils';
 import { companyDomain, logoUrl, missingLogos, useLogos } from '@/lib/logo';
+import { QuickActions, QuickPills } from '@/components/QuickActions';
 
 type MarkJob = Pick<Job, 'company' | 'website' | 'url' | 'portal'>;
 
@@ -123,19 +124,27 @@ export function Empty({ icon, title, children }: { icon: ReactNode; title: strin
   );
 }
 
-/** One listing as a row: the shape used by every list in the app. */
-export function JobRow({ job, rank, right, compact, index }: { job: Job; rank?: ReactNode; right?: ReactNode; compact?: boolean; index?: number }) {
+/**
+ * One listing as a row: the shape used by every list in the app. The whole
+ * row opens the listing; the quick actions on the right move it along
+ * without opening it.
+ */
+export function JobRow({ job, rank, right, compact, index, actions = true }: { job: Job; rank?: ReactNode; right?: ReactNode; compact?: boolean; index?: number; actions?: boolean }) {
   return (
-    <Link
-      to={`/jobs/${encodeURIComponent(job.id)}`}
-      className={cn('group flex items-center gap-3.5 rounded-2xl px-3 py-3 transition-colors duration-200 hover:bg-accent/60', index !== undefined && 'rise')}
+    <div
+      className={cn('group relative flex items-center gap-3.5 rounded-2xl max-sm:items-start px-3 py-3 transition-colors duration-200 hover:bg-accent/60', index !== undefined && 'rise')}
       style={index !== undefined ? ({ '--i': index } as CSSProperties) : undefined}
     >
       {rank}
       <CompanyMark job={job} size={compact ? 32 : 38} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="truncate text-[14.5px] font-medium leading-5 tracking-[-0.005em] transition-colors group-hover:text-foreground">{job.title}</p>
+          <Link
+            to={`/jobs/${encodeURIComponent(job.id)}`}
+            className="truncate text-[14.5px] font-medium leading-5 tracking-[-0.005em] outline-none after:absolute after:inset-0 after:rounded-2xl focus-visible:after:ring-2 focus-visible:after:ring-ring/50"
+          >
+            {job.title}
+          </Link>
           {job.moonshot && <Rocket className="size-3.5 shrink-0 text-violet" aria-label="Moonshot" />}
         </div>
         <div className="mt-1 flex min-w-0 items-center gap-x-3 text-[12.5px] text-muted-foreground">
@@ -153,6 +162,7 @@ export function JobRow({ job, rank, right, compact, index }: { job: Job; rank?: 
             </span>
           )}
         </div>
+        {actions && !compact && <QuickPills job={job} className="relative z-[1] mt-2.5 sm:hidden" />}
       </div>
       {!compact && job.flags?.length ? (
         <Badge tone="warning" className="hidden lg:inline-flex" title={job.flags.join('\n')}>
@@ -160,8 +170,14 @@ export function JobRow({ job, rank, right, compact, index }: { job: Job; rank?: 
           {job.flags.length === 1 ? job.flags[0] : `${job.flags.length} flags`}
         </Badge>
       ) : null}
-      {right ?? <StageBadge stage={job.stage} />}
-    </Link>
+      {actions && (
+        <QuickActions
+          job={job}
+          className={cn('relative z-[1] opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100', !compact && 'max-sm:hidden')}
+        />
+      )}
+      {right ?? <span className={cn(actions && !compact && 'max-sm:hidden')}><StageBadge stage={job.stage} /></span>}
+    </div>
   );
 }
 
