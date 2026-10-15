@@ -5,11 +5,11 @@ import { ArrowRight, ArrowUpRight, CalendarClock, Check, ChevronDown, ClipboardP
 import { Markdown } from '@/components/Markdown';
 import { db, getProfile, moveJob, today } from '@/lib/db';
 import { Card, CardHeader, CompanyMark, Empty, JobRow, shortPay } from '@/components/common';
-import { AddJobButton } from '@/components/AddJob';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ask } from '@/agent/runtime';
 import { applicationPage, openApplication } from '@/lib/workspace';
+import { candidates, QUEUE_SIZE } from '@/lib/queue';
 import type { Doc, Job, Stage } from '@/lib/types';
 import { cn, timeAgo } from '@/lib/utils';
 
@@ -188,6 +188,7 @@ export default function Today() {
   const [goal, cycleGoal] = useGoal();
   const [progress, mark] = useProgress();
   const [more, setMore] = useState(false);
+  const navigate = useNavigate();
   const list = jobs ?? [];
 
   const next = list.filter((j) => j.stage === 'next');
@@ -234,6 +235,14 @@ export default function Today() {
         {focus && <div className="rise mt-5" style={{ '--i': 3 } as CSSProperties}><Goal sent={sentToday} goal={goal} onCycle={cycleGoal} /></div>}
       </section>
 
+      {next.length > QUEUE_SIZE && (
+        <Link to="/review" className="rise group mb-4 flex items-center gap-3 rounded-2xl border border-border/70 bg-surface/70 px-4 py-3 text-[14px] shadow-soft transition hover:border-foreground/20" style={{ '--i': 4 } as CSSProperties}>
+          <Layers className="size-4 shrink-0 text-muted-foreground" />
+          <span className="flex-1"><span className="font-medium">{next.length} roles are lined up.</span> <span className="text-muted-foreground">That’s a lot to carry. Pick your top {QUEUE_SIZE}?</span></span>
+          <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      )}
+
       <div className="rise" style={{ '--i': 4 } as CSSProperties}>
         {focus ? (
           <Focus job={focus} resume={resume} baseOk={!!progress[focus.id]?.resume} opened={!!progress[focus.id]?.opened} onMark={(step) => mark(focus.id, step)} />
@@ -245,14 +254,19 @@ export default function Today() {
             <p className="text-[17px] font-semibold">Nothing lined up right now</p>
             <p className="mx-auto mt-1 max-w-sm text-[14px] text-muted-foreground">Pick a few roles you’d like to send next, or ask the assistant to find some.</p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
-              <Button variant="lemon" onClick={() => ask('What should I apply to next? Pick a few and line them up.')}><Sparkles /> Find me a few</Button>
-              <AddJobButton variant="outline" />
+              {candidates(list).length > 0 && <Button variant="lemon" onClick={() => navigate('/review')}><Layers /> Pick from your saved roles</Button>}
+              <Button variant={candidates(list).length ? 'outline' : 'lemon'} onClick={() => ask(`What should I apply to next? Pick up to ${QUEUE_SIZE} and line them up.`)}><Sparkles /> Ask the assistant</Button>
             </div>
           </Card>
         ) : null}
       </div>
 
-      <div className="mt-10 flex justify-center">
+      <div className="mt-10 flex flex-wrap justify-center gap-2">
+        {focus && next.length < QUEUE_SIZE && candidates(list).length > 0 && (
+          <Link to="/review" className="flex items-center gap-1.5 rounded-full px-4 py-2 text-[13.5px] font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground">
+            <Layers className="size-4" /> Line up more
+          </Link>
+        )}
         <button onClick={() => setMore((m) => !m)} aria-expanded={more} className="flex items-center gap-1.5 rounded-full px-4 py-2 text-[13.5px] font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground">
           {more ? 'Show less' : 'See everything'} <ChevronDown className={cn('size-4 transition-transform duration-300', more && 'rotate-180')} />
         </button>

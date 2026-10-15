@@ -25,6 +25,7 @@ import JobView from '@/pages/JobView';
 import Documents from '@/pages/Documents';
 import DocumentView from '@/pages/DocumentView';
 import Settings from '@/pages/Settings';
+import Review from '@/pages/Review';
 import PrintView from '@/pages/PrintView';
 
 // The map library and its data are big; only load them when someone opens the map.
@@ -195,6 +196,7 @@ const TITLES: Record<string, [string, string?]> = {
   jobs: ['Jobs', 'Job'],
   documents: ['Documents', 'Document'],
   settings: ['Settings'],
+  review: ['Review'],
 };
 
 function pageTitle(pathname: string) {
@@ -439,6 +441,7 @@ export default function App() {
               <Route path="documents" element={<Documents />} />
               <Route path="documents/:id" element={<DocumentView />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="review" element={<Review />} />
             </Route>
           </Routes>
         </BrowserRouter>
