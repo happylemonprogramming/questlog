@@ -81,7 +81,7 @@ export function formTools(): Record<string, Tool> {
     attach_document: defineTool({
       description:
         "Attach a resume or cover letter to a file field on the open form, as a PDF made from the document exactly as it looks in Offerdex. " +
-        'Use the tailored resume for this listing if there is one, else the base resume.',
+        'Use the resume made for this listing; if there is none, make one first.',
       inputSchema: z.object({ ref: z.string(), documentId: z.string() }),
       write: true,
       timeoutMs: 60_000,

@@ -44,7 +44,7 @@ function useGoal() {
 
 type Progress = Record<string, { resume?: boolean; opened?: boolean }>;
 
-/** Steps done outside the data: chose the base resume, opened the form. Kept on this device. */
+/** Steps done outside the data: chose to use a resume made elsewhere, opened the form. Kept on this device. */
 function useProgress() {
   const [p, setP] = useState<Progress>(() => {
     try { return JSON.parse(localStorage.getItem(PROGRESS_KEY) ?? '{}'); } catch { return {}; }
@@ -123,14 +123,14 @@ function Focus({ job, resume, baseOk, opened, onMark }: { job: Job; resume?: Doc
         </div>
 
         <ol className="mt-6 space-y-1.5">
-          <Step n={1} done={ready} current={step === 1} title="Tailor your resume" detail={resume ? resume.title : baseOk ? 'Using your base resume' : 'A version aimed at this role'}>
+          <Step n={1} done={ready} current={step === 1} title="Make your resume" detail={resume ? resume.title : baseOk ? 'Using one you already have' : 'Written and designed for this role'}>
             {resume ? (
               <Button size="sm" variant="ghost" onClick={() => navigate(`/documents/${resume.id}`)}>View</Button>
             ) : baseOk ? null : (
               <>
-                <Button size="sm" variant="ghost" onClick={() => onMark('resume')} className="text-muted-foreground">Use my base</Button>
-                <Button size="sm" variant={step === 1 ? 'lemon' : 'outline'} onClick={() => ask(`Tailor my resume for ${job.company}: ${job.title} (listing ${job.id}).`)}>
-                  <Sparkles /> Tailor it
+                <Button size="sm" variant="ghost" onClick={() => onMark('resume')} className="text-muted-foreground">I have one</Button>
+                <Button size="sm" variant={step === 1 ? 'lemon' : 'outline'} onClick={() => ask(`Make my resume for ${job.company}: ${job.title} (listing ${job.id}), written from my career record and designed for this company.`)}>
+                  <Sparkles /> Make it
                 </Button>
               </>
             )}

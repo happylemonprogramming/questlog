@@ -5,7 +5,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import {
   BriefcaseBusiness, ClipboardPen, FileText, Loader2, Menu, Monitor, Moon, PanelRightOpen, PanelsTopLeft, Settings as SettingsIcon, Sparkles, Sun, Sunrise,
 } from 'lucide-react';
-import { db, seedIfEmpty } from '@/lib/db';
+import { db } from '@/lib/db';
+import { adoptBaseResumes } from '@/lib/career';
 import { ThemeProvider, useTheme, type Theme } from '@/lib/theme';
 import { TooltipProvider, Tip } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -436,7 +437,7 @@ function Shell() {
 
 export default function App() {
   useEffect(() => {
-    void seedIfEmpty();
+    void adoptBaseResumes();
     void navigator.storage?.persist?.();
   }, []);
 

@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import {
   AlertTriangle, ArrowLeft, Check, ChevronDown, ClipboardPen, Clock, ExternalLink, FilePlus2, FileText, Layers, MapPin, MessageSquareText, MoreHorizontal, Rocket, Sparkles, ThumbsDown, ThumbsUp, Trash2, Wallet,
 } from 'lucide-react';
-import { db, logJob, now, today, uid } from '@/lib/db';
+import { db, logJob, now, today } from '@/lib/db';
 import { ask } from '@/agent/runtime';
 import { applicationPage, openApplication } from '@/lib/workspace';
 import { Card, CompanyMark, Empty, STAGE_DOT, STAGE_VAR } from '@/components/common';
@@ -110,7 +110,6 @@ export default function JobView() {
   const navigate = useNavigate();
   const job = useLiveQuery(() => db.jobs.get(id), [id]);
   const docs = useLiveQuery(() => db.docs.where('jobId').equals(id).toArray(), [id]) ?? [];
-  const bases = useLiveQuery(() => db.docs.filter((d) => d.kind === 'resume' && !!d.base).toArray(), []) ?? [];
   const [notes, setNotes] = useAutosave(job, 'notes');
   const [batch, setBatch] = useAutosave(job, 'batch');
   const [website, setWebsite] = useAutosave(job, 'website');
@@ -128,13 +127,6 @@ export default function JobView() {
   const toggleStep = (s: string) => {
     const has = job.steps?.includes(s);
     return update({ steps: has ? job.steps!.filter((x) => x !== s) : INTERVIEW_STEPS.filter((x) => x === s || job.steps?.includes(x)) });
-  };
-  const newFromBase = async (baseId: string) => {
-    const base = await db.docs.get(baseId);
-    if (!base) return;
-    const docId = uid();
-    await db.docs.add({ ...base, id: docId, base: false, jobId: job.id, title: `${job.company}: ${job.title}`, createdAt: now(), updatedAt: now() });
-    navigate(`/documents/${docId}`);
   };
 
   const longPosting = (job.description?.length ?? 0) > 1400;
@@ -171,8 +163,8 @@ export default function JobView() {
         {resume ? (
           <Button size="lg" variant="outline" onClick={() => navigate(`/documents/${resume.id}`)}><FileText /> Your resume for this</Button>
         ) : (
-          <Button size="lg" variant="outline" onClick={() => ask(`Tailor a resume for listing ${job.id}. Start from the best base resume, keep it to one page, and save it linked to the listing.`)}>
-            <Sparkles className="text-lemon" /> Tailor resume
+          <Button size="lg" variant="outline" onClick={() => ask(`Make a resume for listing ${job.id}, written from my career record for this role and designed for this company.`)}>
+            <Sparkles className="text-lemon" /> Make my resume
           </Button>
         )}
         <div className="flex items-center gap-2 sm:ml-auto">
@@ -263,16 +255,8 @@ export default function JobView() {
             ))}
           </div>
           <div className={cn('flex flex-wrap gap-2', docs.length > 0 && 'mt-3')}>
-            <Button size="sm" variant="outline" onClick={() => ask(`Write a cover letter for listing ${job.id}, matching my tailored or base resume. Save it linked to the listing.`)}>Cover letter</Button>
+            <Button size="sm" variant="outline" onClick={() => ask(`Write a cover letter for listing ${job.id}, matching the resume for this listing. Save it linked to the listing.`)}>Cover letter</Button>
             <Button size="sm" variant="outline" onClick={() => ask(`Draft a short answer for the optional "Additional information" box on listing ${job.id}, in my voice. Save it linked to the listing.`)}>Short answer</Button>
-            {bases.length > 0 && (
-              <Menu>
-                <MenuTrigger asChild><Button size="sm" variant="ghost" className="text-muted-foreground">Copy a base resume by hand</Button></MenuTrigger>
-                <MenuContent align="start">
-                  {bases.map((b) => <MenuItem key={b.id} onSelect={() => newFromBase(b.id)}>{b.title}</MenuItem>)}
-                </MenuContent>
-              </Menu>
-            )}
           </div>
         </Fold>
 

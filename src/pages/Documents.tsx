@@ -6,10 +6,9 @@ import { Empty, PageHeader } from '@/components/common';
 import { Sources } from '@/components/Sources';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { DocSheet, ScaledSheet } from '@/components/Sheet';
-import { inheritedDesign } from '@/lib/design';
 import { Button } from '@/components/ui/button';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
-import { SAMPLE_RESUME, sampleLetter, type ResumeData } from '@/lib/sheet';
+import { SAMPLE_RESUME, sampleLetter } from '@/lib/sheet';
 import type { AnswerData, Doc, DocKind, Job } from '@/lib/types';
 import { cn, timeAgo } from '@/lib/utils';
 import { useMedia } from '@/lib/useMedia';
@@ -76,15 +75,10 @@ export default function Documents() {
   const navigate = useNavigate();
   const byId = new Map(jobs.map((j) => [j.id, j]));
   const shown = docs.filter((d) => tab === 'all' || d.kind === tab);
-  const bases = shown.filter((d) => d.base);
-  const rest = shown.filter((d) => !d.base);
-
   async function create(kind: DocKind) {
-    const base = docs.find((d) => d.kind === 'resume' && d.base)?.data as ResumeData | undefined;
-    const css = await inheritedDesign(kind);
-    const data = kind === 'resume' ? (base ?? SAMPLE_RESUME) : kind === 'letter' ? sampleLetter((base ?? SAMPLE_RESUME).header) : ({ text: '' } satisfies AnswerData);
+    const data = kind === 'resume' ? SAMPLE_RESUME : kind === 'letter' ? sampleLetter(SAMPLE_RESUME.header) : ({ text: '' } satisfies AnswerData);
     const id = uid();
-    await db.docs.add({ id, kind, title: kind === 'resume' ? 'Untitled resume' : kind === 'letter' ? 'Untitled letter' : 'Untitled answer', data, css, createdAt: now(), updatedAt: now() });
+    await db.docs.add({ id, kind, title: kind === 'resume' ? 'Untitled resume' : kind === 'letter' ? 'Untitled letter' : 'Untitled answer', data, createdAt: now(), updatedAt: now() });
     navigate(`/documents/${id}`);
   }
 
@@ -95,7 +89,7 @@ export default function Documents() {
 
   return (
     <>
-      <PageHeader eyebrow="Documents" title="Resumes, letters and answers" sub="Base documents are the starting points that tailored copies come from.">
+      <PageHeader eyebrow="Documents" title="Resumes, letters and answers" sub="Each resume is written and designed for one listing, from your career record.">
         <Menu>
           <MenuTrigger asChild><Button variant="primary"><Plus /> New</Button></MenuTrigger>
           <MenuContent>
@@ -124,20 +118,7 @@ export default function Documents() {
       ) : shown.length === 0 ? (
         <Empty icon={<FileText />} title="Nothing here yet">Create one, or open a listing and ask the agent to tailor a resume for it.</Empty>
       ) : (
-        <div className="space-y-10">
-          {bases.length > 0 && (
-            <section>
-              <p className="eyebrow-label mb-4">Base</p>
-              <div className={grid}>{bases.map((d) => <DocCard key={d.id} doc={d} width={card} />)}</div>
-            </section>
-          )}
-          {rest.length > 0 && (
-            <section>
-              <p className="eyebrow-label mb-4">Tailored</p>
-              <div className={grid}>{rest.map((d) => <DocCard key={d.id} doc={d} width={card} job={d.jobId ? byId.get(d.jobId) : undefined} />)}</div>
-            </section>
-          )}
-        </div>
+        <div className={grid}>{shown.map((d) => <DocCard key={d.id} doc={d} width={card} job={d.jobId ? byId.get(d.jobId) : undefined} />)}</div>
       )}
     </>
   );

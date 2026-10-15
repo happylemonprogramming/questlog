@@ -1,5 +1,6 @@
 import { unzipSync, strFromU8 } from 'fflate';
 import { db, now, SAMPLE_ID } from './db';
+import { adoptBaseResumes } from './career';
 import type { Chat, Doc, Job, Profile, Settings, SourceFile, Stage } from './types';
 
 /**
@@ -231,6 +232,8 @@ export async function importText(name: string, text: string): Promise<ImportResu
         await db.settings.put({ ...s, providers: s.providers.map((p) => ({ ...p, apiKey: p.apiKey ?? keys.get(p.id) })) });
       }
     });
+    // A backup from before the career record brings base resumes instead.
+    await adoptBaseResumes();
     return result;
   }
 

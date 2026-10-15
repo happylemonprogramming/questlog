@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { AlertTriangle, ArrowLeft, Braces, CheckCircle2, ClipboardPen, Copy, Eye, FileText, MoreHorizontal, Paintbrush, Printer, RotateCcw, Sparkles, Star, Trash2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Braces, CheckCircle2, ClipboardPen, Copy, Eye, FileText, MoreHorizontal, Paintbrush, Printer, RotateCcw, Sparkles, Trash2 } from 'lucide-react';
 import { db, now, uid } from '@/lib/db';
 import { ask } from '@/agent/runtime';
 import { applicationPage, openApplication } from '@/lib/workspace';
@@ -216,7 +216,6 @@ export default function DocumentView() {
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Badge tone="outline" className="capitalize">{doc.kind}</Badge>
-            {doc.base && <Badge tone="lemon"><Star className="fill-current" /> Base</Badge>}
             {doc.variant && <Badge>{doc.variant}</Badge>}
             {isSheet && fit && (
               fit.fits
@@ -251,7 +250,6 @@ export default function DocumentView() {
           <Menu>
             <MenuTrigger asChild><Button variant="outline" size="icon" className="size-9" aria-label="More"><MoreHorizontal /></Button></MenuTrigger>
             <MenuContent>
-              <MenuItem onSelect={() => db.docs.update(doc.id, { base: !doc.base, updatedAt: now() })}><Star /> {doc.base ? 'Unmark as base' : 'Mark as base'}</MenuItem>
               {isSheet && (
                 <MenuItem onSelect={async () => {
                   const others = (await db.docs.toArray()).filter((d) => d.kind !== 'answer' && d.id !== doc.id);
@@ -260,7 +258,7 @@ export default function DocumentView() {
                   }
                 }}><Paintbrush /> Use this design everywhere</MenuItem>
               )}
-              <MenuItem onSelect={async () => { const nid = uid(); await db.docs.add({ ...doc, id: nid, base: false, title: `${doc.title} (copy)`, createdAt: now(), updatedAt: now() }); navigate(`/documents/${nid}`); }}><Copy /> Duplicate</MenuItem>
+              <MenuItem onSelect={async () => { const nid = uid(); await db.docs.add({ ...doc, id: nid, base: undefined, title: `${doc.title} (copy)`, createdAt: now(), updatedAt: now() }); navigate(`/documents/${nid}`); }}><Copy /> Duplicate</MenuItem>
               <MenuSeparator />
               <MenuItem danger onSelect={async () => { await db.docs.delete(doc.id); navigate('/documents'); }}><Trash2 /> Delete</MenuItem>
             </MenuContent>

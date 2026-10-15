@@ -167,13 +167,12 @@ export function cleanHtml(html: string): string {
 }
 
 /**
- * The design a new document starts with: the base resume's, preferring one of
- * the same variant, so tailored copies and letters match what they came from.
+ * The design a new document starts with. A letter takes its listing's resume
+ * design so the pair matches; a resume starts from the default and gets its own.
  */
-export async function inheritedDesign(kind: DocKind, variant?: string): Promise<string | undefined> {
-  if (kind === 'answer') return undefined;
-  const bases = (await db.docs.where('kind').equals('resume').toArray()).filter((d) => d.base);
-  return (bases.find((d) => variant && d.variant === variant) ?? bases[0])?.css;
+export async function inheritedDesign(kind: DocKind, jobId?: string): Promise<string | undefined> {
+  if (kind !== 'letter' || !jobId) return undefined;
+  return (await db.docs.where('jobId').equals(jobId).toArray()).find((d) => d.kind === 'resume')?.css;
 }
 
 /** How the sheet's markup is built, so a design can target it. Shown to the assistant with get_design. */

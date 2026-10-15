@@ -25,7 +25,7 @@ export async function measureSheet(doc: Pick<Doc, 'kind' | 'data' | 'css'>): Pro
     const over = Math.round(((h - SHEET_H) / SHEET_H) * 100);
     return `It is ${over}% too long for one page (${h - SHEET_H}px over). Shorten it, or tighten the design, and save again.`;
   } catch (e) {
-    return `It failed to render: ${e instanceof Error ? e.message : e}. Check the data shape against the base document.`;
+    return `It failed to render: ${e instanceof Error ? e.message : e}. Check the data against the tool's schema.`;
   } finally {
     root.unmount();
     host.remove();

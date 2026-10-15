@@ -1,6 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
 import { STAGE_LABEL, type Chat, type Doc, type Job, type Profile, type Settings, type SourceFile, type Stage } from './types';
-import { SAMPLE_RESUME } from './sheet';
 
 /** Everything lives in this one IndexedDB database, on this device only. */
 export const db = new Dexie('offerdex') as Dexie & {
@@ -49,22 +48,8 @@ export async function getSettings(): Promise<Settings> {
   return (await db.settings.get('settings')) ?? DEFAULT_SETTINGS;
 }
 
+/** The starter resume older versions put in a fresh install. */
 export const SAMPLE_ID = 'sample-resume';
-
-/** Give a fresh install something to look at: one base resume to tailor from. */
-export async function seedIfEmpty() {
-  if ((await db.docs.count()) > 0) return;
-  // put, not add: StrictMode runs this twice on first load.
-  await db.docs.put({
-    id: SAMPLE_ID,
-    kind: 'resume',
-    title: 'Base resume',
-    base: true,
-    data: SAMPLE_RESUME,
-    createdAt: 0,
-    updatedAt: 0,
-  });
-}
 
 export async function upsertJob(patch: Partial<Job> & { id: string }): Promise<Job> {
   return db.transaction('rw', db.jobs, async () => {

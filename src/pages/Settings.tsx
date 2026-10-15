@@ -211,7 +211,10 @@ function ProfileEditor() {
       <Field label="Search rules" hint="Pay floors, locations, seniority, travel, deal-breakers. The agent checks every listing against these.">
         <Textarea value={p.rules} onChange={(e) => set({ rules: e.target.value })} className="min-h-[180px] font-mono text-[12.5px]" placeholder={'- Pay: $150k base or more\n- Location: remote, or within 30 minutes of home\n- No director-level roles'} />
       </Field>
-      <Field label="Confirmed facts" hint="Things the agent may say about you in tailored documents. It won't use anything that isn't here or in a base resume.">
+      <Field label="Career record" hint="Everything you've done, in full: each role with dates, what you did and the results, projects, education, skills and links. No length limit. The agent writes every resume from this, choosing what each role needs.">
+        <Textarea value={p.history ?? ''} onChange={(e) => set({ history: e.target.value })} className="min-h-[260px] font-mono text-[12.5px]" placeholder={'## Experience\n\n### Acme Robotics • Full-Time • Irvine, CA\n\n**Mechanical Engineer** (Jan. 2020 – Present)\n- Redesigned the gripper, cutting part count 40%\n\n## Projects\n- **Home weather station**: …'} />
+      </Field>
+      <Field label="Confirmed facts" hint="Anything else the agent may say about you. It won't use anything that isn't here or in your career record.">
         <Textarea value={p.facts} onChange={(e) => set({ facts: e.target.value })} className="min-h-[160px] font-mono text-[12.5px]" />
       </Field>
       <Field label="Working notes" hint="Open questions, decisions and next steps. Shown on Today, and the agent keeps it current.">

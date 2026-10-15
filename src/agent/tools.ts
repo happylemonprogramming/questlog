@@ -91,7 +91,7 @@ export function buildTools(host: ToolHost): Record<string, Tool> {
 function makeTools(host: ToolHost): Record<string, Tool> {
   return {
     get_profile: defineTool({
-      description: "Read the user's profile: contact details, search rules, confirmed facts and writing style.",
+      description: "Read the user's profile: contact details, search rules, career record, confirmed facts and writing style.",
       inputSchema: z.object({}),
       run: async () => json(await getProfile()),
     }),
@@ -108,7 +108,8 @@ function makeTools(host: ToolHost): Record<string, Tool> {
         phone: z.string().optional(),
         links: z.array(z.object({ label: z.string(), href: z.string() })).optional(),
         rules: z.string().optional().describe('Search rules: pay floors, locations, seniority, travel, deal-breakers.'),
-        facts: z.string().optional().describe('Facts the user confirmed and that may appear in tailored documents.'),
+        history: z.string().optional().describe('Career record: every role with dates, what the user did and the results with numbers, projects, education, skills and links, in full. Every resume is written from it.'),
+        facts: z.string().optional().describe('Other facts the user confirmed and that may appear in documents.'),
         style: z.string().optional().describe('Writing style and voice.'),
         notes: z.string().optional().describe('Working notes: open questions, decisions, plans and next steps.'),
       }),
@@ -256,7 +257,7 @@ function makeTools(host: ToolHost): Record<string, Tool> {
         let docs = await db.docs.toArray();
         if (kind) docs = docs.filter((d) => d.kind === kind);
         if (jobId) docs = docs.filter((d) => d.jobId === jobId);
-        return json(docs.map((d) => ({ id: d.id, kind: d.kind, title: d.title, base: d.base, variant: d.variant, jobId: d.jobId })));
+        return json(docs.map((d) => ({ id: d.id, kind: d.kind, title: d.title, variant: d.variant, jobId: d.jobId })));
       },
     }),
 
@@ -366,20 +367,18 @@ function makeTools(host: ToolHost): Record<string, Tool> {
 
     save_resume: defineTool({
       description:
-        'Create or replace a resume. To tailor, get_document the base resume, change the text, then save it as a NEW document ' +
-        '(omit id) with jobId set. `data` is the full resume in the same shape as the base. ' +
-        'Inline links are markdown [text](url). Only use facts already in the base resume or the profile. ' +
-        'The result says whether it fits one page; if not, shorten it and save again with the same id.',
+        'Create or replace a resume. Write each one for its listing from the career record and confirmed facts (get_profile), choosing and ordering ' +
+        'what that role needs, rather than copying another resume. A new one omits id and sets jobId. Inline links are markdown [text](url). ' +
+        'Only use facts in the career record or confirmed facts. The result says whether it fits one page; if not, shorten it and save again with the same id.',
       inputSchema: z.object({
         id: z.string().optional(),
         title: z.string(),
         jobId: z.string().optional(),
         variant: z.string().optional(),
-        base: z.boolean().optional(),
         data: resumeSchema,
       }),
       write: true,
-      run: async ({ id, title, jobId, variant, base, data }) => saveDoc('resume', { id, title, jobId, variant, base, data: data as ResumeData }, host),
+      run: async ({ id, title, jobId, variant, data }) => saveDoc('resume', { id, title, jobId, variant, data: data as ResumeData }, host),
     }),
 
     save_letter: defineTool({
@@ -471,7 +470,7 @@ function makeTools(host: ToolHost): Record<string, Tool> {
   };
 }
 
-async function saveDoc<T>(kind: Doc['kind'], d: { id?: string; title: string; jobId?: string; variant?: string; base?: boolean; data: T }, host: ToolHost) {
+async function saveDoc<T>(kind: Doc['kind'], d: { id?: string; title: string; jobId?: string; variant?: string; data: T }, host: ToolHost) {
   const prev = d.id ? await db.docs.get(d.id) : undefined;
   if (d.jobId && !(await db.jobs.get(d.jobId))) return { content: `No listing with id ${d.jobId}.`, isError: true };
   const id = prev?.id ?? uid();
@@ -482,10 +481,8 @@ async function saveDoc<T>(kind: Doc['kind'], d: { id?: string; title: string; jo
     title: d.title,
     jobId: d.jobId ?? prev?.jobId,
     variant: d.variant ?? prev?.variant,
-    base: d.base ?? prev?.base,
     data: d.data,
-    // New documents take the design of the base resume they were tailored from.
-    css: prev ? prev.css : await inheritedDesign(kind, d.variant),
+    css: prev ? prev.css : await inheritedDesign(kind, d.jobId),
     createdAt: prev?.createdAt ?? now(),
     updatedAt: now(),
   };

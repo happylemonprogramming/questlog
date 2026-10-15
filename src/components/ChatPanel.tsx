@@ -248,7 +248,7 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
     : view.doc?.kind === 'resume'
       ? ['Tighten this resume to fit one page', 'Give this resume a fresh, modern design', 'Which listings is this resume best for?']
       : view.doc?.kind === 'letter'
-      ? ['Match this letter’s design to my base resume', 'Tighten this letter']
+      ? ['Match this letter’s design to its resume', 'Tighten this letter']
       : ['Sort my New roles: save the good ones, pass on the rest', 'Line up my best 5 roles for this week', 'Search Anduril’s job board for mechanical roles near me'];
 
   const empty = !chat || chat.messages.length === 0;

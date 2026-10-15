@@ -88,7 +88,7 @@ export interface Doc<T = unknown> {
   title: string;
   /** The listing this was written for. Base documents have none. */
   jobId?: string;
-  /** A starting point other documents are tailored from. */
+  /** From before the career record: a resume others were tailored from. No longer used. */
   base?: boolean;
   /** Short tag such as "mechanical" or "software". */
   variant?: string;
@@ -124,7 +124,9 @@ export interface Profile {
   links?: { label: string; href: string }[];
   /** Search rules the agent applies: pay floors, locations, seniority, travel. Markdown. */
   rules: string;
-  /** Facts the agent may use in tailored documents, and only these. Markdown. */
+  /** Everything the user has done, in full: roles, results, projects, skills. Every resume is written from it. Markdown. */
+  history?: string;
+  /** Other facts the agent may use in documents. With the career record, the only source it may use. Markdown. */
   facts: string;
   /** Voice and writing preferences. Markdown. */
   style: string;

@@ -13,7 +13,7 @@ A job-search workspace that runs entirely in your browser: listings, a pipeline,
 - **Assistant:** a chat panel on every page, powered by [Porygon](https://jsr.io/@porygon/core). It can:
   - read public Greenhouse, Ashby and Lever job boards
   - save and evaluate listings against your rules
-  - tailor documents using only the facts in your profile and base resume
+  - write and design each resume for its listing, using only the facts in your career record
 
   It never submits an application.
 - **Apply here:** opens a listing's application form inside Offerdex, with one-tap copy buttons above it for your contact details, answers and cover letter, and a link to the resume PDF. Greenhouse, Ashby, Lever, BambooHR and Workable forms load in the frame. Workday, LinkedIn, iCIMS and SmartRecruiters block framing, so those open in a new tab. In the browser the agent can't see or fill the form; you paste and submit. The desktop app fills it in for you (below).
