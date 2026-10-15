@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { LayoutList, Search } from 'lucide-react';
 import { db } from '@/lib/db';
-import { Card, Empty, JobRow, PageHeader, StageChips, type StageFilter } from '@/components/common';
+import { Card, Empty, JobRow, StageChips, type StageFilter } from '@/components/common';
+import { JobsHeader } from '@/components/JobsHeader';
 import { AddJobButton } from '@/components/AddJob';
 import { Input } from '@/components/ui/input';
 import { STAGES } from '@/lib/types';
@@ -32,9 +33,9 @@ export default function Listings() {
 
   return (
     <>
-      <PageHeader eyebrow="Listings" title="Every role you're tracking" sub={`${jobs.filter((j) => j.stage !== 'closed').length} open, ${counts.closed ?? 0} closed`}>
+      <JobsHeader sub="Every role you're tracking.">
         <AddJobButton />
-      </PageHeader>
+      </JobsHeader>
 
       <div className="mb-5 flex flex-wrap items-center gap-2">
         <div className="relative min-w-[240px] flex-1">

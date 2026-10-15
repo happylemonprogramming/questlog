@@ -7,7 +7,8 @@ import type { GeometryCollection, Topology } from 'topojson-specification';
 import type { Geometry, Position } from 'geojson';
 import { Globe2, Home, Loader2, Map as MapIcon, MapPinOff, Navigation, Wifi, X } from 'lucide-react';
 import { db } from '@/lib/db';
-import { Card, CardHeader, Empty, JobRow, PageHeader, STAGE_DOT, StageChips, type StageFilter } from '@/components/common';
+import { JobsHeader } from '@/components/JobsHeader';
+import { Card, CardHeader, Empty, JobRow, STAGE_DOT, StageChips, type StageFilter } from '@/components/common';
 import { Tip } from '@/components/ui/tooltip';
 import { bestView, loadGazetteer, loadShapes, locateAll, type Gazetteer, type Place } from '@/lib/geo';
 import { STAGES, type Job, type Stage } from '@/lib/types';
@@ -335,11 +336,7 @@ export default function MapView() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Map"
-        title="Where the roles are"
-        sub={jobs ? `${placed} on the map in ${pins.length} place${pins.length === 1 ? '' : 's'}, ${remote.length} remote` : undefined}
-      />
+      <JobsHeader sub={jobs ? `${placed} on the map in ${pins.length} place${pins.length === 1 ? '' : 's'}, ${remote.length} remote` : undefined} />
 
       <StageChips value={stage} onChange={setStage} counts={counts} open={(jobs?.length ?? 0) - (counts.closed ?? 0)} />
 

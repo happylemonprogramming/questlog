@@ -2,7 +2,8 @@ import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, logJob, now, today } from '@/lib/db';
-import { CompanyMark, PageHeader, STAGE_DOT, STAGE_VAR } from '@/components/common';
+import { CompanyMark, STAGE_DOT, STAGE_VAR } from '@/components/common';
+import { JobsHeader } from '@/components/JobsHeader';
 import { STAGE_LABEL, type Job, type Stage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -24,7 +25,7 @@ export default function Pipeline() {
 
   return (
     <>
-      <PageHeader eyebrow="Pipeline" title="Where everything stands" sub={<><span className="[@media(hover:none)]:hidden">Drag a card to move it.</span><span className="hidden [@media(hover:none)]:inline">Open a card to change its stage.</span> Closed roles live in Listings.</>} />
+      <JobsHeader sub={<>Where everything stands. <span className="[@media(hover:none)]:hidden">Drag a card to move it.</span><span className="hidden [@media(hover:none)]:inline">Open a card to change its stage.</span></>} />
       <div className="scroll-thin -mx-2 flex snap-x snap-mandatory gap-3 overflow-x-auto px-2 pb-4 max-sm:-mx-4 max-sm:scroll-px-4 max-sm:px-4">
         {COLUMNS.map((stage) => {
           const list = jobs.filter((j) => j.stage === stage).sort((a, b) => b.updatedAt - a.updatedAt);

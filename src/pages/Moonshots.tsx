@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ChevronDown, ChevronUp, ExternalLink, Rocket } from 'lucide-react';
 import { db, now } from '@/lib/db';
-import { Card, CompanyMark, Empty, PageHeader, StageBadge } from '@/components/common';
+import { Card, CompanyMark, Empty, StageBadge } from '@/components/common';
+import { JobsHeader } from '@/components/JobsHeader';
 import { Button } from '@/components/ui/button';
 import type { Job } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -29,11 +30,7 @@ export default function Moonshots() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Moonshots"
-        title="Long shots worth taking"
-        sub="Roles that stretch past your usual fit but still pass your rules. Ranked by how much you want them."
-      />
+      <JobsHeader sub="Long shots worth taking, ranked by how much you want them." />
       {list.length === 0 ? (
         <Empty icon={<Rocket />} title="No moonshots yet">Mark a listing as a moonshot from its page, or ask the assistant to find some.</Empty>
       ) : (

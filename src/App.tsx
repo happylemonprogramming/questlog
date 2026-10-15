@@ -1,9 +1,9 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import * as D from '@radix-ui/react-dialog';
-import { BrowserRouter, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Link, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
-  ClipboardPen, FileText, Globe2, KanbanSquare, LayoutList, Loader2, Menu, Monitor, Moon, PanelRightOpen, PanelsTopLeft, Rocket, Settings as SettingsIcon, Sparkles, Sun, Sunrise,
+  BriefcaseBusiness, ClipboardPen, FileText, Loader2, Menu, Monitor, Moon, PanelRightOpen, PanelsTopLeft, Settings as SettingsIcon, Sparkles, Sun, Sunrise,
 } from 'lucide-react';
 import { db, seedIfEmpty } from '@/lib/db';
 import { ThemeProvider, useTheme, type Theme } from '@/lib/theme';
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { ChatPanel } from '@/components/ChatPanel';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ApplyPane } from '@/components/ApplyPane';
+import { isJobsPath } from '@/components/JobsHeader';
 import { onAsk, useLive } from '@/agent/runtime';
 import { setPane, useWorkspace } from '@/lib/workspace';
 import { useIsMobile } from '@/lib/useMedia';
@@ -46,23 +47,23 @@ function Logo() {
   );
 }
 
-function NavItem({ to, icon, label, end, standalone }: { to: string; icon: ReactNode; label: string; end?: boolean; standalone?: boolean }) {
+function NavItem({ to, icon, label, end, standalone, match }: { to: string; icon: ReactNode; label: string; end?: boolean; standalone?: boolean; match?: (path: string) => boolean }) {
+  const { pathname } = useLocation();
+  const isActive = match ? match(pathname) : end ? pathname === to : pathname === to || pathname.startsWith(`${to}/`);
   return (
-    <NavLink
+    <Link
       to={to}
-      end={end}
-      className={({ isActive }) =>
-        cn(
-          'group relative z-[1] flex h-10 items-center gap-3 rounded-xl px-3 text-[14px] font-medium transition-colors duration-200 [&_svg]:size-[18px] [&_svg]:transition-transform [&_svg]:duration-300 [&_svg]:ease-spring hover:[&_svg]:scale-110',
-          isActive ? 'text-foreground [&_svg]:text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
-          // Items outside the sliding highlight carry their own.
-          isActive && standalone && 'bg-surface shadow-card ring-1 ring-border/80',
-        )
-      }
+      aria-current={isActive ? 'page' : undefined}
+      className={cn(
+        'group relative z-[1] flex h-10 items-center gap-3 rounded-xl px-3 text-[14px] font-medium transition-colors duration-200 [&_svg]:size-[18px] [&_svg]:transition-transform [&_svg]:duration-300 [&_svg]:ease-spring hover:[&_svg]:scale-110',
+        isActive ? 'text-foreground [&_svg]:text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+        // Items outside the sliding highlight carry their own.
+        isActive && standalone && 'bg-surface shadow-card ring-1 ring-border/80',
+      )}
     >
       {icon}
       <span className="flex-1">{label}</span>
-    </NavLink>
+    </Link>
   );
 }
 
@@ -129,10 +130,7 @@ function NavContents({ className }: { className?: string }) {
           className="absolute inset-x-0 top-0 rounded-xl bg-surface opacity-0 shadow-card ring-1 ring-border/80 transition-[transform,height] duration-500 ease-spring before:absolute before:inset-y-2.5 before:-left-3.5 before:w-[3px] before:rounded-r-full before:bg-lemon before:shadow-[0_0_12px_hsl(var(--lemon))]"
         />
         <NavItem to="/" end icon={<Sunrise />} label="Today" />
-        <NavItem to="/listings" icon={<LayoutList />} label="Listings" />
-        <NavItem to="/map" icon={<Globe2 />} label="Map" />
-        <NavItem to="/moonshots" icon={<Rocket />} label="Moonshots" />
-        <NavItem to="/pipeline" icon={<KanbanSquare />} label="Pipeline" />
+        <NavItem to="/listings" icon={<BriefcaseBusiness />} label="Jobs" match={isJobsPath} />
         <NavItem to="/documents" icon={<FileText />} label="Documents" />
       </div>
       <div className="mt-auto space-y-3">
@@ -190,11 +188,11 @@ function Page() {
 
 const TITLES: Record<string, [string, string?]> = {
   '': ['Today'],
-  listings: ['Listings'],
-  map: ['Map'],
-  moonshots: ['Moonshots'],
-  pipeline: ['Pipeline'],
-  jobs: ['Listings', 'Listing'],
+  listings: ['Jobs'],
+  map: ['Jobs'],
+  moonshots: ['Jobs'],
+  pipeline: ['Jobs'],
+  jobs: ['Jobs', 'Job'],
   documents: ['Documents', 'Document'],
   settings: ['Settings'],
 };

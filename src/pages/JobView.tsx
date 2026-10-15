@@ -98,7 +98,7 @@ export default function JobView() {
   const [showPosting, setShowPosting] = useState(false);
 
   if (job === undefined) return null;
-  if (!job) return <Empty icon={<FileText />} title="Listing not found"><Link to="/listings" className="underline">Back to listings</Link></Empty>;
+  if (!job) return <Empty icon={<FileText />} title="Listing not found"><Link to="/listings" className="underline">Back to jobs</Link></Empty>;
 
   const update = (patch: Partial<Job>) => db.jobs.update(job.id, { ...patch, updatedAt: now() });
   const setStage = async (stage: Stage) => {
@@ -123,7 +123,7 @@ export default function JobView() {
   return (
     <>
       <Link to="/listings" className="mb-5 inline-flex max-lg:hidden items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="size-3.5" /> Listings
+        <ArrowLeft className="size-3.5" /> Jobs
       </Link>
 
       <div className="rise mb-8 flex flex-wrap items-start gap-5">
