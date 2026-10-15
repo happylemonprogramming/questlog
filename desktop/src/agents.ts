@@ -37,8 +37,22 @@ function loggedIn(login: EngineDef['login']): Promise<boolean | undefined> {
   return new Promise((resolve) => execFile(bin, login.args, { timeout: 8000 }, (err) => resolve(!err)));
 }
 
+/**
+ * The Claude Code binary the adapter drives. The adapter can bring its own,
+ * but it's hundreds of megabytes, so the packaged app ships without it and
+ * uses the one you installed. In development the bundled copy is preferred,
+ * since it's the version the adapter was built against.
+ */
+function claudeExe(): string | undefined {
+  try {
+    return require.resolve(`@anthropic-ai/claude-agent-sdk-${process.platform}-${process.arch}/claude${process.platform === 'win32' ? '.exe' : ''}`);
+  } catch {
+    return which('claude') ?? undefined;
+  }
+}
+
 /** A script from an npm package, run with Node: the system's if there is one, else Electron's own. */
-function nodeScript(pkg: string, file: string) {
+function nodeScript(pkg: string, file: string, env: Record<string, string> = {}) {
   let script: string;
   try {
     script = require.resolve(`${pkg}/${file}`).replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
@@ -46,7 +60,7 @@ function nodeScript(pkg: string, file: string) {
     return { missing: `${pkg} isn't installed` };
   }
   const node = which('node');
-  return node ? { command: node, args: [script] } : { command: process.execPath, args: [script], env: { ELECTRON_RUN_AS_NODE: '1' } };
+  return node ? { command: node, args: [script], env } : { command: process.execPath, args: [script], env: { ...env, ELECTRON_RUN_AS_NODE: '1' } };
 }
 
 const ENGINES: EngineDef[] = [
@@ -55,14 +69,23 @@ const ENGINES: EngineDef[] = [
     label: 'Claude Code',
     note: 'Uses your Claude subscription or API key.',
     login: { command: 'claude', args: ['auth', 'status'], hint: 'run `claude` in a terminal and log in' },
-    launch: () => nodeScript('@agentclientprotocol/claude-agent-acp', 'dist/index.js'),
+    launch: () => {
+      const exe = claudeExe();
+      if (!exe) return { missing: 'Claude Code is not installed (see claude.ai/install)' };
+      return nodeScript('@agentclientprotocol/claude-agent-acp', 'dist/index.js', { CLAUDE_CODE_EXECUTABLE: exe });
+    },
   },
   {
     id: 'codex',
     label: 'Codex',
     note: 'Uses your ChatGPT plan or OpenAI key.',
     login: { command: 'codex', args: ['login', 'status'], hint: 'run `codex login` in a terminal' },
-    launch: () => nodeScript('@agentclientprotocol/codex-acp', 'dist/index.js'),
+    launch: () => {
+      // The Codex you installed; the packaged app doesn't carry its own.
+      const exe = which('codex');
+      if (!exe) return { missing: 'Codex is not installed (npm i -g @openai/codex)' };
+      return nodeScript('@agentclientprotocol/codex-acp', 'dist/index.js', { CODEX_PATH: exe });
+    },
   },
   {
     id: 'opencode',

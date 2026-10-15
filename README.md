@@ -16,7 +16,7 @@ A job-search workspace that runs entirely in your browser: listings, a pipeline,
   - tailor documents using only the facts in your profile and base resume
 
   It never submits an application.
-- **Apply here:** opens a listing's application form inside Offerdex, with one-tap copy buttons above it for your contact details, answers and cover letter, and a link to the resume PDF. Greenhouse, Ashby, Lever, BambooHR and Workable forms load in the frame. Workday, LinkedIn, iCIMS and SmartRecruiters block framing, so those open in a new tab. The assistant can't see or fill the form; you paste and submit.
+- **Apply here:** opens a listing's application form inside Offerdex, with one-tap copy buttons above it for your contact details, answers and cover letter, and a link to the resume PDF. Greenhouse, Ashby, Lever, BambooHR and Workable forms load in the frame. Workday, LinkedIn, iCIMS and SmartRecruiters block framing, so those open in a new tab. In the browser the agent can't see or fill the form; you paste and submit. The desktop app fills it in for you (below).
 - **Phones:** below 1024px wide, the app shows one pane at a time: the page, the assistant, or the application. Switch between them with the tab bar. All three stay loaded, so a chat or a half-filled form survives switching.
 
 ## Bring your own model
@@ -33,6 +33,25 @@ Any OpenAI-compatible endpoint works. Pick one in **Settings → AI provider**:
 The assistant's tools always run in your browser. With Meridian, the proxy hands tool calls back to the page instead of running them, so the model never gets shell or file access on your machine. Meridian accepts requests from any web page, so consider setting `MERIDIAN_API_KEY` and entering the same key in Offerdex.
 
 API keys are stored only in this browser and are left out of exports.
+
+## Desktop app
+
+`desktop/` wraps the same app in Electron and adds what a browser tab can't do:
+
+- **Fills in application forms.** The Apply pane loads any career site, including Workday and LinkedIn. The agent reads the form's fields (iframes included), fills them in, picks from dropdowns and autocompletes, moves between steps, and attaches your resume or cover letter. **It never submits.** Submit buttons are refused, and you review and press Submit yourself. Questions it can't answer truthfully, such as legal attestations, are left for you and listed in the chat.
+- **Exact PDFs.** Resumes and letters print to PDF with the same engine that shows them, so the file matches the preview and keeps real text for applicant tracking systems. There's no print dialog.
+- **Your coding agent as the agent.** In **Settings → Agent**, pick Claude Code, Codex or OpenCode (or Goose), connected over the [Agent Client Protocol](https://agentclientprotocol.com). Each uses the login and models you already have, and OpenCode includes free models. Offerdex's tools reach the agent as an MCP server, so it works the app exactly as the built-in agent does. Claude Code is limited to Offerdex's tools plus web search; if another agent wants to run its own tools (a shell, file edits), you're asked first. Agents run in an empty folder of their own.
+
+The desktop app keeps its own copy of your data. Move it across with **Settings → Data** (export from the browser, import on the desktop).
+
+```bash
+npm --prefix desktop install
+npm run dev                 # the web app, which the desktop app loads in development
+npm run desktop             # build the shell and open it
+npm run desktop:dist        # package it (AppImage, dmg or exe) into desktop/dist
+```
+
+The packaged app doesn't carry its own copy of Claude Code or Codex. It uses the ones on your PATH, so install and log in to them first (`claude`, `codex login`, `opencode auth login`).
 
 ## Bring your data
 
@@ -69,6 +88,11 @@ Main source files:
 | `src/components/Sheet.tsx` | resume and letter renderer |
 | `src/styles/sheet.css` | default drawing-sheet design |
 | `src/lib/design.ts` | per-document designs: sanitizing, shadow-root stylesheets, markup guide |
+| `src/agent/formTools.ts` | desktop form tools: read, fill, attach, click |
+| `desktop/src/main.ts` | Electron main process: window, `app://` origin, PDFs |
+| `desktop/src/forms.ts` | the script that reads and fills forms in the page |
+| `desktop/src/agents.ts` | ACP client for Claude Code, Codex, OpenCode and Goose |
+| `desktop/src/mcp-bridge.ts` | the MCP server agents launch to reach Offerdex's tools |
 
 ## License
 

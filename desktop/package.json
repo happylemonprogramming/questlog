@@ -35,7 +35,9 @@
     "files": [
       "build/**",
       "web/**",
-      "package.json"
+      "package.json",
+      "!node_modules/@openai/codex-*/**",
+      "!node_modules/@anthropic-ai/claude-agent-sdk-*/**"
     ],
     "asarUnpack": [
       "build/mcp-bridge.cjs",

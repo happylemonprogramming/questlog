@@ -26,8 +26,9 @@ const fileName = async (docId: string) => {
   const [doc, profile] = await Promise.all([db.docs.get(docId), getProfile()]);
   if (!doc) return undefined;
   const job = doc.jobId ? await db.jobs.get(doc.jobId) : undefined;
-  const who = (profile.name || 'Resume').replace(/\s+/g, '_');
-  return `${who}_${doc.kind === 'letter' ? 'Cover_Letter' : 'Resume'}${job ? `_${job.company.replace(/\s*\(.*\)/, '')}` : ''}`;
+  const name = profile.name || (doc.data as { header?: { name?: string } }).header?.name || '';
+  const parts = [name, doc.kind === 'letter' ? 'Cover Letter' : 'Resume', job?.company.replace(/\s*\(.*\)/, '')].filter(Boolean);
+  return parts.join(' ').replace(/\s+/g, '_');
 };
 
 export function formTools(): Record<string, Tool> {
