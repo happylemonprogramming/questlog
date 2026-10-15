@@ -123,7 +123,7 @@ export default function Review() {
       ) : job ? (
         <div key={job.id} className="pop mt-6 rounded-[28px] border bg-surface p-6 shadow-card sm:p-7">
           <div className="flex items-start gap-4">
-            <CompanyMark name={job.company} size={52} className="rounded-2xl" />
+            <CompanyMark job={job} size={52} className="rounded-2xl" />
             <div className="min-w-0 flex-1">
               <p className="text-[13.5px] font-medium text-muted-foreground">{job.company}</p>
               <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="mt-0.5 block text-[20px] font-semibold leading-tight tracking-[-0.02em] hover:underline">{job.title}</Link>

@@ -22,6 +22,8 @@ export interface Job {
   /** Stable key, e.g. `greenhouse:stripe:7844214`. */
   id: string;
   company: string;
+  /** The company's own website, e.g. "anduril.com", for its logo. */
+  website?: string;
   title: string;
   location: string;
   url?: string;

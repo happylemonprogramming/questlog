@@ -7,6 +7,7 @@ import type { LetterData, ResumeData } from '@/lib/sheet';
 import { measureSheet } from '@/lib/measure';
 import { letterSchema, resumeSchema } from '@/lib/sheetSchema';
 import { cleanCss, designOf, inheritedDesign, MARKUP_GUIDE } from '@/lib/design';
+import { companyDomain, normalizeWebsite } from '@/lib/logo';
 
 const json = (v: unknown) => JSON.stringify(v, null, 1);
 
@@ -28,6 +29,7 @@ const ats = z.enum(['greenhouse', 'ashby', 'lever']);
 
 const jobFields = {
   company: z.string().optional(),
+  website: z.string().optional().describe('The company\'s own website domain, e.g. "anduril.com", never the job board. Shows its logo. Set it when you know it.'),
   title: z.string().optional(),
   location: z.string().optional(),
   url: z.string().optional(),
@@ -116,13 +118,15 @@ function makeTools(host: ToolHost): Record<string, Tool> {
     list_jobs: defineTool({
       description: 'List saved listings, optionally filtered. Returns brief rows; use get_job for one in full.',
       inputSchema: z.object({
+        noWebsite: z.boolean().optional().describe('Only listings whose company website (for the logo) is unknown.'),
         stage: stage.optional(),
         moonshot: z.boolean().optional(),
         batch: z.string().optional(),
         query: z.string().optional().describe('Matches company, title or location.'),
       }),
-      run: async ({ stage, moonshot, batch, query }) => {
+      run: async ({ stage, moonshot, batch, query, noWebsite }) => {
         let jobs = await db.jobs.toArray();
+        if (noWebsite) jobs = jobs.filter((j) => !companyDomain(j));
         if (stage) jobs = jobs.filter((j) => j.stage === stage);
         if (moonshot !== undefined) jobs = jobs.filter((j) => !!j.moonshot === moonshot);
         if (batch) jobs = jobs.filter((j) => j.batch?.toLowerCase() === batch.toLowerCase());
@@ -169,6 +173,27 @@ function makeTools(host: ToolHost): Record<string, Tool> {
         if (!(await db.jobs.get(id))) return { content: `No listing with id ${id}.`, isError: true };
         await logJob(id, text);
         return 'Logged.';
+      },
+    }),
+
+    set_company_websites: defineTool({
+      description:
+        "Set companies' own website domains (e.g. \"anduril.com\"), which show their logos. Applies to every listing from that company. " +
+        'Only give domains you are sure of; leave out companies you are not.',
+      inputSchema: z.object({ sites: z.array(z.object({ company: z.string(), website: z.string() })).min(1) }),
+      write: true,
+      run: async ({ sites }) => {
+        const jobs = await db.jobs.toArray();
+        let n = 0;
+        for (const { company, website } of sites) {
+          const domain = normalizeWebsite(website);
+          if (!domain) continue;
+          const key = company.trim().toLowerCase();
+          const hits = jobs.filter((j) => j.company.trim().toLowerCase() === key);
+          await db.jobs.bulkUpdate(hits.map((j) => ({ key: j.id, changes: { website: domain } })));
+          n += hits.length;
+        }
+        return `Set websites on ${n} listings.`;
       },
     }),
 

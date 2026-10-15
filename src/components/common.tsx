@@ -1,17 +1,26 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, MapPin, Rocket, Wallet } from 'lucide-react';
 import { Badge, type Tone } from '@/components/ui/badge';
 import { STAGES, STAGE_LABEL, type Job, type Stage } from '@/lib/types';
 import { useSlidingHighlight } from '@/lib/motion';
 import { cn, hueFor } from '@/lib/utils';
+import { companyDomain, logoUrl, missingLogos, useLogos } from '@/lib/logo';
 
-export function CompanyMark({ name, size = 36, className }: { name: string; size?: number; className?: string }) {
+type MarkJob = Pick<Job, 'company' | 'website' | 'url' | 'portal'>;
+
+/** The company's logo, or its initials while the logo loads and when there isn't one. */
+export function CompanyMark({ job, size = 36, className }: { job: MarkJob; size?: number; className?: string }) {
+  const name = job.company;
   const hue = hueFor(name || '?');
   const letters = (name || '?').replace(/\(.*?\)/g, '').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  const logos = useLogos();
+  const domain = logos ? companyDomain(job) : undefined;
+  const [shown, setShown] = useState<string>();
+  const want = domain && !missingLogos.has(domain) ? domain : undefined;
   return (
     <div
-      className={cn('grid shrink-0 place-items-center rounded-[10px] font-semibold tracking-tight', className)}
+      className={cn('relative grid shrink-0 place-items-center overflow-hidden rounded-[10px] font-semibold tracking-tight', className)}
       style={{
         width: size,
         height: size,
@@ -23,6 +32,25 @@ export function CompanyMark({ name, size = 36, className }: { name: string; size
       aria-hidden="true"
     >
       <span className="dark:brightness-150">{letters}</span>
+      {want && (
+        <span className={cn('absolute inset-0 grid place-items-center bg-white ring-1 ring-inset ring-black/5 transition-opacity duration-300', shown === want ? 'opacity-100' : 'opacity-0')}>
+          <img
+            key={want}
+            src={logoUrl(want)}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            className="size-[68%] object-contain"
+            onLoad={(e) => {
+              // A missing favicon comes back as a tiny generic globe.
+              if (e.currentTarget.naturalWidth < 32) missingLogos.add(want);
+              else setShown(want);
+            }}
+            onError={() => missingLogos.add(want)}
+          />
+        </span>
+      )}
     </div>
   );
 }
@@ -104,7 +132,7 @@ export function JobRow({ job, rank, right, compact, index }: { job: Job; rank?: 
       style={index !== undefined ? ({ '--i': index } as CSSProperties) : undefined}
     >
       {rank}
-      <CompanyMark name={job.company} size={compact ? 32 : 38} />
+      <CompanyMark job={job} size={compact ? 32 : 38} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="truncate text-[14.5px] font-medium leading-5 tracking-[-0.005em] transition-colors group-hover:text-foreground">{job.title}</p>

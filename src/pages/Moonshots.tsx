@@ -43,7 +43,7 @@ export default function Moonshots() {
                 <Button variant="ghost" size="icon" className="size-6 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100" onClick={() => move(list, i, 1)} aria-label="Move down"><ChevronDown /></Button>
               </div>
               <Link to={`/jobs/${encodeURIComponent(j.id)}`} className="flex min-w-0 flex-1 gap-4 p-5 transition-colors hover:bg-accent/30">
-                <CompanyMark name={j.company} size={46} className="rounded-xl max-sm:hidden" />
+                <CompanyMark job={j} size={46} className="rounded-xl max-sm:hidden" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-[15.5px] font-semibold tracking-[-0.01em]">{j.title}</p>

@@ -14,6 +14,7 @@ import { Input, Textarea } from '@/components/ui/input';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { INTERVIEW_STEPS, STAGES, STAGE_LABEL, type Job, type Outcome, type Stage } from '@/lib/types';
 import { cn, timeAgo } from '@/lib/utils';
+import { companyDomain } from '@/lib/logo';
 
 const OUTCOMES: [Outcome, string][] = [
   ['in_progress', 'In progress'],
@@ -36,7 +37,7 @@ function Fact({ icon, children }: { icon: ReactNode; children: ReactNode }) {
  * follows the stored value, so the assistant's edits show up live and are
  * never overwritten by a stale draft.
  */
-function useAutosave(job: Job | undefined, key: 'notes' | 'batch') {
+function useAutosave(job: Job | undefined, key: 'notes' | 'batch' | 'website') {
   const stored = (job?.[key] as string | undefined) ?? '';
   const [value, setValue] = useState(stored);
   const [dirty, setDirty] = useState(false);
@@ -108,6 +109,7 @@ export default function JobView() {
   const bases = useLiveQuery(() => db.docs.filter((d) => d.kind === 'resume' && !!d.base).toArray(), []) ?? [];
   const [notes, setNotes] = useAutosave(job, 'notes');
   const [batch, setBatch] = useAutosave(job, 'batch');
+  const [website, setWebsite] = useAutosave(job, 'website');
   const [showPosting, setShowPosting] = useState(false);
 
   if (job === undefined) return null;
@@ -144,7 +146,7 @@ export default function JobView() {
       </Link>
 
       <div className="rise mb-6 flex items-start gap-5">
-        <CompanyMark name={job.company} size={64} className="rounded-[20px] max-sm:hidden" />
+        <CompanyMark job={job} size={64} className="rounded-[20px] max-sm:hidden" />
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-medium text-muted-foreground">{job.company}</p>
           <h1 className="mt-0.5 text-[24px] font-semibold leading-[1.1] tracking-[-0.03em] sm:text-[30px]">{job.title}</h1>
@@ -277,6 +279,11 @@ export default function JobView() {
             <Input value={batch} onChange={(e) => setBatch(e.target.value)} placeholder="e.g. spring push, remote" className="bg-background" />
           </label>
           <p className="mt-1.5 text-[12px] text-muted-foreground">Roles in the same batch are offered together on Today.</p>
+          <label className="mt-4 block space-y-1.5">
+            <span className="eyebrow-label">Company website</span>
+            <Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder={companyDomain({ url: job.url, portal: job.portal }) ?? 'e.g. anduril.com'} className="bg-background" />
+          </label>
+          <p className="mt-1.5 text-[12px] text-muted-foreground">Used for the logo. Leave it empty to use the posting's site when that's the company's own.</p>
         </Fold>
 
         {(['applied', 'interviewing', 'offer', 'closed'] as Stage[]).includes(job.stage) && (

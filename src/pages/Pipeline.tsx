@@ -62,7 +62,7 @@ export default function Pipeline() {
                     style={{ '--i': i } as CSSProperties}
                   >
                     <div className="flex items-center gap-2">
-                      <CompanyMark name={j.company} size={24} className="rounded-md" />
+                      <CompanyMark job={j} size={24} className="rounded-md" />
                       <p className="truncate text-[12.5px] font-medium text-muted-foreground">{j.company}</p>
                     </div>
                     <p className="mt-2 line-clamp-2 text-[13.5px] font-medium leading-snug">{j.title}</p>

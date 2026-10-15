@@ -104,7 +104,7 @@ export function ApplyPane({ jobId, mobile }: { jobId: string | null; mobile?: bo
   return (
     <div className="flex h-full min-w-0 flex-col bg-surface">
       <div className={cn('flex shrink-0 items-center gap-2 border-b px-3', mobile ? 'h-14' : 'h-12')}>
-        <CompanyMark name={job.company} size={28} className="rounded-lg" />
+        <CompanyMark job={job} size={28} className="rounded-lg" />
         <Link to={`/jobs/${encodeURIComponent(job.id)}`} onClick={() => setPane('page')} className="min-w-0 flex-1 leading-tight hover:underline">
           <p className="truncate text-[13px] font-semibold">{job.title}</p>
           <p className="truncate text-[11.5px] text-muted-foreground">{job.company} · application</p>

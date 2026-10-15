@@ -109,7 +109,7 @@ function Focus({ job, resume, baseOk, opened, onMark }: { job: Job; resume?: Doc
       <div className="relative overflow-hidden rounded-[27px] bg-surface p-5 sm:p-7">
         <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[radial-gradient(closest-side,hsl(var(--lemon)/0.14),transparent)]" />
         <div className="flex items-start gap-4">
-          <CompanyMark name={job.company} size={56} className="rounded-2xl max-sm:hidden" />
+          <CompanyMark job={job} size={56} className="rounded-2xl max-sm:hidden" />
           <div className="min-w-0 flex-1">
             <p className="text-[13.5px] font-medium text-muted-foreground">{job.company}</p>
             <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="mt-0.5 block text-[21px] font-semibold leading-tight tracking-[-0.02em] hover:underline sm:text-[24px]">

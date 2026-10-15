@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { CheckCircle2, Download, ExternalLink, Loader2, Plug, RefreshCw, Sparkles, Trash2, Upload, User, Database, XCircle } from 'lucide-react';
+import { CheckCircle2, Building2, Download, ExternalLink, Loader2, Plug, RefreshCw, Sparkles, Trash2, Upload, User, Database, XCircle } from 'lucide-react';
 import { db, exportAll, getProfile, getSettings, uid, DEFAULT_SETTINGS } from '@/lib/db';
 import { PRESETS, listModels } from '@/lib/providers';
 import { importFile, type ImportResult } from '@/lib/importers';
 import { analysisPrompt } from '@/lib/analysis';
 import { ask } from '@/agent/runtime';
 import { PageHeader } from '@/components/common';
+import { companyDomain, setLogos, useLogos } from '@/lib/logo';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import type { Profile, Provider } from '@/lib/types';
@@ -297,6 +298,30 @@ function DataTools() {
   );
 }
 
+function LogoSettings() {
+  const on = useLogos();
+  const missing = useLiveQuery(async () => new Set((await db.jobs.toArray()).filter((j) => !companyDomain(j)).map((j) => j.company.trim().toLowerCase())).size, []);
+  return (
+    <div className="space-y-4">
+      <label className="flex cursor-pointer items-start gap-3">
+        <input type="checkbox" checked={on} onChange={(e) => setLogos(e.target.checked)} className="mt-0.5 size-4 accent-[hsl(var(--lemon))]" />
+        <span className="text-[14px]">
+          Show company logos
+          <span className="block text-[12.5px] text-muted-foreground">Each logo is fetched from Google’s favicon service, which sees the company’s website but nothing else. Off shows initials instead.</span>
+        </span>
+      </label>
+      {on && !!missing && (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="outline" size="sm" onClick={() => ask('Find the website of every company in my listings that has none (list_jobs with noWebsite), then save them all with set_company_websites. Only include ones you are sure of.')}>
+            <Sparkles className="text-lemon" /> Find the missing ones
+          </Button>
+          <span className="text-[12.5px] text-muted-foreground">{missing} {missing === 1 ? 'company has' : 'companies have'} no website yet. The assistant can look them up.</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Settings() {
   return (
     <>
@@ -306,6 +331,9 @@ export default function Settings() {
       </Section>
       <Section icon={<User />} title="Profile" sub="What the assistant knows about you and the rules it applies to every listing.">
         <ProfileEditor />
+      </Section>
+      <Section icon={<Building2 />} title="Company logos" sub="Logos come from each company's own website, even when you found the job on LinkedIn or a job board.">
+        <LogoSettings />
       </Section>
       <Section icon={<Database />} title="Data" sub="Bring in an existing search, or take everything with you.">
         <DataTools />
