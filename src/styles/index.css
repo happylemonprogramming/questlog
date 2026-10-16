@@ -27,20 +27,29 @@
     --gold-foreground: 20 30% 10%;
     --gold-soft: 39 52% 78%;
     --gold-ink: 30 72% 28%;
+    --heart: 4 60% 46%;
     --success: 120 22% 32%;
     --warning: 30 72% 38%;
     --danger: 4 58% 40%;
     --info: 218 21% 42%;
     --violet: 270 16% 42%;
     --shadow: 25 30% 18%;
-    --radius: 0.75rem;
-    /* Ambient glow behind each page, and the accent gradient for display text. */
+    /* Game panels are squarer than app cards. */
+    --radius: 0.5rem;
+    /* Frame lines: the ink line around a panel, and the fainter second line outside it. */
+    --frame: 25 25% 30%;
+    --frame-strength: 0.45;
+    --frame-outer: 0.16;
+    /* The HUD's translucent bar. */
+    --hud: 36 28% 92%;
+    /* Ambient glow behind each screen, and the accent gradient for display text. */
     --glow-a: 36 80% 55% / 0.16;
     --glow-b: 20 50% 45% / 0.08;
     --grad-a: 28 70% 30%;
     --grad-b: 4 45% 36%;
-    /* Flecks in the paper. */
+    /* Flecks in the paper, and the dotted trail that wanders behind each screen. */
     --fleck: 25 45% 25%;
+    --trail: 25 40% 30%;
   }
 
   .dark {
@@ -61,18 +70,24 @@
     --gold-foreground: 24 30% 7%;
     --gold-soft: 36 32% 17%;
     --gold-ink: 40 72% 66%;
+    --heart: 6 62% 56%;
     --success: 110 22% 58%;
     --warning: 34 72% 58%;
     --danger: 6 56% 60%;
     --info: 214 30% 66%;
     --violet: 270 22% 70%;
     --shadow: 20 40% 2%;
+    --frame: 38 40% 75%;
+    --frame-strength: 0.28;
+    --frame-outer: 0.1;
+    --hud: 25 15% 9%;
     /* Lamplight: warm glow from above, a touch of ember. */
     --glow-a: 38 80% 55% / 0.11;
     --glow-b: 14 60% 45% / 0.07;
     --grad-a: 40 72% 66%;
     --grad-b: 20 55% 62%;
     --fleck: 38 50% 70%;
+    --trail: 38 45% 70%;
   }
 
   * {
@@ -122,6 +137,208 @@
     @apply font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground;
   }
 
+  /* ---------- Frames ----------
+     A game panel: an ink line, a small gap, and a fainter line outside it.
+     Squarer than an app card, and the same in every screen. */
+  .panel {
+    position: relative;
+    border-radius: var(--radius);
+    background: hsl(var(--surface));
+    border: 1px solid hsl(var(--frame) / var(--frame-strength));
+    outline: 1px solid hsl(var(--frame) / var(--frame-outer));
+    outline-offset: 3px;
+    box-shadow: 0 1px 2px hsl(var(--shadow) / 0.05), 0 10px 28px -16px hsl(var(--shadow) / 0.2);
+  }
+  /* A panel that matters: gold corners drawn on, and a warm glow. */
+  .panel-hero {
+    border-color: hsl(var(--gold) / 0.55);
+    outline-color: hsl(var(--gold) / 0.25);
+    box-shadow: 0 0 0 1px hsl(var(--gold) / 0.08), 0 14px 40px -18px hsl(var(--gold) / 0.45);
+  }
+  .panel-hero::after {
+    content: '';
+    position: absolute;
+    inset: 5px;
+    pointer-events: none;
+    border-radius: calc(var(--radius) - 3px);
+    --c: hsl(var(--gold));
+    background:
+      linear-gradient(var(--c), var(--c)) top left / 18px 2px no-repeat,
+      linear-gradient(var(--c), var(--c)) top left / 2px 18px no-repeat,
+      linear-gradient(var(--c), var(--c)) top right / 18px 2px no-repeat,
+      linear-gradient(var(--c), var(--c)) top right / 2px 18px no-repeat,
+      linear-gradient(var(--c), var(--c)) bottom left / 18px 2px no-repeat,
+      linear-gradient(var(--c), var(--c)) bottom left / 2px 18px no-repeat,
+      linear-gradient(var(--c), var(--c)) bottom right / 18px 2px no-repeat,
+      linear-gradient(var(--c), var(--c)) bottom right / 2px 18px no-repeat;
+    opacity: 0.8;
+  }
+  /* A sunken well inside a panel, for lists and inputs. */
+  .well {
+    border-radius: calc(var(--radius) - 2px);
+    background: hsl(var(--sunken) / 0.55);
+    box-shadow: inset 0 1px 0 hsl(var(--shadow) / 0.06);
+  }
+
+  /* ---------- The cursor ----------
+     Four gold corners around whatever is pointed at, selected or focused,
+     the way a game highlights the thing you're on. Add .cursor to any
+     positioned element; the corners draw just outside its edge. */
+  .cursor {
+    position: relative;
+  }
+  .cursor::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    pointer-events: none;
+    border-radius: inherit;
+    --c: hsl(var(--gold));
+    --l: 12px;
+    background:
+      linear-gradient(var(--c), var(--c)) top left / var(--l) 2px no-repeat,
+      linear-gradient(var(--c), var(--c)) top left / 2px var(--l) no-repeat,
+      linear-gradient(var(--c), var(--c)) top right / var(--l) 2px no-repeat,
+      linear-gradient(var(--c), var(--c)) top right / 2px var(--l) no-repeat,
+      linear-gradient(var(--c), var(--c)) bottom left / var(--l) 2px no-repeat,
+      linear-gradient(var(--c), var(--c)) bottom left / 2px var(--l) no-repeat,
+      linear-gradient(var(--c), var(--c)) bottom right / var(--l) 2px no-repeat,
+      linear-gradient(var(--c), var(--c)) bottom right / 2px var(--l) no-repeat;
+    filter: drop-shadow(0 0 4px hsl(var(--gold) / 0.7));
+    opacity: 0;
+    transform: scale(1.03);
+    transition: opacity 0.15s ease, transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .cursor:hover::after,
+  .cursor:focus-visible::after,
+  .cursor[aria-current]::after,
+  .cursor[aria-selected='true']::after,
+  .cursor[data-selected='true']::after {
+    opacity: 1;
+    transform: none;
+  }
+  /* A selected thing breathes a little, so the eye finds it. */
+  .cursor[aria-selected='true']::after,
+  .cursor[data-selected='true']::after,
+  .cursor[aria-current]::after {
+    animation: cursor-breathe 2.4s ease-in-out infinite;
+  }
+  .cursor:focus-visible {
+    outline: none;
+  }
+
+  /* ---------- The HUD ---------- */
+  .hud {
+    background: hsl(var(--hud) / 0.82);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid hsl(var(--frame) / 0.3);
+    box-shadow: 0 1px 0 hsl(var(--frame) / 0.1), 0 8px 24px -16px hsl(var(--shadow) / 0.3);
+  }
+  .hud-tab {
+    @apply font-display relative flex h-9 items-center gap-2 rounded-md px-3 text-[17px] text-muted-foreground transition-colors duration-200 [&_svg]:size-4;
+  }
+  .hud-tab:hover {
+    @apply text-foreground;
+  }
+  .hud-tab[aria-current] {
+    @apply text-foreground;
+  }
+  /* The XP bar: a thin gold track with a bright head. */
+  .xp-track {
+    position: relative;
+    height: 5px;
+    border-radius: 999px;
+    background: hsl(var(--frame) / 0.18);
+    overflow: hidden;
+  }
+  .xp-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, hsl(var(--gold-ink)), hsl(var(--gold)));
+    box-shadow: 0 0 10px hsl(var(--gold) / 0.7);
+    transition: width 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .xp-fill.xp-surge {
+    animation: xp-surge 0.9s ease-out;
+  }
+
+  /* ---------- Speech ----------
+     The companion speaks in a dialog box: dark, translucent, a name plate at
+     its shoulder, and a small cursor that blinks for "go on". */
+  .speech {
+    position: relative;
+    border-radius: 10px;
+    background: hsl(var(--speech, 24 16% 12%) / 0.92);
+    color: hsl(36 30% 90%);
+    border: 1px solid hsl(38 40% 75% / 0.22);
+    outline: 1px solid hsl(38 40% 75% / 0.08);
+    outline-offset: 3px;
+    box-shadow: 0 16px 40px -20px hsl(var(--shadow) / 0.6);
+  }
+  .speech .speech-plate {
+    position: absolute;
+    top: -11px;
+    left: 14px;
+    padding: 1px 9px;
+    border-radius: 4px;
+    background: hsl(var(--gold));
+    color: hsl(var(--gold-foreground));
+    font-family: 'Pirata One', serif;
+    font-size: 13.5px;
+    letter-spacing: 0.04em;
+    line-height: 18px;
+    box-shadow: 0 2px 8px -2px hsl(var(--gold) / 0.7);
+  }
+  .speech-cursor {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 7px solid hsl(var(--gold));
+    animation: blink 1.1s steps(2, start) infinite;
+  }
+  .speech ::selection {
+    background: hsl(var(--gold) / 0.6);
+  }
+
+  /* ---------- Ornament ---------- */
+  /* A rule with a diamond in it, between a title and what follows. */
+  .rule {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: hsl(var(--gold));
+  }
+  .rule::before,
+  .rule::after {
+    content: '';
+    height: 1px;
+    flex: 1;
+    background: linear-gradient(90deg, transparent, hsl(var(--frame) / 0.45));
+  }
+  .rule::after {
+    background: linear-gradient(90deg, hsl(var(--frame) / 0.45), transparent);
+  }
+  .rule-left::before {
+    display: none;
+  }
+  .rule-left::after {
+    flex: 1;
+    background: linear-gradient(90deg, hsl(var(--frame) / 0.45), transparent);
+  }
+
+  /* The dotted trail that wanders behind each screen. */
+  .trail {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.35;
+    -webkit-mask-image: linear-gradient(to bottom, #000, transparent 85%);
+    mask-image: linear-gradient(to bottom, #000, transparent 85%);
+  }
+
   /* Dragging the chat edge over the application frame shouldn't lose the pointer. */
   body.resizing iframe {
     pointer-events: none;
@@ -136,7 +353,7 @@
     scrollbar-width: none;
   }
 
-  /* A soft, slowly drifting glow at the top of each page. Painted once as
+  /* A soft, slowly drifting glow at the top of each screen. Painted once as
      gradients; only transform animates, so it stays on the compositor. */
   .aurora {
     position: absolute;
@@ -187,6 +404,24 @@
   .pop {
     animation: pop 0.38s cubic-bezier(0.3, 1.4, 0.5, 1) both;
   }
+  /* A title arriving the way a region's name does: wide, then settling. */
+  .reveal {
+    animation: reveal 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  /* A number floating up and fading, like points earned. */
+  .float-up {
+    animation: float-up 1.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  /* A gold sweep across the top edge of the screen when something is turned in. */
+  .flash-bar {
+    position: fixed;
+    inset: 0 0 auto;
+    height: 3px;
+    z-index: 96;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, hsl(var(--gold)), transparent);
+    animation: flash-bar 1.1s ease-out both;
+  }
 
   /* A light sweep across a button on hover. */
   .shine {
@@ -233,6 +468,78 @@
     transform: scale(1);
   }
 }
+@keyframes reveal {
+  0% {
+    opacity: 0;
+    letter-spacing: 0.4em;
+    transform: translateY(6px);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    letter-spacing: 0.06em;
+    transform: none;
+  }
+}
+@keyframes float-up {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.9);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1.05);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-22px);
+  }
+}
+@keyframes flash-bar {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.2);
+  }
+  25% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1.1);
+  }
+}
+@keyframes xp-surge {
+  0% {
+    filter: brightness(1);
+  }
+  30% {
+    filter: brightness(1.9);
+    box-shadow: 0 0 18px hsl(var(--gold));
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+@keyframes cursor-breathe {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 3px hsl(var(--gold) / 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 7px hsl(var(--gold) / 0.95));
+  }
+}
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
+}
 @keyframes sweep {
   to {
     transform: translateX(260%) skewX(-20deg);
@@ -255,6 +562,21 @@
   }
   to {
     transform: translate3d(90px, 40px, 0) scale(1.12);
+  }
+}
+@keyframes flicker {
+  0%,
+  100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.06) translateY(-1px);
+  }
+  70% {
+    opacity: 0.9;
+    transform: scale(0.98);
   }
 }
 

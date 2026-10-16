@@ -31,7 +31,7 @@ export function WorkspaceWelcome() {
   return (
     <Dialog open={open} onOpenChange={() => {}} title="Where should your quest log live?" description="Questlog keeps your profile, jobs, resumes and letters as plain files in a folder you own. You can open them, back them up, or edit them yourself.">
       <div className="space-y-4">
-        <div className="flex items-center gap-3 rounded-xl bg-sunken px-4 py-3 font-mono text-[13px]">
+        <div className="flex items-center gap-3 rounded-md bg-sunken px-4 py-3 font-mono text-[13px]">
           <FolderOpen className="size-4 shrink-0 text-gold" />
           <span className="truncate">{info && pretty(info.defaultRoot)}</span>
         </div>
@@ -77,7 +77,7 @@ export function WorkspaceSettings() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl bg-sunken px-4 py-3 font-mono text-[13px]">
+        <div className="flex min-w-0 flex-1 items-center gap-3 rounded-md bg-sunken px-4 py-3 font-mono text-[13px]">
           <FolderOpen className="size-4 shrink-0 text-gold" />
           <span className="truncate">{info?.root ? pretty(info.root) : 'No folder yet'}</span>
         </div>
@@ -98,7 +98,7 @@ export function WorkspaceSettings() {
               {busy === 'undo' ? <Loader2 className="animate-spin" /> : <Undo2 />} Undo last change
             </Button>
           </div>
-          <ol className="scroll-thin max-h-72 divide-y overflow-y-auto rounded-xl border bg-surface">
+          <ol className="scroll-thin max-h-72 divide-y overflow-y-auto rounded-md border bg-surface">
             {snaps === null && <li className="p-3 text-[13px] text-muted-foreground">Loading…</li>}
             {snaps?.length === 0 && <li className="p-3 text-[13px] text-muted-foreground">Nothing yet.</li>}
             {snaps?.map((s, i) => (

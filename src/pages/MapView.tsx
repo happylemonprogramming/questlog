@@ -162,7 +162,7 @@ function pinElement(group: Pin[], selected: boolean, onClick: () => void) {
       selected && 'scale-110 ring-foreground',
     )}" style="width:${size}px;height:${size}px">${jobs.length}</span>
     <span class="${cn(
-      'pointer-events-none absolute left-full top-1/2 ml-1.5 -translate-y-1/2 whitespace-nowrap rounded-md bg-surface/95 px-1.5 py-0.5 text-[11.5px] font-medium text-foreground shadow-soft ring-1 ring-border',
+      'pointer-events-none absolute left-full top-1/2 ml-1.5 -translate-y-1/2 whitespace-nowrap rounded-md bg-surface/95 px-1.5 py-0.5 text-[11.5px] font-medium text-foreground shadow-soft ring-1 ring-frame/30',
       selected ? 'block' : 'hidden group-hover:block',
     )}"></span>`;
   (el.lastElementChild as HTMLElement).textContent = label;
@@ -356,12 +356,12 @@ export default function MapView() {
         {ready && (
           <div className="absolute right-3 top-3 flex flex-col gap-1.5">
             <Tip label="Show the most listings">
-              <button onClick={home} disabled={!view} className="grid size-9 place-items-center rounded-lg bg-surface/95 text-foreground shadow-soft ring-1 ring-border backdrop-blur hover:bg-accent disabled:opacity-40 [&_svg]:size-4" aria-label="Show the most listings">
+              <button onClick={home} disabled={!view} className="grid size-9 place-items-center rounded-lg bg-surface/95 text-foreground shadow-soft ring-1 ring-frame/30 backdrop-blur hover:bg-accent disabled:opacity-40 [&_svg]:size-4" aria-label="Show the most listings">
                 <Home />
               </button>
             </Tip>
             <Tip label={globe ? 'Flat map' : 'Globe'}>
-              <button onClick={() => setGlobe((g) => !g)} className="grid size-9 place-items-center rounded-lg bg-surface/95 text-foreground shadow-soft ring-1 ring-border backdrop-blur hover:bg-accent [&_svg]:size-4" aria-label={globe ? 'Flat map' : 'Globe'}>
+              <button onClick={() => setGlobe((g) => !g)} className="grid size-9 place-items-center rounded-lg bg-surface/95 text-foreground shadow-soft ring-1 ring-frame/30 backdrop-blur hover:bg-accent [&_svg]:size-4" aria-label={globe ? 'Flat map' : 'Globe'}>
                 {globe ? <MapIcon /> : <Globe2 />}
               </button>
             </Tip>
@@ -375,7 +375,7 @@ export default function MapView() {
               <button
                 key={g.name}
                 onClick={() => mapRef.current && fit(mapRef.current, g.places, mobile)}
-                className="flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-surface/95 px-2.5 text-[12.5px] font-medium shadow-soft ring-1 ring-border backdrop-blur transition hover:bg-accent [&_svg]:size-3"
+                className="flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-surface/95 px-2.5 text-[12.5px] font-medium shadow-soft ring-1 ring-frame/30 backdrop-blur transition hover:bg-accent [&_svg]:size-3"
               >
                 <Navigation className="text-muted-foreground" />
                 {g.name}
@@ -386,7 +386,7 @@ export default function MapView() {
         )}
 
         {pick && (
-          <div className="absolute inset-x-2 bottom-2 max-h-[48%] overflow-hidden rounded-xl bg-surface/95 shadow-lift ring-1 ring-border backdrop-blur sm:inset-x-auto sm:left-3 sm:w-[400px]">
+          <div className="absolute inset-x-2 bottom-2 max-h-[48%] overflow-hidden rounded-md bg-surface/95 shadow-lift ring-1 ring-frame/30 backdrop-blur sm:inset-x-auto sm:left-3 sm:w-[400px]">
             <div className="flex items-center gap-2 border-b px-3.5 py-2.5">
               <p className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">
                 {pick.place.label}

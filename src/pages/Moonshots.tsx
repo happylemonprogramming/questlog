@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ChevronDown, ChevronUp, ExternalLink, Rocket } from 'lucide-react';
 import { db, now } from '@/lib/db';
-import { Card, CompanyMark, Empty, StageBadge } from '@/components/common';
+import { CompanyMark, Empty, Panel, StageBadge } from '@/components/common';
 import { JobsHeader } from '@/components/JobsHeader';
 import { Button } from '@/components/ui/button';
+import { roman } from '@/lib/quest';
 import type { Job } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +21,7 @@ async function move(list: Job[], i: number, dir: -1 | 1) {
   );
 }
 
+/** Long shots: the quests you'd most like, ranked. Each is a card with its odds. */
 export default function Moonshots() {
   const list =
     useLiveQuery(async () =>
@@ -30,23 +32,23 @@ export default function Moonshots() {
 
   return (
     <>
-      <JobsHeader sub="Long shots worth taking, ranked by how much you want them." />
+      <JobsHeader compact sub="Long shots worth taking, ranked by how much you want them." />
       {list.length === 0 ? (
-        <Empty icon={<Rocket />} title="No moonshots yet">Mark a listing as a moonshot from its page, or ask the agent to find some.</Empty>
+        <Empty icon={<Rocket />} title="No long shots yet">Mark a listing as a long shot from its page, or ask the guide to find some.</Empty>
       ) : (
         <div className="space-y-4">
           {list.map((j, i) => (
-            <Card key={j.id} className="rise group flex items-stretch gap-0 overflow-hidden transition-shadow duration-300 hover:shadow-lift" style={{ '--i': i } as CSSProperties}>
-              <div className="flex w-12 shrink-0 flex-col items-center justify-center gap-0.5 border-r border-border/60 bg-sunken/40 sm:w-16">
+            <Panel key={j.id} hero={i === 0} className="rise group flex items-stretch gap-0 overflow-hidden transition-shadow duration-300 hover:shadow-lift" style={{ '--i': i } as CSSProperties}>
+              <div className="flex w-14 shrink-0 flex-col items-center justify-center gap-0.5 border-r border-frame/25 bg-sunken/40 sm:w-16">
                 <Button variant="ghost" size="icon" className="size-6 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100" onClick={() => move(list, i, -1)} aria-label="Move up"><ChevronUp /></Button>
-                <span className={cn('text-[22px] font-semibold tabular-nums tracking-[-0.04em] sm:text-[26px]', i < 3 ? 'text-gradient' : 'text-muted-foreground')}>{i + 1}</span>
+                <span className={cn('font-display text-[26px] leading-none sm:text-[30px]', i < 3 ? 'text-gradient' : 'text-muted-foreground')}>{roman(i + 1)}</span>
                 <Button variant="ghost" size="icon" className="size-6 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100" onClick={() => move(list, i, 1)} aria-label="Move down"><ChevronDown /></Button>
               </div>
               <Link to={`/jobs/${encodeURIComponent(j.id)}`} className="flex min-w-0 flex-1 gap-4 p-5 transition-colors hover:bg-accent/30">
-                <CompanyMark job={j} size={46} className="rounded-xl max-sm:hidden" />
+                <CompanyMark job={j} size={46} className="rounded-md max-sm:hidden" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-[15.5px] font-semibold tracking-[-0.01em]">{j.title}</p>
+                    <p className="font-display text-[20px] leading-tight">{j.title}</p>
                     <StageBadge stage={j.stage} />
                   </div>
                   <p className="mt-0.5 text-[13px] text-muted-foreground">
@@ -59,11 +61,11 @@ export default function Moonshots() {
                 </div>
               </Link>
               {j.url && (
-                <a href={j.url} target="_blank" rel="noopener noreferrer" className="hidden w-12 shrink-0 place-items-center border-l text-muted-foreground hover:bg-accent hover:text-foreground sm:grid" aria-label="Open posting">
+                <a href={j.url} target="_blank" rel="noopener noreferrer" className="hidden w-12 shrink-0 place-items-center border-l border-frame/25 text-muted-foreground hover:bg-accent hover:text-foreground sm:grid" aria-label="Open posting">
                   <ExternalLink className="size-4" />
                 </a>
               )}
-            </Card>
+            </Panel>
           ))}
         </div>
       )}

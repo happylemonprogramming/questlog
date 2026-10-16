@@ -5,7 +5,7 @@ import { ask, useLive } from '@/agent/runtime';
 import { cn } from '@/lib/utils';
 import { isDesktop } from '@/lib/desktop';
 
-/** Things worth asking for on each page, shown one at a time as the placeholder. */
+/** Things worth asking for on each screen, shown one at a time as the placeholder. */
 function examples(path: string): string[] {
   if (path.startsWith('/jobs/'))
     return [
@@ -16,18 +16,18 @@ function examples(path: string): string[] {
     ];
   if (['/listings', '/pipeline', '/map', '/moonshots'].includes(path))
     return [
-      'Sort my New roles: save the good ones, pass on the rest',
+      'Sort my Found roles: track the good ones, pass on the rest',
       'Find mechanical roles at SpaceX and Anduril',
       'Line up my best 5 for this week',
       'Close everything that pays under my floor',
     ];
   if (path.startsWith('/documents'))
     return ['Make my resume fit on one page', 'Give my resume a clean two-column design', 'Write a cover letter for my next application'];
-  return ['Line up 5 roles for this week', 'Sort my New roles', 'Tailor my resume for the next one', 'What should I do today?'];
+  return ['Line up 5 roles for this week', 'Sort my Found roles', 'Tailor my resume for the next one', 'What should I do today?'];
 }
 
 /**
- * Tell the agent what to do from any page. It opens the agent panel with the
+ * Speak to the guide from any screen. It opens the guide's panel with the
  * request running, so the work happens where you can watch it.
  */
 export function CommandDock({ className, mobile }: { className?: string; mobile?: boolean }) {
@@ -73,11 +73,12 @@ export function CommandDock({ className, mobile }: { className?: string; mobile?
     <form
       onSubmit={(e) => { e.preventDefault(); submit(); }}
       className={cn(
-        'group pointer-events-auto flex w-full items-center gap-2 rounded-full border border-border/80 bg-surface/90 p-1.5 pl-4 shadow-lift backdrop-blur-xl transition-[border-color,box-shadow] duration-300',
-        'focus-within:border-gold/60 focus-within:shadow-[0_0_0_4px_hsl(var(--gold)/0.14),0_16px_40px_-16px_hsl(var(--gold)/0.5)]',
+        'group pointer-events-auto relative flex w-full items-center gap-2 rounded-md border border-frame/45 bg-surface/92 p-1.5 pl-3.5 shadow-lift outline outline-1 outline-offset-[3px] outline-frame/15 backdrop-blur-xl transition-[border-color,box-shadow,outline-color] duration-300',
+        'focus-within:border-gold/70 focus-within:outline-gold/30 focus-within:shadow-[0_0_0_4px_hsl(var(--gold)/0.12),0_16px_40px_-16px_hsl(var(--gold)/0.5)]',
         className,
       )}
     >
+      <span className="font-display absolute -top-2.5 left-3 rounded-[3px] bg-gold px-1.5 text-[11px] leading-4 tracking-wide text-gold-foreground">Guide</span>
       <Sparkles className={cn('size-4 shrink-0 text-gold', busy && 'animate-pulse')} />
       <div className="relative min-w-0 flex-1">
         <input
@@ -88,22 +89,22 @@ export function CommandDock({ className, mobile }: { className?: string; mobile?
             // Tab takes the example shown, so the suggestions are one key away.
             if (e.key === 'Tab' && !text) { e.preventDefault(); setText(example); }
           }}
-          aria-label="Tell the agent what to do"
+          aria-label="Tell the guide what to do"
           enterKeyHint="send"
           className={cn('h-9 w-full bg-transparent text-[14px] outline-none', mobile && 'text-[16px]')}
         />
         {!text && (
           <span key={example} className="pointer-events-none absolute inset-y-0 left-0 flex max-w-full items-center truncate text-[14px] text-muted-foreground animate-in fade-in-0 duration-500">
-            {busy ? 'The agent is working… add to it in the panel' : <>Tell Questlog what to do: <span className="ml-1 truncate text-foreground/60">“{example}”</span></>}
+            {busy ? 'The guide is working… add to it in the panel' : <>Tell the guide what to do: <span className="ml-1 truncate text-foreground/60">“{example}”</span></>}
           </span>
         )}
       </div>
-      {!mobile && !text && <kbd className="hidden shrink-0 rounded-md border border-border/80 px-1.5 py-0.5 font-mono text-[10.5px] text-muted-foreground sm:block">⌘K</kbd>}
+      {!mobile && !text && <kbd className="hidden shrink-0 rounded-[4px] border border-frame/40 px-1.5 py-0.5 font-mono text-[10.5px] text-muted-foreground sm:block">⌘K</kbd>}
       <button
         type="submit"
         disabled={!text.trim() || busy}
-        aria-label="Send to the agent"
-        className="grid size-9 shrink-0 place-items-center rounded-full bg-gold text-gold-foreground transition disabled:opacity-40 [&_svg]:size-4"
+        aria-label="Send to the guide"
+        className="grid size-8 shrink-0 place-items-center rounded-[5px] bg-gold text-gold-foreground ring-1 ring-inset ring-gold-ink/30 transition disabled:opacity-40 [&_svg]:size-4"
       >
         <ArrowUp />
       </button>

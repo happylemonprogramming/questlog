@@ -21,7 +21,7 @@ export function CompanyMark({ job, size = 36, className }: { job: MarkJob; size?
   const want = domain && !missingLogos.has(domain) ? domain : undefined;
   return (
     <div
-      className={cn('sepia-art relative grid shrink-0 place-items-center overflow-hidden rounded-[10px] font-semibold tracking-tight', className)}
+      className={cn('sepia-art relative grid shrink-0 place-items-center overflow-hidden rounded-md font-semibold tracking-tight', className)}
       style={{
         width: size,
         height: size,
@@ -87,27 +87,54 @@ export const STAGE_VAR: Record<Stage, string> = {
   closed: '--muted-foreground',
 };
 
+/**
+ * A quest marker for each stage, the way a map marks its places: a hollow
+ * diamond for something only seen, a filled one once it's yours, gold when
+ * it's next, a star for an offer.
+ */
+export function StageMark({ stage, size = 14, className }: { stage: Stage; size?: number; className?: string }) {
+  const c = `hsl(var(${STAGE_VAR[stage]}))`;
+  const hollow = stage === 'inbox' || stage === 'saved' || stage === 'closed';
+  return (
+    <svg viewBox="0 0 16 16" width={size} height={size} className={cn('shrink-0', className)} aria-hidden="true">
+      {stage === 'offer' ? (
+        <path d="M8 1.2l1.9 4.3 4.6.5-3.4 3.1 1 4.6L8 11.4l-4.1 2.3 1-4.6L1.5 6l4.6-.5z" fill={c} />
+      ) : (
+        <path
+          d="M8 1.5L14.5 8 8 14.5 1.5 8z"
+          fill={hollow ? 'none' : c}
+          stroke={c}
+          strokeWidth={stage === 'inbox' || stage === 'closed' ? 1.2 : 1.6}
+          strokeDasharray={stage === 'inbox' ? '2 1.5' : undefined}
+          opacity={stage === 'closed' ? 0.55 : 1}
+        />
+      )}
+      {stage === 'next' && <circle cx="8" cy="8" r="1.7" fill="hsl(var(--gold-foreground))" />}
+      {stage === 'applied' && <path d="M5.2 8.2l2 2 3.8-4" fill="none" stroke="hsl(var(--background))" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />}
+      {stage === 'interviewing' && <circle cx="8" cy="8" r="2" fill="hsl(var(--background))" />}
+      {stage === 'closed' && <path d="M6 6l4 4M10 6l-4 4" stroke={c} strokeWidth="1.2" strokeLinecap="round" opacity=".7" />}
+    </svg>
+  );
+}
+
 export function StageBadge({ stage }: { stage: Stage }) {
   return (
     <Badge tone={STAGE_TONE[stage]}>
-      <span className={cn('size-1.5 rounded-full', STAGE_DOT[stage])} />
+      <StageMark stage={stage} size={11} />
       {STAGE_LABEL[stage]}
     </Badge>
   );
 }
 
-export function PageHeader({ eyebrow, title, children, sub }: { eyebrow?: string; title: string; sub?: ReactNode; children?: ReactNode }) {
+/** A screen's title: the name in display type over an ornamented rule. */
+export function PageHeader({ eyebrow, title, children, sub, compact }: { eyebrow?: string; title: string; sub?: ReactNode; children?: ReactNode; compact?: boolean }) {
   return (
-    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-      <div className="min-w-0">
-        {eyebrow && (
-          <p className="eyebrow-label mb-2.5 flex items-center gap-2">
-            <span className="size-1.5 rounded-full bg-gold shadow-[0_0_10px_hsl(var(--gold))]" />
-            {eyebrow}
-          </p>
-        )}
-        <h1 className="font-display text-[30px] leading-[1.1] md:text-[38px]">{title}</h1>
-        {sub && <p className="mt-2 text-[14.5px] text-muted-foreground">{sub}</p>}
+    <div className={cn('flex flex-wrap items-end justify-between gap-4', compact ? 'mb-5' : 'mb-7')}>
+      <div className="min-w-0 flex-1">
+        {eyebrow && <p className="eyebrow-label mb-2">{eyebrow}</p>}
+        <h1 className={cn('font-display leading-[1.05]', compact ? 'text-[28px]' : 'text-[32px] md:text-[40px]')}>{title}</h1>
+        <div className="rule rule-left mt-2 max-w-[420px] text-[10px]">◆</div>
+        {sub && <p className="mt-2.5 max-w-[640px] text-[14.5px] text-muted-foreground">{sub}</p>}
       </div>
       {children && <div className="flex items-center gap-2">{children}</div>}
     </div>
@@ -116,38 +143,49 @@ export function PageHeader({ eyebrow, title, children, sub }: { eyebrow?: string
 
 export function Empty({ icon, title, children }: { icon: ReactNode; title: string; children?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border/80 px-6 py-16 text-center">
-      <div className="mb-4 grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-gold/25 to-violet/20 text-foreground ring-1 ring-border [&_svg]:size-5">{icon}</div>
-      <p className="font-medium">{title}</p>
-      {children && <div className="mt-1 max-w-sm text-sm text-muted-foreground">{children}</div>}
+    <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-frame/40 px-6 py-14 text-center">
+      <div className="mb-4 grid size-12 rotate-45 place-items-center rounded-md border border-gold/50 bg-gold-soft/40 text-gold-ink [&_svg]:size-5 [&_svg]:-rotate-45">{icon}</div>
+      <p className="font-display text-[21px]">{title}</p>
+      {children && <div className="mt-1 max-w-sm text-[13.5px] text-muted-foreground">{children}</div>}
     </div>
   );
 }
 
 /**
- * One listing as a row: the shape used by every list in the app. The whole
- * row opens the listing; the quick actions on the right move it along
- * without opening it.
+ * One quest as a row: the shape used by every list in the app. The whole
+ * row opens the quest; the quick actions on the right move it along
+ * without opening it. With `selected`, the row is the one the cursor is on.
  */
-export function JobRow({ job, rank, right, compact, index, actions = true }: { job: Job; rank?: ReactNode; right?: ReactNode; compact?: boolean; index?: number; actions?: boolean }) {
+export function JobRow({ job, rank, right, compact, index, actions = true, selected, onPick }: { job: Job; rank?: ReactNode; right?: ReactNode; compact?: boolean; index?: number; actions?: boolean; selected?: boolean; onPick?: () => void }) {
   return (
     <div
-      className={cn('group relative flex items-center gap-3.5 rounded-2xl max-sm:items-start px-3 py-3 transition-colors duration-200 hover:bg-accent/60', index !== undefined && 'rise')}
+      className={cn(
+        'cursor group relative flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors duration-200 max-sm:items-start',
+        selected ? 'bg-gold-soft/45' : 'hover:bg-accent/60',
+        index !== undefined && 'rise',
+      )}
+      data-selected={selected || undefined}
       style={index !== undefined ? ({ '--i': index } as CSSProperties) : undefined}
     >
       {rank}
-      <CompanyMark job={job} size={compact ? 32 : 38} />
+      <StageMark stage={job.stage} size={12} className="max-sm:hidden" />
+      <CompanyMark job={job} size={compact ? 30 : 36} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <Link
             to={`/jobs/${encodeURIComponent(job.id)}`}
-            className="truncate text-[14.5px] font-medium leading-5 tracking-[-0.005em] outline-none after:absolute after:inset-0 after:rounded-2xl focus-visible:after:ring-2 focus-visible:after:ring-ring/50"
+            onClick={(e) => {
+              if (!onPick) return;
+              e.preventDefault();
+              onPick();
+            }}
+            className="truncate text-[14.5px] font-medium leading-5 tracking-[-0.005em] outline-none after:absolute after:inset-0 after:rounded-md"
           >
             {job.title}
           </Link>
-          {job.moonshot && <Rocket className="size-3.5 shrink-0 text-violet" aria-label="Moonshot" />}
+          {job.moonshot && <Rocket className="size-3.5 shrink-0 text-violet" aria-label="Long shot" />}
         </div>
-        <div className="mt-1 flex min-w-0 items-center gap-x-3 text-[12.5px] text-muted-foreground">
+        <div className="mt-0.5 flex min-w-0 items-center gap-x-3 text-[12.5px] text-muted-foreground">
           <span className="truncate font-medium text-foreground/75">{job.company}</span>
           {job.location && !compact && (
             <span className="hidden min-w-0 items-center gap-1 sm:flex">
@@ -155,7 +193,7 @@ export function JobRow({ job, rank, right, compact, index, actions = true }: { j
               <span className="truncate">{job.location}</span>
             </span>
           )}
-          {job.pay && !/^not listed/i.test(job.pay) && (
+          {job.pay && !/^not listed/i.test(job.pay) && !compact && (
             <span className="hidden shrink-0 items-center gap-1 whitespace-nowrap font-mono text-[11.5px] md:flex">
               <Wallet className="size-3" />
               {shortPay(job.pay)}
@@ -186,32 +224,36 @@ export function shortPay(pay: string) {
   return p.length > 26 ? `${p.slice(0, 25)}…` : p;
 }
 
-export function Card({ className, children, style }: { className?: string; children: ReactNode; style?: CSSProperties }) {
-  return <div className={cn('rounded-3xl border border-border/70 bg-surface shadow-card', className)} style={style}>{children}</div>;
+/** A framed panel: an ink line, a gap, and a fainter line outside. `hero` adds gold corners. */
+export function Panel({ className, children, style, hero }: { className?: string; children: ReactNode; style?: CSSProperties; hero?: boolean }) {
+  return <div className={cn('panel', hero && 'panel-hero', className)} style={style}>{children}</div>;
 }
+export const Card = Panel;
 
-export function CardHeader({ title, icon, action, count }: { title: string; icon?: ReactNode; action?: ReactNode; count?: number }) {
+export function PanelHeader({ title, icon, action, count, className }: { title: string; icon?: ReactNode; action?: ReactNode; count?: number; className?: string }) {
   return (
-    <div className="flex items-center justify-between px-6 pb-2 pt-5">
-      <div className="flex items-center gap-2 [&_svg]:size-4 [&_svg]:text-muted-foreground">
+    <div className={cn('flex items-center gap-3 px-5 pb-2 pt-4', className)}>
+      <div className="flex items-center gap-2 [&_svg]:size-4 [&_svg]:text-gold">
         {icon}
-        <h2 className="font-display text-[19px] leading-none">{title}</h2>
-        {count !== undefined && <span className="font-mono text-xs text-muted-foreground">{count}</span>}
+        <h2 className="font-display text-[20px] leading-none">{title}</h2>
+        {count !== undefined && <span className="font-mono text-[11.5px] text-muted-foreground">{count}</span>}
       </div>
+      <span className="h-px min-w-4 flex-1 bg-gradient-to-r from-frame/35 to-transparent" />
       {action}
     </div>
   );
 }
+export const CardHeader = PanelHeader;
 
 export type StageFilter = Stage | 'all';
 
-/** "Open" plus each stage, with counts. The highlight slides to the one you pick. */
-export function StageChips({ value, onChange, counts, open }: { value: StageFilter; onChange: (v: StageFilter) => void; counts: Record<string, number>; open: number }) {
+/** "All" plus each stage, with counts. The highlight slides to the one you pick. */
+export function StageChips({ value, onChange, counts, open, className }: { value: StageFilter; onChange: (v: StageFilter) => void; counts: Record<string, number>; open: number; className?: string }) {
   const { container, highlight } = useSlidingHighlight<HTMLDivElement, HTMLSpanElement>('[aria-pressed="true"]', value);
   const chips: StageFilter[] = ['all', ...SHOWN_STAGES];
   return (
-    <div ref={container} className="scroll-none relative mb-6 flex gap-1 overflow-x-auto pb-1">
-      <span ref={highlight} aria-hidden="true" className="absolute left-0 top-0 rounded-full bg-primary opacity-0 shadow-soft transition-[transform,width] duration-500 ease-spring" />
+    <div ref={container} className={cn('scroll-none relative flex gap-0.5 overflow-x-auto rounded-md bg-sunken/60 p-1 ring-1 ring-frame/15', className)}>
+      <span ref={highlight} aria-hidden="true" className="absolute left-0 top-0 rounded-[5px] bg-surface opacity-0 shadow-soft ring-1 ring-frame/30 transition-[transform,width] duration-500 ease-spring" />
       {chips.map((c) => (
         <button
           key={c}
@@ -219,11 +261,11 @@ export function StageChips({ value, onChange, counts, open }: { value: StageFilt
           onClick={() => onChange(c)}
           title={c === 'all' ? 'Everything not closed' : STAGE_HINT[c]}
           className={cn(
-            'relative z-[1] flex h-9 shrink-0 items-center gap-2 rounded-full px-3.5 text-[13.5px] font-medium transition-colors duration-200',
-            value === c ? 'text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+            'relative z-[1] flex h-8 shrink-0 items-center gap-1.5 rounded-[5px] px-3 text-[13px] font-medium transition-colors duration-200',
+            value === c ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
           )}
         >
-          {c !== 'all' && <span className={cn('size-1.5 rounded-full', STAGE_DOT[c])} />}
+          {c !== 'all' && <StageMark stage={c} size={11} />}
           {c === 'all' ? 'All' : STAGE_LABEL[c]}
           <span className="font-mono text-[11px] tabular-nums opacity-60">{c === 'all' ? open : (counts[c] ?? 0)}</span>
         </button>

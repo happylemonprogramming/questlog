@@ -28,6 +28,8 @@ export default {
         muted: { DEFAULT: hsl('muted'), foreground: hsl('muted-foreground') },
         accent: { DEFAULT: hsl('accent'), foreground: hsl('accent-foreground') },
         gold: { DEFAULT: hsl('gold'), foreground: hsl('gold-foreground'), soft: hsl('gold-soft'), ink: hsl('gold-ink') },
+        heart: hsl('heart'),
+        frame: hsl('frame'),
         success: hsl('success'),
         warning: hsl('warning'),
         danger: hsl('danger'),

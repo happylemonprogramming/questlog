@@ -26,7 +26,7 @@ export function FolderGrants() {
   return (
     <div className="space-y-2">
       {folders?.length ? (
-        <ul className="divide-y rounded-2xl border">
+        <ul className="divide-y divide-frame/20 rounded-md border border-frame/35">
           {folders.map((f) => (
             <li key={f} className="flex items-center gap-3 px-3.5 py-2.5">
               <Folder className="size-4 shrink-0 text-muted-foreground" />

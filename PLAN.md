@@ -19,6 +19,7 @@ Where Questlog is headed, and what's done. Questlog was called Offerdex until Oc
 - Local folders the agent may read, and a git-history summary for building the career record (proposals only, confirmed by the user).
 - One-line installers, the `questlog` command, and a release workflow.
 - New identity, and the Journal: chapters, weekly quest, runs, keepsakes, and a rest-at-camp end to the day.
+- The game screen: a heads-up bar with hearts for the day, a ring for the week and the chapter's experience bar; Camp with the active quest as objectives and the guide in a dialog box; framed panels with a gold cursor; the quest sheet with its road of stages; cards drawn one at a time when choosing; chapter numbers in Roman numerals.
 
 ## Next
 

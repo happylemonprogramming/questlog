@@ -1,12 +1,13 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import * as D from '@radix-ui/react-dialog';
 import { BrowserRouter, Link, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
-  BookOpen, ClipboardPen, FileText, Loader2, Map as MapIcon, Menu, Monitor, Moon, PanelRightOpen, PanelsTopLeft, Settings as SettingsIcon, Sparkles, Sun, Sunrise,
+  BookOpen, ClipboardPen, FileText, Loader2, Map as MapIcon, Menu, Monitor, Moon, PanelsTopLeft, Settings as SettingsIcon, Sparkles, Sun, Tent,
 } from 'lucide-react';
-import { useJourney } from '@/lib/quest';
-import { Milestones } from '@/components/Milestones';
+import { roman, useDailyGoal, useJourney, useWeeklyGoal } from '@/lib/quest';
+import { Milestones, useXpGain } from '@/components/Milestones';
+import { Hearts, Ring, XpBar } from '@/components/game';
 import { db } from '@/lib/db';
 import { adoptBaseResumes } from '@/lib/career';
 import { ThemeProvider, useTheme, type Theme } from '@/lib/theme';
@@ -51,49 +52,65 @@ export function Mark({ className }: { className?: string }) {
   );
 }
 
-function Logo() {
+function Wordmark({ small }: { small?: boolean }) {
   return (
-    <div className="flex items-center gap-2.5 px-2">
-      <div className="grid size-9 place-items-center rounded-[11px] bg-[hsl(228_39%_13%)] shadow-[0_6px_18px_-6px_hsl(var(--gold)/0.5)] ring-1 ring-gold/30">
-        <Mark className="size-8" />
-      </div>
-      <div className="leading-none">
-        <p className="font-display text-[19px]">Questlog</p>
-        <p className="mt-0.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground">your job search</p>
-      </div>
-    </div>
-  );
-}
-
-function NavItem({ to, icon, label, end, standalone, match }: { to: string; icon: ReactNode; label: string; end?: boolean; standalone?: boolean; match?: (path: string) => boolean }) {
-  const { pathname } = useLocation();
-  const isActive = match ? match(pathname) : end ? pathname === to : pathname === to || pathname.startsWith(`${to}/`);
-  return (
-    <Link
-      to={to}
-      aria-current={isActive ? 'page' : undefined}
-      className={cn(
-        'group relative z-[1] flex h-10 items-center gap-3 rounded-xl px-3 text-[14px] font-medium transition-colors duration-200 [&_svg]:size-[18px] [&_svg]:transition-transform [&_svg]:duration-300 [&_svg]:ease-spring hover:[&_svg]:scale-110',
-        isActive ? 'text-foreground [&_svg]:text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
-        // Items outside the sliding highlight carry their own.
-        isActive && standalone && 'bg-surface shadow-card ring-1 ring-border/80',
-      )}
-    >
-      {icon}
-      <span className="flex-1 font-display text-[17.5px]">{label}</span>
+    <Link to="/" className="flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/60">
+      <span className={cn('grid place-items-center rounded-[7px] bg-[#221c18] ring-1 ring-gold/40 shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.6)]', small ? 'size-7' : 'size-8')}>
+        <Mark className={small ? 'size-6' : 'size-7'} />
+      </span>
+      {!small && <span className="font-display text-[21px] leading-none">Questlog</span>}
     </Link>
   );
 }
 
-function ThemeSwitch() {
+const PLACES: { to: string; icon: ReactNode; label: string; match: (p: string) => boolean }[] = [
+  { to: '/', icon: <Tent />, label: 'Camp', match: (p) => p === '/' },
+  { to: '/listings', icon: <MapIcon />, label: 'Quests', match: isJobsPath },
+  { to: '/documents', icon: <FileText />, label: 'Documents', match: (p) => p.startsWith('/documents') },
+  { to: '/journal', icon: <BookOpen />, label: 'Journal', match: (p) => p.startsWith('/journal') },
+];
+
+/** The places you can go, as tabs in the HUD. The gold cursor sits under the one you're in. */
+function Places({ className, vertical }: { className?: string; vertical?: boolean }) {
+  const { pathname } = useLocation();
+  return (
+    <nav className={cn('flex', vertical ? 'flex-col gap-1' : 'items-center gap-0.5', className)} aria-label="Places">
+      {PLACES.map((p) => {
+        const active = p.match(pathname);
+        return (
+          <Link
+            key={p.to}
+            to={p.to}
+            aria-current={active ? 'page' : undefined}
+            className={cn('hud-tab', vertical && 'h-11 px-3 text-[19px] [&_svg]:size-[18px]', active && '[&_svg]:text-gold')}
+          >
+            {p.icon}
+            {p.label}
+            {!vertical && (
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'absolute inset-x-3 -bottom-[7px] h-[2px] rounded-full bg-gold shadow-[0_0_8px_hsl(var(--gold))] transition-[transform,opacity] duration-500 ease-spring',
+                  active ? 'opacity-100' : 'scale-x-0 opacity-0',
+                )}
+              />
+            )}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function ThemeSwitch({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
   const opts: [Theme, ReactNode, string][] = [
     ['system', <Monitor key="s" />, 'System'],
-    ['light', <Sun key="l" />, 'Light'],
-    ['dark', <Moon key="d" />, 'Dark'],
+    ['light', <Sun key="l" />, 'Day'],
+    ['dark', <Moon key="d" />, 'Night'],
   ];
   return (
-    <div className="flex rounded-lg bg-muted p-0.5" role="radiogroup" aria-label="Theme">
+    <div className={cn('flex rounded-md bg-sunken/70 p-0.5 ring-1 ring-frame/15', className)} role="radiogroup" aria-label="Theme">
       {opts.map(([t, icon, label]) => (
         <Tip key={t} label={label}>
           <button
@@ -101,8 +118,8 @@ function ThemeSwitch() {
             aria-checked={theme === t}
             onClick={() => setTheme(t)}
             className={cn(
-              'grid h-7 flex-1 place-items-center rounded-md transition [&_svg]:size-3.5',
-              theme === t ? 'bg-surface text-foreground shadow-soft' : 'text-muted-foreground hover:text-foreground',
+              'grid h-7 w-8 place-items-center rounded-[5px] transition [&_svg]:size-3.5',
+              theme === t ? 'bg-surface text-foreground shadow-soft ring-1 ring-frame/30' : 'text-muted-foreground hover:text-foreground',
             )}
           >
             {icon}
@@ -113,96 +130,56 @@ function ThemeSwitch() {
   );
 }
 
-/** The highlight behind the current page, sliding between items as you navigate. */
-function useNavIndicator() {
-  const list = useRef<HTMLDivElement>(null);
-  const pill = useRef<HTMLDivElement>(null);
-  const { pathname } = useLocation();
-  useLayoutEffect(() => {
-    const active = list.current?.querySelector<HTMLElement>('a[aria-current="page"]');
-    const el = pill.current;
-    if (!el) return;
-    if (!active) {
-      el.style.opacity = '0';
-      return;
-    }
-    const first = el.style.opacity !== '1';
-    // No slide on first show; just appear in place.
-    el.style.transition = first ? 'none' : '';
-    el.style.transform = `translateY(${active.offsetTop}px)`;
-    el.style.height = `${active.offsetHeight}px`;
-    el.style.opacity = '1';
-  }, [pathname]);
-  return { list, pill };
-}
-
-function NavContents({ className }: { className?: string }) {
-  const { list, pill } = useNavIndicator();
-  return (
-    <nav className={cn('flex flex-col gap-8 px-3.5 py-5', className)}>
-      <Logo />
-      <div ref={list} className="relative space-y-1">
-        <div
-          ref={pill}
-          aria-hidden="true"
-          className="absolute inset-x-0 top-0 rounded-xl bg-surface opacity-0 shadow-card ring-1 ring-border/80 transition-[transform,height] duration-500 ease-spring before:absolute before:inset-y-2.5 before:-left-3.5 before:w-[3px] before:rounded-r-full before:bg-gold before:shadow-[0_0_12px_hsl(var(--gold))]"
-        />
-        <NavItem to="/" end icon={<Sunrise />} label="Today" />
-        <NavItem to="/listings" icon={<MapIcon />} label="Quests" match={isJobsPath} />
-        <NavItem to="/documents" icon={<FileText />} label="Documents" />
-        <NavItem to="/journal" icon={<BookOpen />} label="Journal" />
-      </div>
-      <div className="mt-auto space-y-3">
-        <JourneyCard />
-        <NavItem to="/settings" icon={<SettingsIcon />} label="Settings" standalone />
-        <ThemeSwitch />
-      </div>
-    </nav>
-  );
-}
-
-/** Where you are in the story, at a glance. Opens the journal. */
-function JourneyCard() {
+/**
+ * Status in the HUD: today's hearts, the week's ring, and the chapter with
+ * its experience bar. Points just earned float up beside the bar.
+ */
+function Status({ compact }: { compact?: boolean }) {
   const j = useJourney();
-  if (!j) return null;
+  const [daily, cycleDaily] = useDailyGoal();
+  const [weekly] = useWeeklyGoal();
+  const gain = useXpGain();
+  const [surge, setSurge] = useState(0);
+  useEffect(() => {
+    if (gain) setSurge(gain.key);
+  }, [gain]);
+  if (!j) return <div className="h-8" />;
   const { level } = j;
   return (
-    <Link to="/journal" className="block rounded-xl px-3 py-2.5 transition hover:bg-accent/50">
-      <p className="flex items-baseline justify-between gap-2 text-[12.5px]">
-        <span className="font-medium">Chapter {level.level} <span className="text-muted-foreground">· {level.title}</span></span>
-      </p>
-      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted">
-        <div className="h-full rounded-full bg-gold transition-[width] duration-700" style={{ width: `${Math.min(100, (level.into / level.span) * 100)}%` }} />
-      </div>
-    </Link>
-  );
-}
-
-function Sidebar() {
-  return <NavContents className="h-full w-[244px] shrink-0 border-r border-border/60 bg-sunken/70" />;
-}
-
-/** The sidebar as a drawer, for phones. Closes itself when you pick a page. */
-function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const { pathname } = useLocation();
-  useEffect(() => onOpenChange(false), [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
-  return (
-    <D.Root open={open} onOpenChange={onOpenChange}>
-      <D.Portal>
-        <D.Overlay className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=open]:fade-in-0" />
-        <D.Content onOpenAutoFocus={(e) => e.preventDefault()} className="fixed inset-y-0 left-0 z-50 flex w-[272px] max-w-[85vw] flex-col bg-background pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-lift data-[state=open]:animate-in data-[state=open]:slide-in-from-left">
-          <D.Title className="sr-only">Navigation</D.Title>
-          <NavContents className="h-full" />
-        </D.Content>
-      </D.Portal>
-    </D.Root>
+    <div className={cn('flex items-center', compact ? 'gap-3' : 'gap-5')}>
+      <Hearts
+        filled={j.sentToday}
+        total={daily}
+        size={compact ? 14 : 16}
+        onClick={cycleDaily}
+        title={`${j.sentToday} of ${daily} sent today. Tap to change today's goal.`}
+      />
+      <Ring value={j.sentThisWeek} max={weekly} size={compact ? 24 : 28} title={`${j.sentThisWeek} of ${weekly} this week`}>
+        <span className="font-mono text-[9px] font-semibold tabular-nums">{j.sentThisWeek}</span>
+      </Ring>
+      <Link to="/journal" className="group relative block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/60" title={`${level.into} of ${level.span} to the next chapter`}>
+        <div className={cn('flex items-baseline justify-between gap-3 leading-none', compact ? 'w-[96px]' : 'w-[150px]')}>
+          <span className="font-display text-[14px] tracking-wide">
+            Ch. {roman(level.level)}
+            {!compact && <span className="ml-1.5 text-muted-foreground">{level.title}</span>}
+          </span>
+          <span className="font-mono text-[10px] tabular-nums text-muted-foreground">{level.xp}</span>
+        </div>
+        <XpBar key={surge} into={level.into} span={level.span} surge={surge > 0} className="mt-1.5" />
+        {gain && (
+          <span key={gain.key} className="float-up pointer-events-none absolute -top-5 right-0 font-mono text-[12px] font-semibold text-gold-ink">
+            +{gain.xp}
+          </span>
+        )}
+      </Link>
+    </div>
   );
 }
 
 const WIDTH_KEY = 'questlog:chat-width';
 const OPEN_KEY = 'questlog:assistant-open';
 
-/** Ask-from-page buttons bring the agent forward. */
+/** Ask-from-page buttons bring the companion forward. */
 function useAskOpens(open: () => void) {
   const ref = useRef(open);
   ref.current = open;
@@ -214,7 +191,7 @@ function Page() {
   return (
     <ErrorBoundary resetKey={pathname}>
       <Suspense fallback={<div className="grid h-40 place-items-center text-muted-foreground"><Loader2 className="size-5 animate-spin" /></div>}>
-        {/* Keyed so each page fades up as you arrive. */}
+        {/* Keyed so each screen fades up as you arrive. */}
         <div key={pathname} className="page-enter @container">
           <Outlet />
         </div>
@@ -223,8 +200,32 @@ function Page() {
   );
 }
 
+/** A faint dotted trail wandering behind the screen, the way a map draws a route. */
+function Trail() {
+  return (
+    <svg className="trail" aria-hidden="true" preserveAspectRatio="none" viewBox="0 0 1200 900">
+      <path
+        d="M-40 120 C 160 80, 260 240, 420 200 S 700 60, 860 160 S 1100 420, 1260 380"
+        fill="none"
+        stroke="hsl(var(--trail) / 0.5)"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeDasharray="0.1 11"
+      />
+      <path
+        d="M-40 640 C 200 560, 380 760, 600 680 S 980 540, 1260 700"
+        fill="none"
+        stroke="hsl(var(--trail) / 0.35)"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeDasharray="0.1 11"
+      />
+    </svg>
+  );
+}
+
 const TITLES: Record<string, [string, string?]> = {
-  '': ['Today'],
+  '': ['Camp'],
   listings: ['Quests'],
   map: ['Quests'],
   moonshots: ['Quests'],
@@ -233,7 +234,7 @@ const TITLES: Record<string, [string, string?]> = {
   journal: ['Journal'],
   documents: ['Documents', 'Document'],
   settings: ['Settings'],
-  review: ['Review'],
+  review: ['Choose'],
 };
 
 function pageTitle(pathname: string) {
@@ -248,11 +249,11 @@ function TabButton({ active, onClick, icon, label, dot }: { active: boolean; onC
       onClick={onClick}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative flex h-14 flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors [&_svg]:size-5',
+        'font-display relative flex h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[13px] tracking-wide transition-colors [&_svg]:size-5',
         active ? 'text-foreground' : 'text-muted-foreground',
       )}
     >
-      <span className={cn('relative grid h-7 w-12 place-items-center rounded-full transition-colors', active && 'bg-gold-soft ring-1 ring-gold/50')}>
+      <span className={cn('relative grid h-7 w-12 place-items-center rounded-md transition-colors', active && 'bg-gold-soft ring-1 ring-gold/50')}>
         {icon}
         {dot && <span className="absolute right-2 top-0.5 size-2 rounded-full bg-gold ring-2 ring-background" />}
       </span>
@@ -261,8 +262,32 @@ function TabButton({ active, onClick, icon, label, dot }: { active: boolean; onC
   );
 }
 
+/** The places as a drawer, for phones. Closes itself when you pick one. */
+function PlacesDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const { pathname } = useLocation();
+  useEffect(() => onOpenChange(false), [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <D.Root open={open} onOpenChange={onOpenChange}>
+      <D.Portal>
+        <D.Overlay className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        <D.Content onOpenAutoFocus={(e) => e.preventDefault()} className="fixed inset-y-0 left-0 z-50 flex w-[272px] max-w-[85vw] flex-col bg-background pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-lift data-[state=open]:animate-in data-[state=open]:slide-in-from-left">
+          <D.Title className="sr-only">Places</D.Title>
+          <div className="flex h-full flex-col gap-6 px-4 py-5">
+            <Wordmark />
+            <Places vertical />
+            <div className="mt-auto space-y-3">
+              <Link to="/settings" className="hud-tab h-11 px-3 text-[19px] [&_svg]:size-[18px]"><SettingsIcon /> Settings</Link>
+              <ThemeSwitch className="w-fit" />
+            </div>
+          </div>
+        </D.Content>
+      </D.Portal>
+    </D.Root>
+  );
+}
+
 /**
- * Phones: one pane at a time (the page, the agent, or the application
+ * Phones: one pane at a time (the screen, the companion, or the application
  * form) with a tab bar. Every pane stays mounted so nothing is lost when you
  * switch, which is the main difference from hiding them by routing.
  */
@@ -317,15 +342,17 @@ function MobileShell() {
     <div className="flex h-dvh flex-col overflow-hidden">
       <div className="relative min-h-0 flex-1">
         <section className={cn('absolute inset-0 flex flex-col', pane !== 'page' && 'hidden')}>
-          <header className="shrink-0 border-b border-border/60 bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+          <header className="hud shrink-0 pt-[env(safe-area-inset-top)]">
             <div className="flex h-12 items-center gap-2 px-2">
-              <Button variant="ghost" size="icon" className="size-10" onClick={() => setDrawer(true)} aria-label="Menu"><Menu className="!size-5" /></Button>
-              <p className="flex-1 truncate text-[15px] font-semibold tracking-tight">{title}</p>
+              <Button variant="ghost" size="icon" className="size-10" onClick={() => setDrawer(true)} aria-label="Places"><Menu className="!size-5" /></Button>
+              <p className="font-display flex-1 truncate text-[19px]">{title}</p>
+              <div className="pr-1"><Status compact /></div>
             </div>
           </header>
           <main ref={page} className="scroll-thin relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <div className="aurora" aria-hidden="true" />
-            <div className="relative mx-auto w-full max-w-[860px] px-5 pb-6 pt-7 sm:px-6"><Page /></div>
+            <Trail />
+            <div className="relative mx-auto w-full max-w-[860px] px-5 pb-6 pt-6 sm:px-6"><Page /></div>
             <div className="pointer-events-none sticky bottom-0 z-20 bg-gradient-to-t from-background via-background/85 to-transparent px-4 pb-3 pt-8">
               <CommandDock mobile />
             </div>
@@ -334,7 +361,7 @@ function MobileShell() {
         <section
           className={cn('absolute inset-0 pt-[env(safe-area-inset-top)]', pane !== 'chat' && 'hidden')}
           onClickCapture={(e) => {
-            // Following a link from the chat means you want to see the page.
+            // Following a link from the chat means you want to see the screen.
             if ((e.target as HTMLElement).closest('a[href^="/"]:not([target])')) setPane('page');
           }}
         >
@@ -344,14 +371,14 @@ function MobileShell() {
           <ErrorBoundary><ApplyPane jobId={applyJobId} mobile /></ErrorBoundary>
         </section>
       </div>
-      <nav className={cn('shrink-0 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur', typing && 'hidden')}>
+      <nav className={cn('hud shrink-0 !border-b-0 border-t border-frame/30 pb-[env(safe-area-inset-bottom)]', typing && 'hidden')}>
         <div className="flex">
-          <TabButton active={pane === 'page'} onClick={() => setPane('page')} icon={<PanelsTopLeft />} label={title || 'Page'} dot={pageDot} />
-          <TabButton active={pane === 'chat'} onClick={() => setPane('chat')} icon={running ? <Loader2 className="animate-spin" /> : <Sparkles />} label="Agent" dot={chatDot} />
+          <TabButton active={pane === 'page'} onClick={() => setPane('page')} icon={<PanelsTopLeft />} label={title || 'Screen'} dot={pageDot} />
+          <TabButton active={pane === 'chat'} onClick={() => setPane('chat')} icon={running ? <Loader2 className="animate-spin" /> : <Sparkles />} label="Guide" dot={chatDot} />
           <TabButton active={pane === 'apply'} onClick={() => setPane('apply')} icon={<ClipboardPen />} label="Apply" dot={!!applyJobId && pane !== 'apply'} />
         </div>
       </nav>
-      <NavDrawer open={drawer} onOpenChange={setDrawer} />
+      <PlacesDrawer open={drawer} onOpenChange={setDrawer} />
     </div>
   );
 }
@@ -359,10 +386,13 @@ function MobileShell() {
 function DesktopShell() {
   const { pane, applyJobId } = useWorkspace();
   const applyJob = useLiveQuery(() => (applyJobId ? db.jobs.get(applyJobId) : undefined), [applyJobId]);
-  // Closed until asked for: the page should be the first thing you see.
+  const live = useLive();
+  const { pathname } = useLocation();
+  // Closed until asked for: the screen should be the first thing you see.
   const [open, setOpen] = useState(() => localStorage.getItem(OPEN_KEY) === '1');
   const [width, setWidth] = useState(() => Number(localStorage.getItem(WIDTH_KEY)) || 420);
   const showApply = !!applyJobId && pane === 'apply';
+  const running = !!live && !live.error;
 
   useEffect(() => {
     localStorage.setItem(OPEN_KEY, open ? '1' : '0');
@@ -403,58 +433,88 @@ function DesktopShell() {
     window.addEventListener('pointerup', up);
   }
 
+  const inSettings = pathname.startsWith('/settings');
+
   return (
-    <div className="flex h-full overflow-hidden">
-      <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
-        {applyJobId && (
-          <div className="flex h-11 shrink-0 items-center gap-1 border-b bg-sunken/40 px-3">
-            {([['page', <PanelsTopLeft key="p" />, 'Page'], ['apply', <ClipboardPen key="a" />, applyJob ? `Apply: ${applyJob.company}` : 'Application']] as const).map(([p, icon, label]) => (
+    <div className="flex h-full flex-col overflow-hidden">
+      {/* The HUD: where you are, how today and the week are going, and the companion. */}
+      <header className="hud relative z-30 shrink-0">
+        <div className="flex h-[52px] items-center gap-6 px-4">
+          <Wordmark />
+          <Places className="ml-2" />
+          <div className="ml-auto flex items-center gap-4">
+            <Status />
+            <span className="h-6 w-px bg-frame/25" aria-hidden="true" />
+            <Tip label={open ? 'Close the guide (⌘J)' : 'Call the guide (⌘J)'}>
               <button
-                key={p}
-                onClick={() => setPane(p)}
+                onClick={() => setOpen((o) => !o)}
+                aria-pressed={open}
                 className={cn(
-                  'flex h-8 max-w-[280px] items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium transition [&_svg]:size-3.5 [&_svg]:shrink-0',
-                  (p === 'apply') === showApply ? 'bg-surface text-foreground shadow-soft ring-1 ring-border' : 'text-muted-foreground hover:text-foreground',
+                  'font-display flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[15px] tracking-wide transition [&_svg]:size-4',
+                  open ? 'bg-gold-soft text-foreground ring-1 ring-gold/50' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                 )}
               >
-                {icon}<span className="truncate">{label}</span>
+                {running ? <Loader2 className="animate-spin text-gold" /> : <Sparkles className="text-gold" />}
+                Guide
               </button>
-            ))}
+            </Tip>
+            <Tip label="Settings">
+              <Link
+                to="/settings"
+                aria-current={inSettings ? 'page' : undefined}
+                className={cn('grid size-8 place-items-center rounded-md transition [&_svg]:size-4', inSettings ? 'bg-gold-soft text-foreground ring-1 ring-gold/50' : 'text-muted-foreground hover:bg-accent hover:text-foreground')}
+              >
+                <SettingsIcon />
+              </Link>
+            </Tip>
           </div>
-        )}
-        <main className={cn('scroll-thin relative min-h-0 flex-1 overflow-y-auto', showApply && 'hidden')}>
-          <div className="aurora" aria-hidden="true" />
-          {!open && (
-            <div className="sticky top-0 z-10 flex justify-end p-3">
-              <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="shadow-soft">
-                <Sparkles className="text-gold" /> Agent <PanelRightOpen className="text-muted-foreground" />
-              </Button>
+        </div>
+      </header>
+      <div className="flex min-h-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-col">
+          {applyJobId && (
+            <div className="flex h-10 shrink-0 items-center gap-1 border-b border-frame/25 bg-sunken/40 px-3">
+              {([['page', <PanelsTopLeft key="p" />, 'Screen'], ['apply', <ClipboardPen key="a" />, applyJob ? `Apply: ${applyJob.company}` : 'Application']] as const).map(([p, icon, label]) => (
+                <button
+                  key={p}
+                  onClick={() => setPane(p)}
+                  className={cn(
+                    'flex h-7 max-w-[280px] items-center gap-1.5 rounded-[5px] px-3 text-[13px] font-medium transition [&_svg]:size-3.5 [&_svg]:shrink-0',
+                    (p === 'apply') === showApply ? 'bg-surface text-foreground shadow-soft ring-1 ring-frame/30' : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {icon}<span className="truncate">{label}</span>
+                </button>
+              ))}
             </div>
           )}
-          <div className={cn('relative mx-auto w-full max-w-[1100px] px-10', open ? 'pb-20 pt-11' : '-mt-4 pb-6')}>
-            <Page />
-          </div>
-          {!open && (
-            <div className="pointer-events-none sticky bottom-0 z-20 flex justify-center bg-gradient-to-t from-background via-background/80 to-transparent px-10 pb-5 pt-10">
-              <CommandDock className="max-w-[640px]" />
+          <main className={cn('scroll-thin relative min-h-0 flex-1 overflow-y-auto', showApply && 'hidden')}>
+            <div className="aurora" aria-hidden="true" />
+            <Trail />
+            <div className={cn('relative mx-auto w-full max-w-[1120px] px-10 pt-9', open ? 'pb-16' : 'pb-6')}>
+              <Page />
+            </div>
+            {!open && (
+              <div className="pointer-events-none sticky bottom-0 z-20 flex justify-center bg-gradient-to-t from-background via-background/80 to-transparent px-10 pb-5 pt-10">
+                <CommandDock className="max-w-[640px]" />
+              </div>
+            )}
+          </main>
+          {applyJobId && (
+            <div className={cn('min-h-0 flex-1', !showApply && 'hidden')}>
+              <ErrorBoundary><ApplyPane jobId={applyJobId} /></ErrorBoundary>
             </div>
           )}
-        </main>
-        {applyJobId && (
-          <div className={cn('min-h-0 flex-1', !showApply && 'hidden')}>
-            <ErrorBoundary><ApplyPane jobId={applyJobId} /></ErrorBoundary>
-          </div>
-        )}
-      </div>
-      {/* Kept mounted while hidden so a running turn and page requests are never dropped. */}
-      <div className={cn('relative shrink-0 border-l', open ? 'flex' : 'hidden')} style={{ width }}>
+        </div>
+        {/* Kept mounted while hidden so a running turn and page requests are never dropped. */}
+        <div className={cn('relative shrink-0 border-l border-frame/30', open ? 'flex' : 'hidden')} style={{ width }}>
           <div
             onPointerDown={drag}
             className="absolute -left-1 top-0 z-10 h-full w-2 cursor-col-resize transition-colors hover:bg-gold/40"
             aria-hidden="true"
           />
           <div className="min-w-0 flex-1"><ErrorBoundary><ChatPanel onClose={() => setOpen(false)} /></ErrorBoundary></div>
+        </div>
       </div>
     </div>
   );

@@ -20,10 +20,10 @@ import { cn, download } from '@/lib/utils';
 
 function Section({ icon, title, sub, children }: { icon: ReactNode; title: string; sub: string; children: ReactNode }) {
   return (
-    <section className="grid grid-cols-1 gap-6 border-t py-8 first:border-t-0 first:pt-0 @[860px]:grid-cols-[260px_minmax(0,1fr)]">
+    <section className="grid grid-cols-1 gap-6 border-t border-frame/25 py-8 first:border-t-0 first:pt-0 @[860px]:grid-cols-[260px_minmax(0,1fr)]">
       <div>
-        <div className="mb-2 grid size-9 place-items-center rounded-xl bg-muted text-muted-foreground [&_svg]:size-[18px]">{icon}</div>
-        <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
+        <div className="mb-3 grid size-9 rotate-45 place-items-center rounded-[5px] border border-gold/50 bg-gold-soft/40 text-gold-ink [&_svg]:size-4 [&_svg]:-rotate-45">{icon}</div>
+        <h2 className="font-display text-[22px] leading-none tracking-wide">{title}</h2>
         <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{sub}</p>
       </div>
       <div className="min-w-0">{children}</div>
@@ -109,7 +109,7 @@ function ProviderEditor() {
               key={p.id}
               onClick={() => pick(p)}
               className={cn(
-                'rounded-xl border bg-surface p-3.5 text-left transition hover:border-foreground/25',
+                'rounded-md border bg-surface p-3.5 text-left transition hover:border-foreground/25',
                 selected && 'border-gold ring-2 ring-gold/40',
               )}
             >
@@ -124,7 +124,7 @@ function ProviderEditor() {
         })}
         <button
           onClick={() => { setDraft({ id: uid(), name: 'Custom', baseURL: '' }); setStatus(null); setModels([]); }}
-          className={cn('rounded-xl border border-dashed p-3.5 text-left transition hover:border-foreground/25', draft && !preset && 'border-gold ring-2 ring-gold/40')}
+          className={cn('rounded-md border border-dashed p-3.5 text-left transition hover:border-foreground/25', draft && !preset && 'border-gold ring-2 ring-gold/40')}
         >
           <p className="text-[14px] font-semibold">Custom</p>
           <p className="mt-1 text-[12.5px] text-muted-foreground">Any OpenAI-compatible endpoint.</p>
@@ -132,7 +132,7 @@ function ProviderEditor() {
       </div>
 
       {draft && (
-        <div className="space-y-4 rounded-2xl border bg-surface p-5 shadow-soft">
+        <div className="space-y-4 rounded-md border bg-surface p-5 shadow-soft">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Name"><Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></Field>
             <Field label="Base URL"><Input value={draft.baseURL} onChange={(e) => setDraft({ ...draft, baseURL: e.target.value })} placeholder="https://…/v1" className="font-mono text-[13px]" /></Field>
@@ -144,7 +144,7 @@ function ProviderEditor() {
             <Input type="password" value={draft.apiKey ?? ''} onChange={(e) => setDraft({ ...draft, apiKey: e.target.value })} className="font-mono text-[13px]" />
           </Field>
           {preset?.id === 'meridian' && (
-            <p className="rounded-xl bg-sunken p-3 text-[12.5px] leading-relaxed text-muted-foreground">
+            <p className="rounded-md bg-sunken p-3 text-[12.5px] leading-relaxed text-muted-foreground">
               Run <code className="rounded bg-muted px-1 font-mono text-foreground">meridian</code> on this computer. Questlog sends its own tools, and Meridian returns the calls here to run in your browser, so the model never touches your files. If you set <code className="rounded bg-muted px-1 font-mono text-foreground">MERIDIAN_API_KEY</code>, enter it above.
             </p>
           )}
@@ -219,7 +219,7 @@ function ProfileEditor() {
       <Field label="Confirmed facts" hint="Anything else the agent may say about you. It won't use anything that isn't here or in your career record.">
         <Textarea value={p.facts} onChange={(e) => set({ facts: e.target.value })} className="min-h-[160px] font-mono text-[12.5px]" />
       </Field>
-      <Field label="Working notes" hint="Open questions, decisions and next steps. Shown on Today, and the agent keeps it current.">
+      <Field label="Working notes" hint="Open questions, decisions and next steps. Shown at camp, and the agent keeps it current.">
         <Textarea value={p.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} className="min-h-[120px] font-mono text-[12.5px]" />
       </Field>
       <Field label="Writing style">
@@ -304,7 +304,7 @@ function DataTools() {
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => { e.preventDefault(); void onFiles(e.dataTransfer.files); }}
         onClick={() => fileRef.current?.click()}
-        className="cursor-pointer rounded-2xl border-2 border-dashed bg-surface p-8 text-center transition hover:border-gold hover:bg-gold-soft/30"
+        className="cursor-pointer rounded-md border-2 border-dashed bg-surface p-8 text-center transition hover:border-gold hover:bg-gold-soft/30"
       >
         {busy ? <Loader2 className="mx-auto mb-2 size-6 animate-spin text-muted-foreground" /> : <Upload className="mx-auto mb-2 size-6 text-muted-foreground" />}
         <p className="text-[14px] font-medium">Drop files to import</p>
@@ -315,7 +315,7 @@ function DataTools() {
       </div>
       {msg && <p className={cn('text-[13px]', msg.ok ? 'text-success' : 'text-danger')}>{msg.text}</p>}
       {bundles.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-gold-soft/60 px-4 py-3 text-[13px] ring-1 ring-gold/50">
+        <div className="flex flex-wrap items-center gap-3 rounded-md bg-gold-soft/60 px-4 py-3 text-[13px] ring-1 ring-gold/50">
           <Sparkles className="size-4 text-foreground" />
           <span className="flex-1">
             {connected ? 'The agent is reading your files now. Follow along in the chat panel.' : 'Connect an AI provider above, then let the agent read your files.'}
@@ -361,7 +361,7 @@ function EnginePicker() {
   return (
     <div className="mb-8 space-y-2">
       {rows.map((e) => (
-        <label key={e.id} className={cn('flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition', current === e.id ? 'border-gold/60 bg-gold-soft/40' : 'hover:bg-accent/40', !e.available && 'cursor-not-allowed opacity-60')}>
+        <label key={e.id} className={cn('flex cursor-pointer items-start gap-3 rounded-md border p-3.5 transition', current === e.id ? 'border-gold/60 bg-gold-soft/40' : 'hover:bg-accent/40', !e.available && 'cursor-not-allowed opacity-60')}>
           <input type="radio" name="engine" checked={current === e.id} disabled={!e.available} onChange={() => choose(e.id)} className="mt-1 accent-[hsl(var(--gold))]" />
           <span className="min-w-0">
             <span className="block text-[14px] font-medium">{e.label}</span>
@@ -404,7 +404,7 @@ function LogoSettings() {
 export default function Settings() {
   return (
     <>
-      <PageHeader eyebrow="Settings" title="Settings" sub={isDesktop() ? 'Everything is stored on this computer, in a folder you own. There\'s no account and no server.' : "Everything is stored in this browser's IndexedDB. There's no account and no server."} />
+      <PageHeader title="Settings" sub={isDesktop() ? 'Everything is stored on this computer, in a folder you own. There\'s no account and no server.' : "Everything is stored in this browser's IndexedDB. There's no account and no server."} />
       <Section icon={<Plug />} title={isDesktop() ? 'Agent' : 'AI provider'} sub={isDesktop() ? 'Who does the work. Claude Code, Codex and OpenCode use the login you already have; the built-in agent uses any OpenAI-compatible provider.' : 'Bring your own model. Any OpenAI-compatible endpoint works, including Meridian for a Claude subscription.'}>
         {isDesktop() && <EnginePicker />}
         <ProviderEditor />

@@ -11,7 +11,7 @@ export function MenuContent({ children, align = 'end', className }: { children: 
       <M.Content
         align={align}
         sideOffset={6}
-        className={cn('z-50 min-w-[180px] rounded-xl border bg-surface p-1 shadow-lift data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95', className)}
+        className={cn('panel z-50 min-w-[180px] p-1 shadow-lift data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95', className)}
       >
         {children}
       </M.Content>
@@ -24,7 +24,7 @@ export function MenuItem({ children, onSelect, danger, active }: { children: Rea
     <M.Item
       onSelect={onSelect}
       className={cn(
-        'flex cursor-default select-none items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] outline-none data-[highlighted]:bg-accent [&_svg]:size-4 [&_svg]:text-muted-foreground',
+        'flex cursor-default select-none items-center gap-2 rounded-[5px] px-2.5 py-1.5 text-[13px] outline-none data-[highlighted]:bg-gold-soft/60 [&_svg]:size-4 [&_svg]:text-muted-foreground',
         danger && 'text-danger [&_svg]:text-danger',
         active && 'font-medium',
       )}

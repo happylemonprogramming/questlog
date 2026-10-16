@@ -62,7 +62,7 @@ export function Sources() {
         );
       })}
       <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)} title={open?.path ?? ''} description={open?.status} className="w-[min(860px,calc(100vw-2rem))]">
-        <pre className="scroll-thin max-h-[65vh] overflow-auto whitespace-pre-wrap rounded-xl bg-sunken p-4 font-mono text-[12px] leading-relaxed">{open?.text}</pre>
+        <pre className="scroll-thin max-h-[65vh] overflow-auto whitespace-pre-wrap rounded-md bg-sunken p-4 font-mono text-[12px] leading-relaxed">{open?.text}</pre>
       </Dialog>
     </div>
   );

@@ -27,7 +27,7 @@ export const shownStage = (s: Stage): Stage => (s === 'interviewing' || s === 'o
 export const STAGE_HINT: Record<Stage, string> = {
   inbox: 'Heard about, not looked at yet',
   saved: 'Worth keeping, not applying yet',
-  next: 'Applying soon; Today walks you through these',
+  next: 'Applying soon; camp walks you through these',
   applied: 'Application sent',
   interviewing: 'Talking with them',
   offer: 'An offer is in',

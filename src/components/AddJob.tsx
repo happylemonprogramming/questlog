@@ -62,16 +62,16 @@ export function AddJobButton({ variant = 'primary' }: { variant?: 'primary' | 'o
   return (
     <>
       <Button variant={variant} onClick={() => setOpen(true)}>
-        <Plus /> Add listing
+        <Plus /> New quest
       </Button>
-      <Dialog open={open} onOpenChange={setOpen} title="Add a listing" description="Paste a Greenhouse, Ashby or Lever link to import the whole posting, or fill in the basics.">
+      <Dialog open={open} onOpenChange={setOpen} title="Take on a new quest" description="Paste a Greenhouse, Ashby or Lever link to import the whole posting, or fill in the basics.">
         <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void save(); }}>
           <label className="block space-y-1.5">
             <span className="eyebrow-label">Posting link</span>
             <Input autoFocus value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://boards.greenhouse.io/…" />
           </label>
           {ref ? (
-            <p className="rounded-lg bg-success/10 px-3 py-2 text-[13px] text-success">
+            <p className="rounded-md bg-success/10 px-3 py-2 text-[13px] text-success">
               {ref.ats[0].toUpperCase() + ref.ats.slice(1)} posting on <b>{ref.board}</b>. Title, location, pay and text will be imported.
             </p>
           ) : (
@@ -85,8 +85,8 @@ export function AddJobButton({ variant = 'primary' }: { variant?: 'primary' | 'o
           {error && <p className="text-[13px] text-danger">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" variant="primary" disabled={busy || (!ref && (!company || !title))}>
-              {busy && <Loader2 className="animate-spin" />} Save listing
+            <Button type="submit" variant="gold" disabled={busy || (!ref && (!company || !title))}>
+              {busy && <Loader2 className="animate-spin" />} Add to the log
             </Button>
           </div>
         </form>

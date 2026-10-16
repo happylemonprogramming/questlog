@@ -7,12 +7,14 @@ import {
 import { db, logJob, now, today } from '@/lib/db';
 import { ask } from '@/agent/runtime';
 import { applicationPage, openApplication } from '@/lib/workspace';
-import { Card, CompanyMark, Empty, STAGE_DOT, STAGE_VAR } from '@/components/common';
+import { CompanyMark, Empty, Panel, STAGE_VAR, StageMark } from '@/components/common';
+import { Plate, Reward } from '@/components/game';
+import { XP } from '@/lib/quest';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input, Textarea } from '@/components/ui/input';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
-import { INTERVIEW_STEPS, SHOWN_STAGES, STAGE_HINT, STAGE_LABEL, type Job, type Outcome, type Stage } from '@/lib/types';
+import { INTERVIEW_STEPS, SHOWN_STAGES, STAGE_HINT, STAGE_LABEL, STAGES, type Job, type Outcome, type Stage } from '@/lib/types';
 import { cn, timeAgo } from '@/lib/utils';
 import { companyDomain } from '@/lib/logo';
 
@@ -66,10 +68,10 @@ function StagePicker({ stage, onChange }: { stage: Stage; onChange: (s: Stage) =
     <Menu>
       <MenuTrigger asChild>
         <button
-          className="flex h-9 items-center gap-2 rounded-full px-3.5 text-[13.5px] font-medium transition hover:brightness-110"
+          className="font-display flex h-9 items-center gap-2 rounded-md px-3.5 text-[15px] tracking-wide transition hover:brightness-110"
           style={{ background: `hsl(var(${c}) / 0.14)`, boxShadow: `inset 0 0 0 1px hsl(var(${c}) / 0.4)` }}
         >
-          <span className={cn('size-2 rounded-full', STAGE_DOT[stage])} />
+          <StageMark stage={stage} size={13} />
           {STAGE_LABEL[stage]}
           <ChevronDown className="size-3.5 text-muted-foreground" />
         </button>
@@ -77,7 +79,7 @@ function StagePicker({ stage, onChange }: { stage: Stage; onChange: (s: Stage) =
       <MenuContent align="start">
         {(SHOWN_STAGES.includes(stage as never) ? SHOWN_STAGES : [...SHOWN_STAGES, stage]).map((s) => (
           <MenuItem key={s} onSelect={() => onChange(s)}>
-            <span className={cn('size-2 shrink-0 rounded-full', STAGE_DOT[s])} />
+            <StageMark stage={s} size={12} />
             <span className="flex flex-col">
               <span>{STAGE_LABEL[s]}</span>
               <span className="text-[11.5px] text-muted-foreground">{STAGE_HINT[s]}</span>
@@ -90,13 +92,42 @@ function StagePicker({ stage, onChange }: { stage: Stage; onChange: (s: Stage) =
   );
 }
 
+/** The quest's road: each stage as a waypoint, the trail gold as far as you've come. */
+function Road({ stage }: { stage: Stage }) {
+  const path = STAGES.filter((s): s is Exclude<Stage, 'closed'> => s !== 'closed');
+  const at = path.indexOf(stage as Exclude<Stage, 'closed'>);
+  const closed = stage === 'closed';
+  return (
+    <ol className="flex items-center" aria-label="Progress">
+      {path.map((s, i) => {
+        const done = !closed && i <= at;
+        return (
+          <li key={s} className="flex items-center" title={STAGE_HINT[s]}>
+            {i > 0 && (
+              <span
+                className="h-px w-5 sm:w-8"
+                style={{ background: done ? 'hsl(var(--gold))' : 'hsl(var(--frame) / 0.3)', backgroundImage: done ? undefined : 'repeating-linear-gradient(90deg, hsl(var(--frame) / 0.5) 0 2px, transparent 2px 5px)' }}
+              />
+            )}
+            <span className="flex flex-col items-center gap-1">
+              <StageMark stage={done ? s : 'inbox'} size={i === at && !closed ? 16 : 12} className={cn(i === at && !closed && 'drop-shadow-[0_0_5px_hsl(var(--gold))]', !done && 'opacity-50')} />
+              <span className={cn('font-display text-[11px] leading-none tracking-wide max-sm:hidden', i === at && !closed ? 'text-foreground' : 'text-muted-foreground')}>{STAGE_LABEL[s]}</span>
+            </span>
+          </li>
+        );
+      })}
+      {closed && <li className="ml-3"><Plate>Closed</Plate></li>}
+    </ol>
+  );
+}
+
 /** A section kept closed until you want it, with a one-line hint of what's inside. */
 function Fold({ title, icon, hint, open, children }: { title: string; icon: ReactNode; hint?: ReactNode; open?: boolean; children: ReactNode }) {
   return (
     <details open={open} className="group/fold">
-      <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 transition-colors hover:bg-accent/40 sm:px-6 [&::-webkit-details-marker]:hidden [&_svg]:size-4">
-        <span className="text-muted-foreground">{icon}</span>
-        <span className="text-[14.5px] font-medium">{title}</span>
+      <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-3.5 transition-colors hover:bg-accent/40 sm:px-6 [&::-webkit-details-marker]:hidden [&_svg]:size-4">
+        <span className="text-gold">{icon}</span>
+        <span className="font-display text-[18px] tracking-wide">{title}</span>
         <span className="ml-auto min-w-0 truncate text-[13px] text-muted-foreground">{hint}</span>
         <ChevronDown className="shrink-0 text-muted-foreground transition-transform duration-300 group-open/fold:rotate-180" />
       </summary>
@@ -116,7 +147,7 @@ export default function JobView() {
   const [showPosting, setShowPosting] = useState(false);
 
   if (job === undefined) return null;
-  if (!job) return <Empty icon={<FileText />} title="Listing not found"><Link to="/listings" className="underline">Back to jobs</Link></Empty>;
+  if (!job) return <Empty icon={<FileText />} title="Quest not found"><Link to="/listings" className="underline">Back to quests</Link></Empty>;
 
   const update = (patch: Partial<Job>) => db.jobs.update(job.id, { ...patch, updatedAt: now() });
   const setStage = async (stage: Stage) => {
@@ -134,53 +165,70 @@ export default function JobView() {
   const words = job.description ? job.description.trim().split(/\s+/).length : 0;
   const resume = docs.find((d) => d.kind === 'resume');
   const evaluate = () => ask(`Evaluate listing ${job.id} against my rules and profile. Read the posting if needed, then save strengths, gaps, flags and a one-sentence verdict on it.`);
+  const sent = !!job.appliedAt;
 
   return (
-    <div className="mx-auto max-w-[760px]">
-      <Link to="/listings" className="mb-5 inline-flex max-lg:hidden items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="size-3.5" /> Jobs
+    <div className="mx-auto max-w-[780px]">
+      <Link to="/listings" className="mb-5 inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground max-lg:hidden">
+        <ArrowLeft className="size-3.5" /> Quests
       </Link>
 
-      <div className="rise mb-6 flex items-start gap-5">
-        <CompanyMark job={job} size={64} className="rounded-[20px] max-sm:hidden" />
-        <div className="min-w-0 flex-1">
-          <p className="text-[14px] font-medium text-muted-foreground">{job.company}</p>
-          <h1 className="mt-0.5 font-display text-[26px] leading-[1.1] sm:text-[34px]">{job.title}</h1>
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
-            {job.location && <Fact icon={<MapPin />}>{job.location}</Fact>}
-            {job.pay && <Fact icon={<Wallet />}><span className="font-mono text-[12.5px]">{job.pay}</span></Fact>}
-            {job.moonshot && <Badge tone="violet"><Rocket /> Moonshot{job.moonshotRank ? ` #${job.moonshotRank}` : ''}</Badge>}
+      {/* The quest sheet. */}
+      <Panel hero className="rise relative overflow-hidden">
+        <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[radial-gradient(closest-side,hsl(var(--gold)/0.14),transparent)]" />
+        <div className="relative p-5 sm:p-7">
+          <div className="flex flex-wrap items-center gap-2">
+            <Plate className="border-gold/50 bg-gold-soft/50 text-gold-ink">Quest</Plate>
+            {job.moonshot && <Badge tone="violet"><Rocket /> Long shot{job.moonshotRank ? ` #${job.moonshotRank}` : ''}</Badge>}
+            <Reward xp={sent ? XP.turnedIn : XP.turnedIn} label={sent ? 'Earned' : 'Reward'} className="ml-auto" />
+          </div>
+          <div className="mt-5 flex items-start gap-5">
+            <CompanyMark job={job} size={64} className="rounded-md max-sm:hidden" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-medium text-muted-foreground">{job.company}</p>
+              <h1 className="mt-0.5 font-display text-[28px] leading-[1.08] sm:text-[36px]">{job.title}</h1>
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+                {job.location && <Fact icon={<MapPin />}>{job.location}</Fact>}
+                {job.pay && <Fact icon={<Wallet />}><span className="font-mono text-[12.5px]">{job.pay}</span></Fact>}
+              </div>
+            </div>
+          </div>
+
+          <div className="well mt-6 flex flex-wrap items-center justify-between gap-4 px-4 py-3">
+            <Road stage={job.stage} />
+            <StagePicker stage={job.stage} onChange={setStage} />
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            {applicationPage(job) ? (
+              <Button variant="gold" size="lg" onClick={() => openApplication(job.id)}><ClipboardPen /> Apply here</Button>
+            ) : job.url ? (
+              <Button variant="gold" size="lg" onClick={() => window.open(job.url, '_blank', 'noopener')}><ExternalLink /> Apply on their site</Button>
+            ) : null}
+            {resume ? (
+              <Button size="lg" variant="outline" onClick={() => navigate(`/documents/${resume.id}`)}><FileText /> Your resume for this</Button>
+            ) : (
+              <Button size="lg" variant="outline" onClick={() => ask(`Make a resume for listing ${job.id}, written from my career record for this role and designed for this company.`)}>
+                <Sparkles className="text-gold" /> Make my resume
+              </Button>
+            )}
+            <div className="ml-auto">
+              <Menu>
+                <MenuTrigger asChild><Button variant="ghost" size="icon" className="size-9" aria-label="More"><MoreHorizontal /></Button></MenuTrigger>
+                <MenuContent align="end">
+                  {job.url && <MenuItem onSelect={() => window.open(job.url, '_blank', 'noopener')}><ExternalLink /> Open the posting</MenuItem>}
+                  <MenuItem onSelect={() => update({ moonshot: !job.moonshot })}><Rocket /> {job.moonshot ? 'Not a long shot' : 'Mark as a long shot'}</MenuItem>
+                  <MenuItem danger onSelect={async () => { await db.jobs.delete(job.id); navigate('/listings'); }}><Trash2 /> Delete quest</MenuItem>
+                </MenuContent>
+              </Menu>
+            </div>
           </div>
         </div>
-      </div>
+      </Panel>
 
-      <div className="rise mb-6 flex flex-wrap items-center gap-2" style={{ '--i': 1 } as CSSProperties}>
-        {applicationPage(job) ? (
-          <Button variant="gold" size="lg" onClick={() => openApplication(job.id)}><ClipboardPen /> Apply here</Button>
-        ) : job.url ? (
-          <Button variant="gold" size="lg" onClick={() => window.open(job.url, '_blank', 'noopener')}><ExternalLink /> Apply on their site</Button>
-        ) : null}
-        {resume ? (
-          <Button size="lg" variant="outline" onClick={() => navigate(`/documents/${resume.id}`)}><FileText /> Your resume for this</Button>
-        ) : (
-          <Button size="lg" variant="outline" onClick={() => ask(`Make a resume for listing ${job.id}, written from my career record for this role and designed for this company.`)}>
-            <Sparkles className="text-gold" /> Make my resume
-          </Button>
-        )}
-        <div className="flex items-center gap-2 sm:ml-auto">
-          <StagePicker stage={job.stage} onChange={setStage} />
-          <Menu>
-            <MenuTrigger asChild><Button variant="ghost" size="icon" className="size-9" aria-label="More"><MoreHorizontal /></Button></MenuTrigger>
-            <MenuContent align="end">
-              {job.url && <MenuItem onSelect={() => window.open(job.url, '_blank', 'noopener')}><ExternalLink /> Open the posting</MenuItem>}
-              <MenuItem onSelect={() => update({ moonshot: !job.moonshot })}><Rocket /> {job.moonshot ? 'Not a moonshot' : 'Mark as moonshot'}</MenuItem>
-              <MenuItem danger onSelect={async () => { await db.jobs.delete(job.id); navigate('/listings'); }}><Trash2 /> Delete listing</MenuItem>
-            </MenuContent>
-          </Menu>
-        </div>
-      </div>
-
-      <Card className="rise mb-6 p-5 sm:p-6" style={{ '--i': 2 } as CSSProperties}>
+      {/* The guide's read on it. */}
+      <Panel className="rise my-6 p-5 sm:p-6" style={{ '--i': 2 } as CSSProperties}>
+        <p className="eyebrow-label mb-2 flex items-center gap-1.5"><Sparkles className="size-3 text-gold" /> The guide’s read</p>
         {job.verdict || job.strengths?.length || job.gaps?.length ? (
           <>
             {job.verdict && <p className="text-[16px] leading-relaxed">{job.verdict}</p>}
@@ -198,9 +246,9 @@ export default function JobView() {
             <Button size="sm" variant="outline" onClick={evaluate}><Sparkles className="text-gold" /> Is it a fit?</Button>
           </div>
         )}
-      </Card>
+      </Panel>
 
-      <Card className="rise divide-y divide-border/60 overflow-hidden" style={{ '--i': 3 } as CSSProperties}>
+      <Panel className="rise divide-y divide-frame/20 overflow-hidden" style={{ '--i': 3 } as CSSProperties}>
         <Fold title="Fit in full" icon={<Sparkles />} hint={job.strengths?.length || job.gaps?.length ? `${plural(job.strengths?.length ?? 0, 'strength')}, ${plural(job.gaps?.length ?? 0, 'gap')}` : 'Not evaluated'}>
           <div className="grid gap-5 @[640px]:grid-cols-2">
             <div>
@@ -220,7 +268,7 @@ export default function JobView() {
               ) : <p className="text-[13px] text-muted-foreground">None recorded.</p>}
             </div>
           </div>
-          <Button size="sm" variant="ghost" className="mt-4 -ml-2" onClick={evaluate}><Sparkles className="text-gold" /> {job.strengths?.length ? 'Re-evaluate' : 'Evaluate'}</Button>
+          <Button size="sm" variant="ghost" className="-ml-2 mt-4" onClick={evaluate}><Sparkles className="text-gold" /> {job.strengths?.length ? 'Re-evaluate' : 'Evaluate'}</Button>
         </Fold>
 
         <Fold title="Posting" icon={<FileText />} hint={words ? `${words.toLocaleString()} words${job.posted ? ` · posted ${job.posted}` : ''}` : 'Not saved'}>
@@ -245,8 +293,8 @@ export default function JobView() {
         <Fold title="Documents" icon={<FilePlus2 />} hint={docs.length ? `${docs.length} for this role` : 'None yet'}>
           <div className="space-y-1">
             {docs.map((d) => (
-              <Link key={d.id} to={`/documents/${d.id}`} className="-mx-3 flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-accent/70">
-                <div className="grid h-9 w-7 shrink-0 place-items-center rounded-[4px] border bg-background shadow-sm"><span className="h-0.5 w-3 rounded bg-gold" /></div>
+              <Link key={d.id} to={`/documents/${d.id}`} className="cursor -mx-3 flex items-center gap-3 rounded-md px-3 py-2 hover:bg-accent/70">
+                <div className="grid h-9 w-7 shrink-0 place-items-center rounded-[3px] border border-frame/40 bg-background shadow-sm"><span className="h-0.5 w-3 rounded bg-gold" /></div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13.5px] font-medium">{d.title}</p>
                   <p className="text-[12px] capitalize text-muted-foreground">{d.kind} · {timeAgo(d.updatedAt)}</p>
@@ -266,7 +314,7 @@ export default function JobView() {
             <span className="eyebrow-label">Batch</span>
             <Input value={batch} onChange={(e) => setBatch(e.target.value)} placeholder="e.g. spring push, remote" className="bg-background" />
           </label>
-          <p className="mt-1.5 text-[12px] text-muted-foreground">Roles in the same batch are offered together on Today.</p>
+          <p className="mt-1.5 text-[12px] text-muted-foreground">Quests in the same batch are offered together at camp.</p>
           <label className="mt-4 block space-y-1.5">
             <span className="eyebrow-label">Company website</span>
             <Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder={companyDomain({ url: job.url, portal: job.portal }) ?? 'e.g. anduril.com'} className="bg-background" />
@@ -280,16 +328,16 @@ export default function JobView() {
               {INTERVIEW_STEPS.map((x) => {
                 const on = job.steps?.includes(x);
                 return (
-                  <button key={x} onClick={() => toggleStep(x)} className="flex w-full items-center gap-2.5 rounded-lg px-1 py-1 text-left text-[13.5px] hover:bg-accent/60">
-                    <span className={cn('grid size-[18px] place-items-center rounded-md border transition', on ? 'border-violet bg-violet text-white' : 'border-input')}>
-                      {on && <Check className="size-3" strokeWidth={3} />}
+                  <button key={x} onClick={() => toggleStep(x)} className="flex w-full items-center gap-2.5 rounded-md px-1 py-1 text-left text-[13.5px] hover:bg-accent/60">
+                    <span className={cn('grid size-[18px] rotate-45 place-items-center rounded-[3px] border transition', on ? 'border-violet bg-violet text-white' : 'border-frame/50')}>
+                      {on && <Check className="size-3 -rotate-45" strokeWidth={3} />}
                     </span>
                     {x}
                   </button>
                 );
               })}
             </div>
-            <select value={job.outcome ?? 'in_progress'} onChange={(e) => update({ outcome: e.target.value as Outcome })} className="mt-4 h-9 w-full rounded-lg border border-input bg-background px-3 text-sm">
+            <select value={job.outcome ?? 'in_progress'} onChange={(e) => update({ outcome: e.target.value as Outcome })} className="mt-4 h-9 w-full rounded-md border border-frame/35 bg-background px-3 text-sm">
               {OUTCOMES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </Fold>
@@ -297,10 +345,10 @@ export default function JobView() {
 
         {job.log?.length ? (
           <Fold title="History" icon={<Clock />} hint={job.log.at(-1)?.text}>
-            <ol className="relative ml-1 space-y-2.5 border-l pl-4">
+            <ol className="relative ml-1 space-y-2.5 border-l border-frame/30 pl-4">
               {[...job.log].reverse().map((l, i) => (
                 <li key={i} className="relative text-[13px]">
-                  <span className="absolute -left-[21px] top-1.5 size-2 rounded-full border-2 border-surface bg-muted-foreground/50" />
+                  <span className="absolute -left-[21px] top-1.5 size-2 rotate-45 border-2 border-surface bg-muted-foreground/50" />
                   {l.text}
                   <p className="font-mono text-[11px] text-muted-foreground">{l.at}</p>
                 </li>
@@ -308,7 +356,7 @@ export default function JobView() {
             </ol>
           </Fold>
         ) : null}
-      </Card>
+      </Panel>
     </div>
   );
 }

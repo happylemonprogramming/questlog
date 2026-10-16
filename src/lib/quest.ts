@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { db } from './db';
 import type { Doc, Job } from './types';
 
@@ -148,16 +148,47 @@ export function badges(jobs: Job[], docs: Doc[], all: Deed[]): Badge[] {
 }
 
 const WEEKLY_KEY = 'questlog:weekly-goal';
+const DAILY_KEY = 'questlog:daily-goal';
+
+/**
+ * A number kept on this device that every screen sees change at once: the
+ * HUD's hearts and the camp's goal are the same goal.
+ */
+function useStoredNumber(key: string, fallback: number, min: number, max: number) {
+  const [value, setValue] = useState(() => Number(localStorage.getItem(key)) || fallback);
+  useEffect(() => {
+    const on = (e: Event) => {
+      if ((e as CustomEvent<string>).detail === key) setValue(Number(localStorage.getItem(key)) || fallback);
+    };
+    window.addEventListener('questlog:stored', on);
+    return () => window.removeEventListener('questlog:stored', on);
+  }, [key, fallback]);
+  const change = (g: number) => {
+    const next = Math.max(min, Math.min(max, g));
+    localStorage.setItem(key, String(next));
+    window.dispatchEvent(new CustomEvent('questlog:stored', { detail: key }));
+  };
+  return [value, change] as const;
+}
 
 /** How many applications to aim for each week. Remembered on this device. */
 export function useWeeklyGoal() {
-  const [goal, setGoal] = useState(() => Number(localStorage.getItem(WEEKLY_KEY)) || 5);
-  const change = (g: number) => {
-    const next = Math.max(1, Math.min(25, g));
-    localStorage.setItem(WEEKLY_KEY, String(next));
-    setGoal(next);
-  };
-  return [goal, change] as const;
+  return useStoredNumber(WEEKLY_KEY, 5, 1, 25);
+}
+
+/** How many applications to aim for today, as hearts. Tap to cycle 1–5. */
+export function useDailyGoal() {
+  const [goal, set] = useStoredNumber(DAILY_KEY, 3, 1, 5);
+  const cycle = () => set((goal % 5) + 1);
+  return [goal, cycle] as const;
+}
+
+/** Roman numerals for chapters, the way a book numbers them. */
+export function roman(n: number) {
+  const parts: [number, string][] = [[10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];
+  let out = '';
+  for (const [v, s] of parts) while (n >= v) { out += s; n -= v; }
+  return out || 'I';
 }
 
 export interface Journey {
@@ -166,6 +197,9 @@ export interface Journey {
   run: { weeks: number; restedLast: boolean };
   badges: Badge[];
   sentThisWeek: number;
+  sentToday: number;
+  /** Points earned today, across every deed. */
+  xpToday: number;
   /** Turned in, and how many of those heard back with an interview or offer. */
   sent: number;
   heard: number;
@@ -176,12 +210,16 @@ export function useJourney(): Journey | undefined {
     const [jobs, docs] = await Promise.all([db.jobs.toArray(), db.docs.toArray()]);
     const all = deeds(jobs, docs);
     const week = weekOf(new Date());
+    // Dates in the data are ISO days, so today is too.
+    const todayStr = day(Date.now());
     return {
       deeds: all,
       level: levelOf(all.reduce((n, d) => n + d.xp, 0)),
       run: run(all),
       badges: badges(jobs, docs, all),
       sentThisWeek: jobs.filter((j) => j.appliedAt && weekOf(j.appliedAt) === week).length,
+      sentToday: jobs.filter((j) => j.appliedAt === todayStr).length,
+      xpToday: all.filter((d) => d.at === todayStr).reduce((n, d) => n + d.xp, 0),
       sent: jobs.filter((j) => j.appliedAt).length,
       heard: jobs.filter((j) => j.appliedAt && (j.steps?.length || j.stage === 'interviewing' || j.stage === 'offer')).length,
     };

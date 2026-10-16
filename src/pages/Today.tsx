@@ -1,11 +1,12 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowRight, ArrowUpRight, BookOpen, CalendarClock, Check, ChevronDown, ClipboardPen, FileText, Layers, MapPin, NotebookPen, PartyPopper, Rocket, Send, Sparkles, Tent, Wallet } from 'lucide-react';
-import { useJourney } from '@/lib/quest';
+import { ArrowRight, ArrowUpRight, BookOpen, ClipboardPen, FileText, Layers, MapPin, NotebookPen, Rocket, ScrollText, Send, Sparkles, Wallet } from 'lucide-react';
+import { useDailyGoal, useJourney, XP } from '@/lib/quest';
 import { Markdown } from '@/components/Markdown';
 import { db, getProfile, moveJob, today } from '@/lib/db';
-import { Card, CardHeader, CompanyMark, Empty, JobRow, shortPay } from '@/components/common';
+import { CompanyMark, JobRow, Panel, PanelHeader, shortPay, StageMark } from '@/components/common';
+import { Campfire, Hearts, Objective, Plate, Reward, Speech } from '@/components/game';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ask } from '@/agent/runtime';
@@ -19,29 +20,17 @@ function greeting() {
   return h < 5 ? 'Up late' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
 }
 
-/** One line on where things stand, leading with the best news. */
+/** What the guide says about where things stand, leading with the best news. */
 function momentum(c: Record<Stage, number>, sentThisWeek: number) {
   const week = sentThisWeek ? ` ${sentThisWeek} sent this week.` : '';
   if (c.offer) return `${c.offer === 1 ? 'An offer is' : `${c.offer} offers are`} on the table.${week}`;
   if (c.interviewing) return `${c.interviewing} interview${c.interviewing === 1 ? '' : 's'} in motion and ${c.next} more lined up.${week}`;
   if (c.applied) return `${c.applied} application${c.applied === 1 ? '' : 's'} out and ${c.next} lined up.${week}`;
   if (c.next) return `${c.next} role${c.next === 1 ? '' : 's'} lined up. A good day to send the first one.`;
-  return 'Add a listing or ask the agent to search a job board to get started.';
+  return 'Add a listing, or ask me to search a job board, and we’ll start the first quest.';
 }
 
-const GOAL_KEY = 'questlog:daily-goal';
 const PROGRESS_KEY = 'questlog:progress';
-
-/** How many applications to aim for today. Tap to change; it's remembered. */
-function useGoal() {
-  const [goal, setGoal] = useState(() => Number(localStorage.getItem(GOAL_KEY)) || 3);
-  const cycle = () => {
-    const g = (goal % 5) + 1;
-    localStorage.setItem(GOAL_KEY, String(g));
-    setGoal(g);
-  };
-  return [goal, cycle] as const;
-}
 
 type Progress = Record<string, { resume?: boolean; opened?: boolean }>;
 
@@ -59,43 +48,8 @@ function useProgress() {
   return [p, mark] as const;
 }
 
-function Goal({ sent, goal, onCycle }: { sent: number; goal: number; onCycle: () => void }) {
-  return (
-    <button onClick={onCycle} title="Change today's goal" className="group flex items-center gap-3 rounded-full border border-border/70 bg-surface/70 py-1.5 pl-2 pr-4 shadow-soft transition hover:border-foreground/20">
-      <span className="flex gap-1">
-        {Array.from({ length: goal }, (_, i) => (
-          <span key={i} className={cn('size-2.5 rounded-full transition-colors duration-500', i < sent ? 'bg-gold shadow-[0_0_8px_hsl(var(--gold))]' : 'bg-muted-foreground/20')} />
-        ))}
-      </span>
-      <span className="text-[13px] font-medium">
-        {Math.min(sent, goal)} of {goal} <span className="text-muted-foreground">turned in today</span>
-      </span>
-    </button>
-  );
-}
-
-function Step({ n, done, current, title, detail, children }: { n: number; done: boolean; current: boolean; title: string; detail?: ReactNode; children?: ReactNode }) {
-  return (
-    <li className={cn('flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-2xl px-3 py-3 transition-colors duration-300 sm:px-4', current && 'bg-gold-soft/60 ring-1 ring-gold/40')}>
-      <span
-        className={cn(
-          'grid size-8 shrink-0 place-items-center rounded-full text-[13px] font-semibold transition-colors duration-300',
-          done ? 'bg-gold text-gold-foreground' : current ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground',
-        )}
-      >
-        {done ? <Check className="size-4" strokeWidth={3} /> : n}
-      </span>
-      <div className="min-w-[11rem] flex-1">
-        <p className={cn('text-[15px] font-medium', done && 'text-muted-foreground line-through decoration-muted-foreground/40')}>{title}</p>
-        {detail && <p className="text-[13px] text-muted-foreground">{detail}</p>}
-      </div>
-      {children && <div className="flex shrink-0 items-center gap-2 max-sm:ml-12">{children}</div>}
-    </li>
-  );
-}
-
-/** The one application to work on now, as three small steps. */
-function Focus({ job, resume, baseOk, opened, onMark }: { job: Job; resume?: Doc; baseOk: boolean; opened: boolean; onMark: (step: 'resume' | 'opened') => void }) {
+/** The active quest: the one application to work on now, as three objectives. */
+function ActiveQuest({ job, resume, baseOk, opened, onMark }: { job: Job; resume?: Doc; baseOk: boolean; opened: boolean; onMark: (step: 'resume' | 'opened') => void }) {
   const navigate = useNavigate();
   const inApp = !!applicationPage(job);
   const ready = !!resume || baseOk;
@@ -106,25 +60,31 @@ function Focus({ job, resume, baseOk, opened, onMark }: { job: Job; resume?: Doc
     else if (job.url) window.open(job.url, '_blank', 'noopener,noreferrer');
   };
   return (
-    <div key={job.id} className="pop relative rounded-[28px] bg-gradient-to-br from-gold/60 via-border to-violet/50 p-px shadow-glow">
-      <div className="relative overflow-hidden rounded-[27px] bg-surface p-5 sm:p-7">
-        <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[radial-gradient(closest-side,hsl(var(--gold)/0.14),transparent)]" />
-        <div className="flex items-start gap-4">
-          <CompanyMark job={job} size={56} className="rounded-2xl max-sm:hidden" />
+    <Panel hero key={job.id} className="pop relative overflow-hidden">
+      <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[radial-gradient(closest-side,hsl(var(--gold)/0.16),transparent)]" />
+      <div className="relative p-5 sm:p-7">
+        <div className="flex items-center gap-2">
+          <Plate className="border-gold/50 bg-gold-soft/50 text-gold-ink">Active quest</Plate>
+          <span className="flex items-center gap-1.5 text-[12px] text-muted-foreground"><StageMark stage="next" size={11} /> {STAGE_LABEL.next}</span>
+          <Reward xp={XP.turnedIn} className="ml-auto" />
+        </div>
+        <div className="mt-5 flex items-start gap-4">
+          <CompanyMark job={job} size={56} className="rounded-md max-sm:hidden" />
           <div className="min-w-0 flex-1">
             <p className="text-[13.5px] font-medium text-muted-foreground">{job.company}</p>
-            <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="mt-0.5 block font-display text-[23px] leading-tight hover:underline sm:text-[27px]">
+            <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="mt-0.5 block font-display text-[26px] leading-tight hover:underline sm:text-[30px]">
               {job.title}
             </Link>
-            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
               {job.location && <span className="flex items-center gap-1.5"><MapPin className="size-3.5" />{job.location}</span>}
               {job.pay && !/^not listed/i.test(job.pay) && <span className="flex items-center gap-1.5 font-mono text-[12.5px]"><Wallet className="size-3.5" />{shortPay(job.pay)}</span>}
             </div>
           </div>
         </div>
 
-        <ol className="mt-6 space-y-1.5">
-          <Step n={1} done={ready} current={step === 1} title="Make your resume" detail={resume ? resume.title : baseOk ? 'Using one you already have' : 'Written and designed for this role'}>
+        <p className="eyebrow-label mt-6 px-3">Objectives</p>
+        <ol className="well mt-2 space-y-0.5 p-1.5">
+          <Objective done={ready} current={step === 1} title="Make your resume" detail={resume ? resume.title : baseOk ? 'Using one you already have' : 'Written and designed for this role'}>
             {resume ? (
               <Button size="sm" variant="ghost" onClick={() => navigate(`/documents/${resume.id}`)}>View</Button>
             ) : baseOk ? null : (
@@ -135,61 +95,60 @@ function Focus({ job, resume, baseOk, opened, onMark }: { job: Job; resume?: Doc
                 </Button>
               </>
             )}
-          </Step>
-          <Step n={2} done={opened} current={step === 2} title="Fill in the application" detail={inApp ? 'Opens here, next to your answers' : 'Opens the company’s site in a new tab'}>
+          </Objective>
+          <Objective done={opened} current={step === 2} title="Fill in the application" detail={inApp ? 'Opens here, next to your answers' : 'Opens the company’s site in a new tab'}>
             {(inApp || job.url) && (
               <Button size="sm" variant={step === 2 ? 'gold' : 'outline'} onClick={open}>
                 {inApp ? <ClipboardPen /> : <ArrowUpRight />} Open it
               </Button>
             )}
-          </Step>
-          <Step n={3} done={false} current={step === 3} title="Turn it in" detail="Press submit on their form, then mark it here">
+          </Objective>
+          <Objective done={false} current={step === 3} title="Turn it in" detail="Press submit on their form, then mark it here">
             <Button size="sm" variant={step === 3 ? 'gold' : 'outline'} onClick={() => moveJob(job, 'applied')}>
               <Send /> I sent it
             </Button>
-          </Step>
+          </Objective>
         </ol>
 
-        <div className="mt-5 flex items-center justify-between gap-3 border-t border-border/60 pt-4 text-[13px]">
+        <div className="mt-4 flex items-center justify-between gap-3 px-1 text-[13px]">
           <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="font-medium text-muted-foreground transition hover:text-foreground">Read the listing</Link>
-          <button onClick={() => moveJob(job, 'saved', 'Set aside from Today')} className="font-medium text-muted-foreground transition hover:text-foreground">Not now</button>
+          <button onClick={() => moveJob(job, 'saved', 'Set aside at camp')} className="font-medium text-muted-foreground transition hover:text-foreground">Not now</button>
         </div>
       </div>
-    </div>
+    </Panel>
   );
 }
 
-/** The day's goal is met: a clear place to stop, with the option to carry on. */
-function Camp({ sent, onContinue, more }: { sent: number; onContinue: () => void; more: boolean }) {
-  const j = useJourney();
-  const todays = j?.deeds.filter((d) => d.at === today()) ?? [];
-  const xp = todays.reduce((n, d) => n + d.xp, 0);
+/** The day's goal is met: a fire, a tally, and a clear place to stop. */
+function RestAtCamp({ sent, onContinue, more, xp, deeds }: { sent: number; onContinue: () => void; more: boolean; xp: number; deeds: { text: string; xp: number }[] }) {
   return (
-    <div className="pop relative overflow-hidden rounded-[28px] border border-gold/40 bg-surface p-7 text-center shadow-glow sm:p-9">
-      <div className="pointer-events-none absolute inset-x-0 -bottom-24 mx-auto size-72 rounded-full bg-[radial-gradient(closest-side,hsl(var(--gold)/0.22),transparent)]" />
-      <div className="relative mx-auto mb-4 grid size-14 place-items-center rounded-2xl bg-gold-soft text-gold-ink ring-1 ring-gold/40 [&_svg]:size-6"><Tent /></div>
-      <p className="relative font-display text-[26px] sm:text-[30px]">Today’s quest is done</p>
-      <p className="relative mx-auto mt-2 max-w-md text-[14.5px] leading-relaxed text-muted-foreground">
-        You turned in {sent} application{sent === 1 ? '' : 's'} today{xp ? `, and earned ${xp} points` : ''}. Rest at camp. The road will still be here tomorrow.
-      </p>
-      {todays.length > 0 && (
-        <ul className="relative mx-auto mt-5 max-w-sm space-y-1 text-left text-[13px]">
-          {todays.slice(0, 5).map((d, i) => (
-            <li key={i} className="flex gap-3"><span className="flex-1 truncate">{d.text}</span><span className="font-mono text-gold-ink">+{d.xp}</span></li>
-          ))}
-        </ul>
-      )}
-      <div className="relative mt-6 flex flex-wrap justify-center gap-2">
-        <Link to="/journal" className="inline-flex h-9 items-center gap-2 rounded-xl px-4 text-[13.5px] font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground"><BookOpen className="size-4" /> Open your journal</Link>
-        {more && <Button variant="outline" onClick={onContinue}>Keep going anyway</Button>}
+    <Panel hero className="pop relative overflow-hidden text-center">
+      <div className="pointer-events-none absolute inset-x-0 -bottom-24 mx-auto size-80 rounded-full bg-[radial-gradient(closest-side,hsl(var(--gold)/0.25),transparent)]" />
+      <div className="relative p-7 sm:p-9">
+        <Campfire className="mx-auto size-16" />
+        <p className="mt-3 font-display text-[30px] sm:text-[36px]">Today’s quest is done</p>
+        <p className="mx-auto mt-2 max-w-md text-[14.5px] leading-relaxed text-muted-foreground">
+          You turned in {sent} application{sent === 1 ? '' : 's'} today{xp ? `, and earned ${xp} points` : ''}. Rest at camp. The road will still be here tomorrow.
+        </p>
+        {deeds.length > 0 && (
+          <ul className="well mx-auto mt-5 max-w-sm space-y-1 p-3 text-left text-[13px]">
+            {deeds.slice(0, 5).map((d, i) => (
+              <li key={i} className="flex gap-3"><span className="flex-1 truncate">{d.text}</span><span className="font-mono text-gold-ink">+{d.xp}</span></li>
+            ))}
+          </ul>
+        )}
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <Link to="/journal" className="inline-flex h-9 items-center gap-2 rounded-md px-4 text-[13.5px] font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground"><BookOpen className="size-4" /> Open your journal</Link>
+          {more && <Button variant="outline" onClick={onContinue}>Keep going anyway</Button>}
+        </div>
       </div>
-    </div>
+    </Panel>
   );
 }
 
 const PER_BATCH = 5;
 
-function Batch({ name, list, offset }: { name: string; list: Job[]; offset: number }) {
+function Batch({ name, list, offset, activeId }: { name: string; list: Job[]; offset: number; activeId?: string }) {
   const [all, setAll] = useState(false);
   const shown = all ? list : list.slice(0, PER_BATCH);
   return (
@@ -197,12 +156,12 @@ function Batch({ name, list, offset }: { name: string; list: Job[]; offset: numb
       <div className="flex items-center gap-2 px-3 pb-1.5 pt-2">
         <Layers className="size-3.5 text-muted-foreground" />
         <p className="eyebrow-label">{name}</p>
-        <span className="h-px flex-1 bg-border/70" />
+        <span className="h-px flex-1 bg-frame/20" />
         <span className="font-mono text-[11px] text-muted-foreground">{list.length}</span>
       </div>
-      {shown.map((j, i) => <JobRow key={j.id} job={j} right={<span />} index={offset + i} />)}
+      {shown.map((j, i) => <JobRow key={j.id} job={j} compact actions={false} right={<span />} index={offset + i} selected={j.id === activeId} />)}
       {list.length > PER_BATCH && (
-        <button onClick={() => setAll((a) => !a)} className="ml-3 mt-1 rounded-lg px-2 py-1 text-[12.5px] font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground">
+        <button onClick={() => setAll((a) => !a)} className="ml-3 mt-1 rounded-md px-2 py-1 text-[12.5px] font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground">
           {all ? 'Show fewer' : `Show all ${list.length}`}
         </button>
       )}
@@ -214,9 +173,9 @@ export default function Today() {
   const profile = useLiveQuery(() => getProfile(), []);
   const jobs = useLiveQuery(() => db.jobs.toArray(), []);
   const docs = useLiveQuery(() => db.docs.orderBy('updatedAt').reverse().toArray(), []) ?? [];
-  const [goal, cycleGoal] = useGoal();
+  const journey = useJourney();
+  const [goal, cycleGoal] = useDailyGoal();
   const [progress, mark] = useProgress();
-  const [more, setMore] = useState(false);
   const [onward, setOnward] = useState(false);
   const navigate = useNavigate();
   const list = jobs ?? [];
@@ -235,10 +194,10 @@ export default function Today() {
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, 6);
   const counts = Object.fromEntries((['next', 'applied', 'interviewing', 'offer'] as const).map((s) => [s, list.filter((j) => j.stage === s).length])) as Record<Stage, number>;
-  const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
-  const sentThisWeek = list.filter((j) => j.appliedAt && j.appliedAt >= weekAgo).length;
   const sentToday = list.filter((j) => j.appliedAt === today()).length;
+  const sentThisWeek = journey?.sentThisWeek ?? 0;
   const first = profile?.name?.split(' ')[0];
+  const todays = journey?.deeds.filter((d) => d.at === today()) ?? [];
 
   let row = 0;
   const offsets = [...batches.values()].map((l) => {
@@ -247,131 +206,133 @@ export default function Today() {
     return o;
   });
 
+  const line = !jobs ? '\u00a0'
+    : sentToday >= goal ? `You hit today’s goal. ${momentum(counts, sentThisWeek)}`
+    : focus ? `${momentum(counts, sentThisWeek)} One quest at a time; here’s the next one.`
+    : momentum(counts, sentThisWeek);
+
   return (
-    <div className="mx-auto max-w-[720px]">
-      <section className="mb-8">
-        <p className="eyebrow-label rise mb-4 flex items-center gap-2">
-          <span className="size-1.5 rounded-full bg-gold shadow-[0_0_10px_hsl(var(--gold))]" />
-          {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-        </p>
-        <h1 className="rise font-display text-[36px] leading-[1.05] sm:text-[48px]" style={{ '--i': 1 } as CSSProperties}>
-          {greeting()},{' '}
-          <span className="text-gradient">{first || 'friend'}</span>
-          <span className="text-gradient">.</span>
-        </h1>
-        <p className="rise mt-3 text-[15.5px] leading-relaxed text-muted-foreground sm:text-[17px]" style={{ '--i': 2 } as CSSProperties}>
-          {!jobs ? '\u00a0' : sentToday >= goal ? 'You hit today’s goal.' : focus ? 'One quest at a time. Here’s the next one.' : momentum(counts, sentThisWeek)}
-        </p>
-        {focus && <div className="rise mt-5" style={{ '--i': 3 } as CSSProperties}><Goal sent={sentToday} goal={goal} onCycle={cycleGoal} /></div>}
-      </section>
-
-      {next.length > QUEUE_SIZE && (
-        <Link to="/review" className="rise group mb-4 flex items-center gap-3 rounded-2xl border border-border/70 bg-surface/70 px-4 py-3 text-[14px] shadow-soft transition hover:border-foreground/20" style={{ '--i': 4 } as CSSProperties}>
-          <Layers className="size-4 shrink-0 text-muted-foreground" />
-          <span className="flex-1"><span className="font-medium">{next.length} roles are lined up.</span> <span className="text-muted-foreground">That’s a lot to carry. Pick your top {QUEUE_SIZE}?</span></span>
-          <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-        </Link>
-      )}
-
-      <div className="rise" style={{ '--i': 4 } as CSSProperties}>
-        {jobs && sentToday >= goal && !onward ? (
-          <Camp sent={sentToday} more={!!focus} onContinue={() => setOnward(true)} />
-        ) : focus ? (
-          <Focus job={focus} resume={resume} baseOk={!!progress[focus.id]?.resume} opened={!!progress[focus.id]?.opened} onMark={(step) => mark(focus.id, step)} />
-        ) : jobs ? (
-          <Card className="p-8 text-center">
-            <div className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-gold/25 to-violet/20 ring-1 ring-border [&_svg]:size-5">
-              {counts.applied || counts.interviewing ? <PartyPopper /> : <CalendarClock />}
+    <div className="grid gap-7 @[900px]:grid-cols-[minmax(0,1fr)_300px] @[900px]:gap-8">
+      <div className="min-w-0">
+        <section className="mb-6">
+          <p className="eyebrow-label rise mb-3 flex items-center gap-2">
+            <span className="size-1.5 rounded-full bg-gold shadow-[0_0_10px_hsl(var(--gold))]" />
+            {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
+          <h1 className="rise font-display text-[38px] leading-[1.02] sm:text-[50px]" style={{ '--i': 1 } as CSSProperties}>
+            {greeting()},{' '}
+            <span className="text-gradient">{first || 'traveler'}</span>
+            <span className="text-gradient">.</span>
+          </h1>
+          <Speech className="rise mt-6" style={{ '--i': 2 } as CSSProperties} more={!!focus && sentToday < goal}>
+            <p>{line}</p>
+          </Speech>
+          {focus && (
+            <div className="rise mt-4 flex flex-wrap items-center gap-3 px-1" style={{ '--i': 3 } as CSSProperties}>
+              <Hearts filled={sentToday} total={goal} size={18} onClick={cycleGoal} title="Change today's goal" />
+              <span className="text-[13px] text-muted-foreground">{Math.min(sentToday, goal)} of {goal} turned in today</span>
             </div>
-            <p className="text-[17px] font-semibold">Nothing lined up right now</p>
-            <p className="mx-auto mt-1 max-w-sm text-[14px] text-muted-foreground">Pick a few roles you’d like to send next, or ask the agent to find some.</p>
-            <div className="mt-5 flex flex-wrap justify-center gap-2">
-              {candidates(list).length > 0 && <Button variant="gold" onClick={() => navigate('/review')}><Layers /> Pick from your saved roles</Button>}
-              <Button variant={candidates(list).length ? 'outline' : 'gold'} onClick={() => ask(`What should I apply to next? Pick up to ${QUEUE_SIZE} and line them up.`)}><Sparkles /> Ask the agent</Button>
-            </div>
-          </Card>
-        ) : null}
-      </div>
+          )}
+        </section>
 
-      <div className="mt-10 flex flex-wrap justify-center gap-2">
-        {focus && next.length < QUEUE_SIZE && candidates(list).length > 0 && (
-          <Link to="/review" className="flex items-center gap-1.5 rounded-full px-4 py-2 text-[13.5px] font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground">
-            <Layers className="size-4" /> Line up more
+        {next.length > QUEUE_SIZE && (
+          <Link to="/review" className="rise panel group mb-4 flex items-center gap-3 px-4 py-3 text-[14px] transition hover:border-gold/60" style={{ '--i': 4 } as CSSProperties}>
+            <Layers className="size-4 shrink-0 text-gold" />
+            <span className="flex-1"><span className="font-medium">{next.length} quests are lined up.</span> <span className="text-muted-foreground">That’s a lot to carry. Choose your top {QUEUE_SIZE}?</span></span>
+            <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
           </Link>
         )}
-        <button onClick={() => setMore((m) => !m)} aria-expanded={more} className="flex items-center gap-1.5 rounded-full px-4 py-2 text-[13.5px] font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground">
-          {more ? 'Show less' : 'See everything'} <ChevronDown className={cn('size-4 transition-transform duration-300', more && 'rotate-180')} />
-        </button>
+
+        <div className="rise" style={{ '--i': 4 } as CSSProperties}>
+          {jobs && sentToday >= goal && !onward ? (
+            <RestAtCamp sent={sentToday} more={!!focus} onContinue={() => setOnward(true)} xp={journey?.xpToday ?? 0} deeds={todays} />
+          ) : focus ? (
+            <ActiveQuest job={focus} resume={resume} baseOk={!!progress[focus.id]?.resume} opened={!!progress[focus.id]?.opened} onMark={(step) => mark(focus.id, step)} />
+          ) : jobs ? (
+            <Panel className="p-8 text-center">
+              <div className="mx-auto mb-4 grid size-12 rotate-45 place-items-center rounded-md border border-gold/50 bg-gold-soft/40 text-gold-ink [&_svg]:size-5 [&_svg]:-rotate-45">
+                <ScrollText />
+              </div>
+              <p className="font-display text-[24px]">No active quest</p>
+              <p className="mx-auto mt-1 max-w-sm text-[14px] text-muted-foreground">Choose a few roles you’d like to send next, or ask the guide to find some.</p>
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                {candidates(list).length > 0 && <Button variant="gold" onClick={() => navigate('/review')}><Layers /> Choose from your tracked roles</Button>}
+                <Button variant={candidates(list).length ? 'outline' : 'gold'} onClick={() => ask(`What should I apply to next? Pick up to ${QUEUE_SIZE} and line them up.`)}><Sparkles /> Ask the guide</Button>
+              </div>
+            </Panel>
+          ) : null}
+        </div>
+
+        {profile?.notes?.trim() && (
+          <Panel className="rise mt-7" style={{ '--i': 6 } as CSSProperties}>
+            <PanelHeader title="Working notes" icon={<NotebookPen />} action={<Link to="/settings" className="text-[12.5px] text-muted-foreground hover:text-foreground">Edit</Link>} />
+            <div className="scroll-thin max-h-[340px] overflow-y-auto px-6 pb-5">
+              <Markdown text={profile.notes} />
+            </div>
+          </Panel>
+        )}
       </div>
 
-      {more && (
-        <div className="page-enter mt-6 space-y-6">
-          <p className="text-center text-[14px] text-muted-foreground">{momentum(counts, sentThisWeek)}</p>
-          <Card>
-            <CardHeader title="Lined up" icon={<CalendarClock />} count={next.length} action={<Link to="/listings" className="text-[12.5px] font-medium text-muted-foreground transition hover:text-foreground">All jobs</Link>} />
-            <div className="px-3 pb-4">
-              {next.length === 0 ? (
-                <div className="p-3"><Empty icon={<CalendarClock />} title="Nothing lined up yet">Open a listing and set its stage to Next up, or ask the agent what to apply to.</Empty></div>
-              ) : (
-                [...batches].map(([batch, l], i) => <Batch key={batch} name={batch} list={l} offset={offsets[i]} />)
-              )}
-            </div>
-          </Card>
-
-          {profile?.notes?.trim() && (
-            <Card>
-              <CardHeader title="Working notes" icon={<NotebookPen />} action={<Link to="/settings" className="text-[12.5px] text-muted-foreground hover:text-foreground">Edit</Link>} />
-              <div className="scroll-thin max-h-[340px] overflow-y-auto px-6 pb-5">
-                <Markdown text={profile.notes} />
-              </div>
-            </Card>
-          )}
-
-          <div className="grid gap-6 @[640px]:grid-cols-2">
-            <Card>
-              <CardHeader title="Moonshots" icon={<Rocket />} action={<Link to="/moonshots" className="grid size-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-accent hover:text-foreground" aria-label="All moonshots"><ArrowRight className="size-4" /></Link>} />
-              <div className="px-3 pb-4">
-                {moonshots.length ? moonshots.map((j, i) => (
-                  <JobRow key={j.id} job={j} compact right={j.stage === 'applied' ? <Badge tone="info">{STAGE_LABEL.applied}</Badge> : <span />} rank={<span className="w-4 text-center font-mono text-[12px] text-muted-foreground">{i + 1}</span>} />
-                )) : <p className="px-3 py-4 text-[13px] text-muted-foreground">Long shots worth a try will show up here.</p>}
-              </div>
-            </Card>
-
-            <Card>
-              <CardHeader title="Recent documents" icon={<FileText />} action={<Link to="/documents" className="grid size-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-accent hover:text-foreground" aria-label="All documents"><ArrowRight className="size-4" /></Link>} />
-              <div className="px-3 pb-4">
-                {docs.slice(0, 4).map((d) => (
-                  <Link key={d.id} to={`/documents/${d.id}`} className="group flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-accent/60">
-                    <div className="grid h-10 w-8 shrink-0 place-items-center rounded-[5px] border bg-background shadow-sm transition-transform duration-300 ease-spring group-hover:-rotate-3 group-hover:scale-105">
-                      <span className="h-0.5 w-3.5 rounded bg-gold" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[14px] font-medium">{d.title}</p>
-                      <p className="text-[12px] capitalize text-muted-foreground">{d.kind} · {timeAgo(d.updatedAt)}</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </Card>
+      <aside className="min-w-0 space-y-5 @[900px]:pt-1">
+        <Panel className="rise" style={{ '--i': 5 } as CSSProperties}>
+          <PanelHeader title="Quest board" icon={<ScrollText />} count={next.length} action={<Link to="/listings" className="text-[12.5px] font-medium text-muted-foreground transition hover:text-foreground">All quests</Link>} />
+          <div className="px-2 pb-3">
+            {next.length === 0 ? (
+              <p className="px-3 py-3 text-[13px] text-muted-foreground">Nothing lined up. Open a listing and set it to Up next, or ask the guide.</p>
+            ) : (
+              [...batches].map(([batch, l], i) => <Batch key={batch} name={batch} list={l} offset={offsets[i]} activeId={focus?.id} />)
+            )}
+            {focus && next.length < QUEUE_SIZE && candidates(list).length > 0 && (
+              <Link to="/review" className="mt-1 flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12.5px] font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground">
+                <Layers className="size-3.5" /> Line up more
+              </Link>
+            )}
           </div>
+        </Panel>
 
-          {activity.length > 0 && (
-            <Card>
-              <CardHeader title="Activity" />
-              <ol className="relative mx-6 mb-5 space-y-3.5 border-l border-border/80 pl-4">
-                {activity.map((a, i) => (
-                  <li key={i} className="relative text-[13px]">
-                    <span className={cn('absolute -left-[21px] top-1.5 size-2 rounded-full border-2 border-surface', i === 0 ? 'bg-gold shadow-[0_0_8px_hsl(var(--gold))]' : 'bg-muted-foreground/50')} />
-                    <Link to={`/jobs/${encodeURIComponent(a.job.id)}`} className="font-medium hover:underline">{a.job.company}</Link>
-                    <span className="text-muted-foreground">: {a.text}</span>
-                    <p className="font-mono text-[11px] text-muted-foreground">{a.at}</p>
-                  </li>
-                ))}
-              </ol>
-            </Card>
-          )}
-        </div>
-      )}
+        <Panel className="rise" style={{ '--i': 6 } as CSSProperties}>
+          <PanelHeader title="Long shots" icon={<Rocket />} action={<Link to="/moonshots" className="grid size-7 place-items-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground" aria-label="All long shots"><ArrowRight className="size-4" /></Link>} />
+          <div className="px-2 pb-3">
+            {moonshots.length ? moonshots.map((j, i) => (
+              <JobRow key={j.id} job={j} compact actions={false} right={j.stage === 'applied' ? <Badge tone="info">{STAGE_LABEL.applied}</Badge> : <span />} rank={<span className="w-4 text-center font-mono text-[12px] text-muted-foreground">{i + 1}</span>} />
+            )) : <p className="px-3 py-3 text-[13px] text-muted-foreground">Long shots worth a try will show up here.</p>}
+          </div>
+        </Panel>
+
+        <Panel className="rise" style={{ '--i': 7 } as CSSProperties}>
+          <PanelHeader title="Recent scrolls" icon={<FileText />} action={<Link to="/documents" className="grid size-7 place-items-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground" aria-label="All documents"><ArrowRight className="size-4" /></Link>} />
+          <div className="px-2 pb-3">
+            {docs.slice(0, 4).map((d) => (
+              <Link key={d.id} to={`/documents/${d.id}`} className="cursor group flex items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-accent/60">
+                <div className="grid h-9 w-7 shrink-0 place-items-center rounded-[3px] border border-frame/40 bg-background shadow-sm transition-transform duration-300 ease-spring group-hover:-rotate-3 group-hover:scale-105">
+                  <span className="h-0.5 w-3 rounded bg-gold" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13.5px] font-medium">{d.title}</p>
+                  <p className="text-[11.5px] capitalize text-muted-foreground">{d.kind} · {timeAgo(d.updatedAt)}</p>
+                </div>
+              </Link>
+            ))}
+            {docs.length === 0 && <p className="px-3 py-3 text-[13px] text-muted-foreground">Resumes and letters you write will show up here.</p>}
+          </div>
+        </Panel>
+
+        {activity.length > 0 && (
+          <Panel className="rise" style={{ '--i': 8 } as CSSProperties}>
+            <PanelHeader title="Chronicle" icon={<BookOpen />} />
+            <ol className="relative mx-6 mb-5 space-y-3 border-l border-frame/30 pl-4">
+              {activity.map((a, i) => (
+                <li key={i} className="relative text-[13px]">
+                  <span className={cn('absolute -left-[21px] top-1.5 size-2 rotate-45 border border-surface', i === 0 ? 'bg-gold shadow-[0_0_8px_hsl(var(--gold))]' : 'bg-muted-foreground/50')} />
+                  <Link to={`/jobs/${encodeURIComponent(a.job.id)}`} className="font-medium hover:underline">{a.job.company}</Link>
+                  <span className="text-muted-foreground">: {a.text}</span>
+                  <p className="font-mono text-[11px] text-muted-foreground">{a.at}</p>
+                </li>
+              ))}
+            </ol>
+          </Panel>
+        )}
+      </aside>
     </div>
   );
 }

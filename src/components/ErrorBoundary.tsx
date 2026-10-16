@@ -19,7 +19,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode; resetKey?: u
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <div className={this.props.compact ? 'grid h-full place-items-center p-3 text-center text-[11px] text-danger' : 'rounded-2xl border border-danger/30 bg-danger/5 p-6 text-[13.5px]'}>
+      <div className={this.props.compact ? 'grid h-full place-items-center p-3 text-center text-[11px] text-danger' : 'rounded-md border border-danger/30 bg-danger/5 p-6 text-[13.5px]'}>
         {this.props.compact ? (
           'Can’t render'
         ) : (

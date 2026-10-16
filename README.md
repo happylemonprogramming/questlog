@@ -24,7 +24,8 @@ Questlog's agent is a coding agent you may already have: [Claude Code](https://c
 
 ## What it does
 
-- **Today:** one application at a time, in three steps: make the resume, fill in the form, turn it in. Set a daily goal; when you reach it, Today says so and lets you stop. Up next holds about five roles, and a one-card review trims or refills it.
+- **Camp:** the active quest, one application at a time, in three objectives: make the resume, fill in the form, turn it in. A daily goal shows as hearts in the heads-up bar; when they're full, camp says so and lets you rest. Up next holds about five quests, and a one-card review trims or refills it.
+- **The look:** a game screen, not a dashboard. Framed panels, a gold cursor on whatever you're pointing at, a guide who speaks in a dialog box, chapters and points for effort in the journal. Parchment by day, lamplit walnut by night.
 - **Quests:** every role you're tracking, as a list, a pipeline you drag cards across, a world map, or ranked moonshots. A listing leads with Apply and the verdict; fit, posting, documents and notes fold away.
 - **Journal:** your progress as a story. Points for tracking roles, writing for them, sending them, following up and interviewing; chapters as they add up; a weekly quest; a run of active weeks where one quiet week is a rest, not a break; and keepsakes, including one for hearing no and keeping going.
 - **Documents:** resumes, cover letters and short answers, each rendered as one page with a live fit check. Every resume is written for its listing from your career record, using only facts you've confirmed, and designed for that company: the agent looks at the company's website and starts from its real colors and type. Each document carries its own stylesheet, so you or the agent can redesign it completely.

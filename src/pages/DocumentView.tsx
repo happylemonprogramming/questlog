@@ -56,7 +56,7 @@ function JsonEditor({ doc }: { doc: Doc }) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         spellCheck={false}
-        className="scroll-thin min-h-0 flex-1 resize-none rounded-xl border bg-sunken p-4 font-mono text-[12px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-ring/40"
+        className="scroll-thin min-h-0 flex-1 resize-none rounded-md border bg-sunken p-4 font-mono text-[12px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-ring/40"
       />
       <p className={cn('mt-2 text-[12px]', error ? 'text-danger' : 'text-muted-foreground')}>
         {error || 'Saved as you type. Links are written [text](url).'}
@@ -97,7 +97,7 @@ function DesignEditor({ doc }: { doc: Doc }) {
         }}
         spellCheck={false}
         aria-label="Design stylesheet"
-        className="scroll-thin min-h-0 flex-1 resize-none rounded-xl border bg-sunken p-4 font-mono text-[12px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-ring/40"
+        className="scroll-thin min-h-0 flex-1 resize-none rounded-md border bg-sunken p-4 font-mono text-[12px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-ring/40"
       />
       <div className="mt-2 flex items-center justify-between gap-3">
         <p className="text-[12px] text-muted-foreground">
@@ -120,7 +120,7 @@ function SheetPreview({ doc, onFit, className }: { doc: Doc; onFit: (fits: boole
   const sheetWidth = Math.min(width, 860);
   const report = useCallback((fits: boolean, height: number) => { setFit(fits); onFit(fits, height); }, [onFit]);
   return (
-    <div ref={box} className={cn('paper-grid flex justify-center rounded-2xl border bg-sunken px-2 py-8', className)}>
+    <div ref={box} className={cn('paper-grid flex justify-center rounded-md border bg-sunken px-2 py-8', className)}>
       {width > 0 && (
         <div className="relative" style={{ width: sheetWidth }}>
           <ScaledSheet width={sheetWidth} onFit={report}>
@@ -165,7 +165,7 @@ function AnswerEditor({ doc }: { doc: Doc<AnswerData> }) {
         <span className="eyebrow-label">Question on the form</span>
         <Textarea value={prompt} onChange={(e) => { setPrompt(e.target.value); setDirty(true); }} placeholder="e.g. Additional information" className="min-h-[44px]" rows={1} />
       </label>
-      <div className="rounded-2xl border bg-surface shadow-soft">
+      <div className="rounded-md border bg-surface shadow-soft">
         <Textarea value={text} onChange={(e) => { setText(e.target.value); setDirty(true); }} className="min-h-[320px] border-0 bg-transparent p-5 text-[15px] leading-7 focus-visible:ring-0" />
         <div className="flex items-center justify-between border-t px-4 py-2.5">
           <span className="font-mono text-[11.5px] text-muted-foreground">{words} words · {text.length} chars</span>

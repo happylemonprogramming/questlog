@@ -3,7 +3,7 @@ import type { Job } from './types';
 /** How many roles "Next up" should hold: enough to keep going, few enough to not weigh on you. */
 export const QUEUE_SIZE = 5;
 
-/** Roles lined up to apply to, in the order Today offers them: batch by batch. */
+/** Roles lined up to apply to, in the order camp offers them: batch by batch. */
 export function lineup(jobs: Job[]): Job[] {
   const batches = new Map<string, Job[]>();
   for (const j of jobs.filter((j) => j.stage === 'next')) {

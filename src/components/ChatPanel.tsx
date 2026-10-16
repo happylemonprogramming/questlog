@@ -10,6 +10,7 @@ import { db, getSettings } from '@/lib/db';
 import { answerPermission, clearError, engineOf, newChat, onAsk, send, setSessionOption, stop, useLive, useSessionOptions } from '@/agent/runtime';
 import { Button } from '@/components/ui/button';
 import { Markdown } from '@/components/Markdown';
+import { Speech } from '@/components/game';
 import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from '@/components/ui/menu';
 import { Tip } from '@/components/ui/tooltip';
 import { cn, timeAgo } from '@/lib/utils';
@@ -23,12 +24,12 @@ function describe(name: string, args: Record<string, unknown>): string {
   switch (name) {
     case 'get_profile': return 'Read your profile';
     case 'update_profile': return 'Updated your profile';
-    case 'list_jobs': return `Looked through ${a('stage') || (args?.moonshot ? 'moonshots' : '')} listings`.replace(/\s+/g, ' ');
-    case 'get_job': return 'Opened a listing';
-    case 'save_job': return `Saved ${[a('company'), a('title')].filter(Boolean).join(': ') || 'a listing'}${a('stage') ? ` → ${a('stage')}` : ''}`;
+    case 'list_jobs': return `Looked through ${a('stage') || (args?.moonshot ? 'long shot' : '')} quests`.replace(/\s+/g, ' ');
+    case 'get_job': return 'Opened a quest';
+    case 'save_job': return `Saved ${[a('company'), a('title')].filter(Boolean).join(': ') || 'a quest'}${a('stage') ? ` → ${a('stage')}` : ''}`;
     case 'log_job': return 'Added a note';
     case 'set_company_websites': return 'Found company logos';
-    case 'delete_job': return 'Deleted a listing';
+    case 'delete_job': return 'Deleted a quest';
     case 'search_board': return `Searched ${a('board')} on ${a('ats')}`;
     case 'read_posting': return 'Read a posting';
     case 'list_documents': return 'Looked through documents';
@@ -48,6 +49,10 @@ function describe(name: string, args: Record<string, unknown>): string {
     case 'attach_document': return 'Attached a document';
     case 'click_form': return 'Clicked on the form';
     case 'read_page': return 'Read the page';
+    case 'list_folder': return `Looked in ${a('path') || 'a folder'}`;
+    case 'read_file': return `Read ${a('path') || 'a file'}`;
+    case 'git_log': return 'Read the commit history';
+    case 'git_show': return 'Read a commit';
     default: return name;
   }
 }
@@ -77,8 +82,8 @@ function ToolLine({ name, args, result, running }: { name: string; args: Record<
         onClick={() => setOpen(!open)}
         className="group flex w-full items-center gap-2 rounded-md py-0.5 text-left text-muted-foreground hover:text-foreground"
       >
-        <span className={cn('grid size-4 place-items-center rounded-full', running ? 'text-foreground' : failed ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success')}>
-          {running ? <Loader2 className="size-3 animate-spin" /> : failed ? <X className="size-2.5" /> : <Check className="size-2.5" strokeWidth={3} />}
+        <span className={cn('grid size-4 rotate-45 place-items-center rounded-[3px]', running ? 'text-foreground' : failed ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success')}>
+          <span className="-rotate-45">{running ? <Loader2 className="size-3 animate-spin" /> : failed ? <X className="size-2.5" /> : <Check className="size-2.5" strokeWidth={3} />}</span>
         </span>
         <span className="truncate">{describe(name, args)}</span>
         {to && !/^(get|list)_/.test(name) && (
@@ -89,10 +94,20 @@ function ToolLine({ name, args, result, running }: { name: string; args: Record<
         {result && <ChevronRight className={cn('ml-auto size-3.5 shrink-0 opacity-0 transition group-hover:opacity-100', open && 'rotate-90 opacity-100')} />}
       </button>
       {open && result && (
-        <pre className="scroll-thin ml-6 mt-1 max-h-60 overflow-auto whitespace-pre-wrap rounded-lg bg-sunken p-2.5 font-mono text-[11px] leading-relaxed text-muted-foreground">
+        <pre className="scroll-thin ml-6 mt-1 max-h-60 overflow-auto whitespace-pre-wrap rounded-md bg-sunken p-2.5 font-mono text-[11px] leading-relaxed text-muted-foreground">
           {result.content.slice(0, 6000)}
         </pre>
       )}
+    </div>
+  );
+}
+
+/** What the guide said: a gold diamond at the margin, the way a speaker is marked. */
+function Said({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative pl-4">
+      <span className="absolute left-0 top-[9px] size-1.5 rotate-45 bg-gold shadow-[0_0_6px_hsl(var(--gold)/0.7)]" aria-hidden="true" />
+      {children}
     </div>
   );
 }
@@ -105,7 +120,7 @@ function Transcript({ messages }: { messages: ChatMessage[] }) {
         if (m.role === 'user') {
           return (
             <div key={i} className="flex justify-end">
-              <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-[13.5px] leading-relaxed text-primary-foreground">
+              <div className="max-w-[85%] whitespace-pre-wrap rounded-md border border-frame/35 bg-sunken/70 px-3.5 py-2 text-[13.5px] leading-relaxed">
                 {m.content}
               </div>
             </div>
@@ -113,14 +128,16 @@ function Transcript({ messages }: { messages: ChatMessage[] }) {
         }
         if (m.role === 'assistant') {
           return (
-            <div key={i} className="space-y-1.5">
-              {m.content.trim() && <Markdown text={m.content} />}
-              {m.toolCalls?.length ? (
-                <div className="space-y-0.5">
-                  {m.toolCalls.map((c) => <ToolLine key={c.id} name={c.name} args={parseArgs(c.arguments)} result={results.get(c.id)} />)}
-                </div>
-              ) : null}
-            </div>
+            <Said key={i}>
+              <div className="space-y-1.5">
+                {m.content.trim() && <Markdown text={m.content} />}
+                {m.toolCalls?.length ? (
+                  <div className="space-y-0.5">
+                    {m.toolCalls.map((c) => <ToolLine key={c.id} name={c.name} args={parseArgs(c.arguments)} result={results.get(c.id)} />)}
+                  </div>
+                ) : null}
+              </div>
+            </Said>
           );
         }
         return null;
@@ -136,9 +153,9 @@ function PermissionCard({ ask }: { ask: PermissionAsk }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => ref.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), [ask.id]);
   return (
-    <div ref={ref} className="pop rounded-2xl border border-gold/50 bg-gold-soft/40 p-3.5 text-[13px]">
-      <p className="font-medium">The agent wants to {ask.title ? <span className="font-mono text-[12px]">{ask.title}</span> : 'use a tool'}</p>
-      {input && <pre className="scroll-thin mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-background/70 p-2 font-mono text-[11px] text-muted-foreground">{input.slice(0, 2000)}</pre>}
+    <div ref={ref} className="panel panel-hero pop p-3.5 text-[13px]">
+      <p className="font-medium">The guide wants to {ask.title ? <span className="font-mono text-[12px]">{ask.title}</span> : 'use a tool'}</p>
+      {input && <pre className="scroll-thin mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-md bg-background/70 p-2 font-mono text-[11px] text-muted-foreground">{input.slice(0, 2000)}</pre>}
       <div className="mt-3 flex flex-wrap gap-1.5">
         {ask.options.map((o) => (
           <Button key={o.optionId} size="sm" variant={o.kind === 'allow_once' ? 'gold' : 'outline'} onClick={() => answerPermission(o.optionId)}>{o.name}</Button>
@@ -188,6 +205,10 @@ function useViewContext() {
   return { path: pathname, label, job, doc, applying };
 }
 
+/**
+ * The guide: a companion that works the app for you. Its panel reads like a
+ * conversation in a game: it speaks, you choose a line or type your own.
+ */
 export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: boolean }) {
   const navigate = useNavigate();
   const live = useLive();
@@ -245,87 +266,81 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
   }
 
   const suggestions = view.applying && view.job
-    ? ['Help me answer a question on this form', `Draft a short "Additional information" answer`, 'I submitted it. Mark it applied']
+    ? ['Help me answer a question on this form', `Draft a short "Additional information" answer`, 'I submitted it. Mark it turned in']
     : view.job
     ? [`Is ${view.job.company} a fit for me?`, 'Tailor my resume for this role', isDesktop() ? 'Fill out this application for me' : 'Draft a short "Additional information" answer']
     : view.doc?.kind === 'resume'
-      ? ['Tighten this resume to fit one page', 'Give this resume a fresh, modern design', 'Which listings is this resume best for?']
+      ? ['Tighten this resume to fit one page', 'Give this resume a fresh, modern design', 'Which quests is this resume best for?']
       : view.doc?.kind === 'letter'
       ? ['Match this letter’s design to its resume', 'Tighten this letter']
-      : ['Sort my New roles: save the good ones, pass on the rest', 'Line up my best 5 roles for this week', 'Search Anduril’s job board for mechanical roles near me'];
+      : ['Sort my Found roles: track the good ones, pass on the rest', 'Line up my best 5 roles for this week', 'Search Anduril’s job board for mechanical roles near me'];
 
   const empty = !chat || chat.messages.length === 0;
 
   return (
     <aside className="flex h-full min-w-0 flex-col bg-surface">
-      <div className="flex h-14 shrink-0 items-center gap-1 border-b border-border/60 px-3 max-lg:[&_button]:size-10">
-        <Sparkles className="ml-1 size-4 text-gold" />
-        <div className="ml-1.5 min-w-0 flex-1 leading-tight">
-          <p className="truncate text-[13.5px] font-semibold">{chat && chat.messages.length ? chat.title : 'Agent'}</p>
-          <p className="truncate text-[11px] text-muted-foreground">Runs everything in Questlog</p>
+      <div className="hud flex h-[52px] shrink-0 items-center gap-1 !border-b px-3 max-lg:[&_button]:size-10">
+        <span className="ml-1 grid size-7 place-items-center rounded-md bg-gold-soft/60 ring-1 ring-gold/40"><Sparkles className="size-4 text-gold-ink" /></span>
+        <div className="ml-2 min-w-0 flex-1 leading-tight">
+          <p className="font-display truncate text-[18px]">{chat && chat.messages.length ? chat.title : 'Guide'}</p>
+          <p className="truncate text-[11px] text-muted-foreground">Works the app for you</p>
         </div>
         <Menu>
-          <Tip label="History"><MenuTrigger asChild><Button variant="ghost" size="icon" aria-label="History"><History /></Button></MenuTrigger></Tip>
+          <Tip label="Past conversations"><MenuTrigger asChild><Button variant="ghost" size="icon" aria-label="Past conversations"><History /></Button></MenuTrigger></Tip>
           <MenuContent className="w-72">
-            <MenuLabel>Recent chats</MenuLabel>
+            <MenuLabel>Past conversations</MenuLabel>
             {chats?.length ? chats.map((c) => (
               <MenuItem key={c.id} onSelect={() => setChatId(c.id)} active={c.id === chatId}>
                 <span className="min-w-0 flex-1 truncate">{c.title}</span>
                 <span className="text-[11px] text-muted-foreground">{timeAgo(c.updatedAt)}</span>
               </MenuItem>
-            )) : <p className="px-2.5 py-2 text-[13px] text-muted-foreground">No chats yet</p>}
+            )) : <p className="px-2.5 py-2 text-[13px] text-muted-foreground">No conversations yet</p>}
             {chat && (
               <>
                 <MenuSeparator />
                 <MenuItem danger onSelect={async () => { await db.chats.delete(chat.id); setChatId(null); }}>
-                  <Trash2 /> Delete this chat
+                  <Trash2 /> Delete this conversation
                 </MenuItem>
               </>
             )}
           </MenuContent>
         </Menu>
-        <Tip label="New chat"><Button variant="ghost" size="icon" onClick={startNew} aria-label="New chat"><MessageSquarePlus /></Button></Tip>
-        {onClose && <Tip label="Hide (⌘J)"><Button variant="ghost" size="icon" onClick={onClose} aria-label="Hide agent"><PanelRightClose /></Button></Tip>}
+        <Tip label="New conversation"><Button variant="ghost" size="icon" onClick={startNew} aria-label="New conversation"><MessageSquarePlus /></Button></Tip>
+        {onClose && <Tip label="Hide (⌘J)"><Button variant="ghost" size="icon" onClick={onClose} aria-label="Hide the guide"><PanelRightClose /></Button></Tip>}
       </div>
 
       <div ref={scroller} className="scroll-thin min-h-0 flex-1 overflow-y-auto px-4 py-5">
         {empty && !running ? (
           <div className="flex h-full flex-col justify-end pb-2">
-            <div className="rise mb-5">
-              {/* A slowly breathing glow behind the mark. */}
-              <div className="relative mb-5 size-12">
-                <div className="absolute -inset-4 animate-[breathe_4s_ease-in-out_infinite] rounded-full bg-[radial-gradient(closest-side,hsl(var(--gold)/0.35),transparent)]" />
-                <div className="relative grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-gold to-[hsl(36_100%_58%)] text-gold-foreground shadow-[0_8px_24px_-8px_hsl(var(--gold)/0.8)]">
-                  <Sparkles className="size-6" />
-                </div>
-              </div>
-              <p className="font-display text-[21px]">What should we <span className="text-gradient">take on</span>?</p>
-              <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">
-                I’m not just a chat. I work the app for you, with the same controls you have, and each change shows up on the page as I make it.
+            <Speech className="rise mb-4" more>
+              <p className="font-display text-[20px] leading-tight tracking-wide">What shall we take on?</p>
+              <p className="mt-2 text-[13.5px] leading-relaxed opacity-90">
+                I’m not just a chat. I work the app for you, with the same controls you have, and each change shows up on the screen as I make it.
               </p>
-            </div>
-            <ul className="rise mb-5 space-y-2.5 rounded-2xl border border-border/70 bg-background/50 p-3.5 text-[13px]" style={{ '--i': 1 } as React.CSSProperties}>
+            </Speech>
+            <ul className="rise well mb-5 space-y-2 p-3.5 text-[13px]" style={{ '--i': 1 } as React.CSSProperties}>
               {([
-                [<BriefcaseBusiness key="j" />, 'Jobs', 'search company job boards, sort what’s new, line up what to send'],
+                [<BriefcaseBusiness key="j" />, 'Quests', 'search company job boards, sort what’s new, line up what to send'],
                 [<FileText key="d" />, 'Documents', 'tailor and redesign resumes, write letters and answers'],
                 [<UserRound key="p" />, 'Your profile', 'keep your rules, facts and notes current'],
                 [<ClipboardPen key="a" />, 'Applications', isDesktop() ? 'fill in forms and attach your resume; you press Submit' : 'draft your answers (the desktop app also fills in forms)'],
               ] as const).map(([icon, title, text]) => (
                 <li key={title} className="flex gap-3">
-                  <span className="mt-0.5 text-muted-foreground [&_svg]:size-4">{icon}</span>
-                  <span><span className="font-medium">{title}:</span> <span className="text-muted-foreground">{text}</span></span>
+                  <span className="mt-0.5 text-gold [&_svg]:size-4">{icon}</span>
+                  <span><span className="font-display text-[14.5px] tracking-wide">{title}:</span> <span className="text-muted-foreground">{text}</span></span>
                 </li>
               ))}
             </ul>
-            <p className="eyebrow-label mb-2 px-1">Try</p>
-            <div className="space-y-2">
+            {/* Choices, the way a game offers lines to say. */}
+            <div className="space-y-1">
               {suggestions.map((s, i) => (
                 <button
                   key={s}
                   onClick={() => submit(s)}
-                  className="rise group flex w-full items-center gap-2 rounded-2xl border border-border/70 bg-background/60 px-3.5 py-2.5 text-left text-[13.5px] transition-[background-color,border-color,transform] duration-200 hover:-translate-y-px hover:border-gold/40 hover:bg-accent/60 active:scale-[0.99]"
+                  className="rise group flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-[13.5px] transition-[background-color,transform] duration-200 hover:bg-gold-soft/50 active:scale-[0.99]"
                   style={{ '--i': i + 2 } as React.CSSProperties}
                 >
+                  <span className="w-3 shrink-0 text-[11px] text-gold opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden="true">▶</span>
                   <span className="flex-1">{s}</span>
                   <ArrowUp className="size-3.5 rotate-45 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                 </button>
@@ -336,26 +351,28 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
           <div className="space-y-5">
             {chat && <Transcript messages={chat.messages} />}
             {live && live.chatId === chatId && (
-              <div className="space-y-1.5">
-                {live.text && <Markdown text={live.text} />}
-                {live.tool && <ToolLine name={live.tool.name} args={(live.tool.args ?? {}) as Record<string, unknown>} running />}
-                {running && !live.text && !live.tool && (
-                  <div className="flex items-center gap-1.5 py-1">
-                    {[0, 1, 2].map((i) => (
-                      <span key={i} className="size-1.5 animate-pulse rounded-full bg-muted-foreground/60" style={{ animationDelay: `${i * 150}ms` }} />
-                    ))}
-                  </div>
-                )}
-                {live.permission && <PermissionCard ask={live.permission} />}
-                {live.error && (
-                  <div className="rounded-xl border border-danger/30 bg-danger/5 px-3 py-2 text-[13px] text-danger">
-                    {live.error}
-                    {/provider|Settings/.test(live.error) && (
-                      <Link to="/settings" className="ml-1 font-medium underline">Open settings</Link>
-                    )}
-                  </div>
-                )}
-              </div>
+              <Said>
+                <div className="space-y-1.5">
+                  {live.text && <Markdown text={live.text} />}
+                  {live.tool && <ToolLine name={live.tool.name} args={(live.tool.args ?? {}) as Record<string, unknown>} running />}
+                  {running && !live.text && !live.tool && (
+                    <div className="flex items-center gap-1.5 py-1">
+                      {[0, 1, 2].map((i) => (
+                        <span key={i} className="size-1.5 rotate-45 animate-pulse bg-gold/70" style={{ animationDelay: `${i * 150}ms` }} />
+                      ))}
+                    </div>
+                  )}
+                  {live.permission && <PermissionCard ask={live.permission} />}
+                  {live.error && (
+                    <div className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-[13px] text-danger">
+                      {live.error}
+                      {/provider|Settings/.test(live.error) && (
+                        <Link to="/settings" className="ml-1 font-medium underline">Open settings</Link>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </Said>
             )}
           </div>
         )}
@@ -363,15 +380,15 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
 
       <div className="shrink-0 p-3 pt-0">
         {settings && !engine && !provider?.model && (
-          <Link to="/settings" className="mb-2 flex items-center gap-2 rounded-xl bg-gold-soft px-3 py-2 text-[12.5px] ring-1 ring-gold/50 hover:brightness-[0.98]">
+          <Link to="/settings" className="mb-2 flex items-center gap-2 rounded-md bg-gold-soft px-3 py-2 text-[12.5px] ring-1 ring-gold/50 hover:brightness-[0.98]">
             <Plug className="size-3.5" />
-            {isDesktop() ? 'Pick who runs the agent: Claude Code, Codex, OpenCode, or an AI provider.' : 'Connect an AI provider to start. Meridian works out of the box.'}
+            {isDesktop() ? 'Pick who runs the guide: Claude Code, Codex, OpenCode, or an AI provider.' : 'Connect an AI provider to start. Meridian works out of the box.'}
           </Link>
         )}
-        <div className="rounded-[20px] border border-border/80 bg-background shadow-card transition-[border-color,box-shadow] duration-300 focus-within:border-gold/50 focus-within:shadow-[0_0_0_4px_hsl(var(--gold)/0.12),0_10px_30px_-12px_hsl(var(--gold)/0.4)]">
+        <div className="panel bg-background transition-[border-color,box-shadow] duration-300 focus-within:border-gold/60 focus-within:shadow-[0_0_0_4px_hsl(var(--gold)/0.12),0_10px_30px_-12px_hsl(var(--gold)/0.4)]">
           {view.label && (
             <div className="flex items-center gap-1.5 px-3 pt-2.5 text-[11.5px] text-muted-foreground">
-              <span className="size-1.5 rounded-full bg-gold" />
+              <span className="size-1.5 rotate-45 bg-gold" />
               <span className="truncate">{view.applying ? 'Applying to' : 'Looking at'} {view.job ? `${view.job.company}: ${view.job.title}` : view.doc?.title}</span>
             </div>
           )}
@@ -398,11 +415,11 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
               {engine && chatId && sessionOpts && <SessionPicker chatId={chatId} engine={engine} options={sessionOpts} />}
             </div>
             {running ? (
-              <Button size="icon" variant="primary" onClick={stop} className="rounded-full max-lg:size-10" aria-label="Stop">
+              <Button size="icon" variant="primary" onClick={stop} className="max-lg:size-10" aria-label="Stop">
                 <Square className="!size-3 fill-current" />
               </Button>
             ) : (
-              <Button size="icon" variant="gold" onMouseDown={(e) => e.preventDefault()} onClick={() => submit()} disabled={!draft.trim()} className="rounded-full max-lg:size-10" aria-label="Send">
+              <Button size="icon" variant="gold" onMouseDown={(e) => e.preventDefault()} onClick={() => submit()} disabled={!draft.trim()} className="max-lg:size-10" aria-label="Send">
                 <ArrowUp />
               </Button>
             )}
