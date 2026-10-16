@@ -1,0 +1,107 @@
+# Builds what the installers (scripts/install.sh, scripts/install.ps1)
+# download: Questlog for Linux (x64, arm64), macOS (Apple Silicon, Intel) and
+# Windows (x64), as plain archives, with a SHA256SUMS beside them. A tag
+# (v0.2.0) publishes them as a release; run by hand, it only keeps them as
+# artifacts of the run, to try first.
+#
+# There is no Apple certificate: the macOS app is signed ad hoc (mac.identity
+# "-" in desktop/package.json), which Apple Silicon needs to run it at all.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # x64 and arm64: Questlog has no native modules, so both package here.
+          - os: ubuntu-latest
+            flags: --linux
+          # Apple Silicon; the Intel build is packaged here too.
+          - os: macos-latest
+            flags: --mac
+          - os: windows-latest
+            flags: --win
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      # Sign with nothing found in a keychain: ad hoc on macOS, not at all on
+      # Windows.
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      # The npm scripts use rm and cp; on Windows, run them in Git's bash.
+      - if: runner.os == 'Windows'
+        run: npm config set script-shell "C:\\Program Files\\Git\\bin\\bash.exe"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            desktop/package-lock.json
+      # The root .npmrc fetches @jsr packages from npm.jsr.io, which needs no token.
+      - run: npm ci
+      - run: npm ci --prefix desktop
+      - name: Package
+        run: npm --prefix desktop run dist -- ${{ matrix.flags }} --publish never
+      - run: ls -l desktop/dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: questlog-${{ runner.os }}
+          path: |
+            desktop/dist/Questlog-*.tar.gz
+            desktop/dist/Questlog-*.zip
+          if-no-files-found: error
+
+  release:
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          pattern: questlog-*
+          merge-multiple: true
+      - name: Checksums
+        working-directory: release
+        run: |
+          sha256sum Questlog-* > SHA256SUMS
+          cat SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: release/*
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        working-directory: release
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" * --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" * --verify-tag --generate-notes
+          fi
