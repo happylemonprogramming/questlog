@@ -80,7 +80,7 @@ export function formTools(): Record<string, Tool> {
 
     attach_document: defineTool({
       description:
-        "Attach a resume or cover letter to a file field on the open form, as a PDF made from the document exactly as it looks in Offerdex. " +
+        "Attach a resume or cover letter to a file field on the open form, as a PDF made from the document exactly as it looks in Questlog. " +
         'Use the resume made for this listing; if there is none, make one first.',
       inputSchema: z.object({ ref: z.string(), documentId: z.string() }),
       write: true,

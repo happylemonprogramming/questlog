@@ -11,10 +11,10 @@
     "https://blossom.ditto.pub",
     "https://blossom.dreamith.to"
   ],
-  "id": "offerdex",
+  "id": "questlog",
   "fallback": "/index.html",
   "publishRelayList": false,
   "publishServerList": false,
-  "title": "Offerdex",
+  "title": "Questlog",
   "description": "A local-first job search with a bring-your-own-model assistant."
 }

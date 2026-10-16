@@ -88,7 +88,7 @@ export function careerFromResumes(resumes: ResumeData[]): string {
 }
 
 /**
- * Offerdex used to keep "base" resumes that tailored copies started from. The
+ * Questlog used to keep "base" resumes that tailored copies started from. The
  * first time it runs without a career record, it builds one from them. The
  * old documents stay, as ordinary documents.
  */

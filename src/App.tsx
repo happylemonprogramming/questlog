@@ -3,8 +3,10 @@ import * as D from '@radix-ui/react-dialog';
 import { BrowserRouter, Link, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
-  BriefcaseBusiness, ClipboardPen, FileText, Loader2, Menu, Monitor, Moon, PanelRightOpen, PanelsTopLeft, Settings as SettingsIcon, Sparkles, Sun, Sunrise,
+  BookOpen, ClipboardPen, FileText, Loader2, Map as MapIcon, Menu, Monitor, Moon, PanelRightOpen, PanelsTopLeft, Settings as SettingsIcon, Sparkles, Sun, Sunrise,
 } from 'lucide-react';
+import { useJourney } from '@/lib/quest';
+import { Milestones } from '@/components/Milestones';
 import { db } from '@/lib/db';
 import { adoptBaseResumes } from '@/lib/career';
 import { ThemeProvider, useTheme, type Theme } from '@/lib/theme';
@@ -14,6 +16,9 @@ import { ChatPanel } from '@/components/ChatPanel';
 import { CommandDock } from '@/components/CommandDock';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ApplyPane } from '@/components/ApplyPane';
+import { WorkspaceWelcome } from '@/components/WorkspacePanel';
+import { startDisk } from '@/lib/disk';
+import { isDesktop } from '@/lib/desktop';
 import { isJobsPath } from '@/components/JobsHeader';
 import { onAsk, useLive } from '@/agent/runtime';
 import { serveTools } from '@/agent/serve';
@@ -28,24 +33,33 @@ import JobView from '@/pages/JobView';
 import Documents from '@/pages/Documents';
 import DocumentView from '@/pages/DocumentView';
 import Settings from '@/pages/Settings';
+import Journal from '@/pages/Journal';
 import Review from '@/pages/Review';
 import PrintView from '@/pages/PrintView';
 
 // The map library and its data are big; only load them when someone opens the map.
 const MapView = lazy(() => import('@/pages/MapView'));
 
+/** The mark: a waypoint at the end of a trail of steps. */
+export function Mark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" className={className} aria-hidden="true">
+      <path d="M7 25.6c4.2.2 7.8-1.6 10-5.2" fill="none" stroke="hsl(var(--gold))" strokeWidth="2.2" strokeLinecap="round" strokeDasharray=".01 3.5" opacity=".7" />
+      <path d="M19.5 4.8l5.8 6.9-5.8 6.9-5.8-6.9z" fill="hsl(var(--gold))" />
+      <circle cx="19.5" cy="11.7" r="2.1" fill="hsl(228 39% 13%)" />
+    </svg>
+  );
+}
+
 function Logo() {
   return (
     <div className="flex items-center gap-2.5 px-2">
-      <div className="relative grid size-9 place-items-center rounded-[11px] bg-primary text-primary-foreground shadow-[0_6px_18px_-6px_hsl(var(--lemon)/0.55)] ring-1 ring-lemon/30">
-        <svg viewBox="0 0 32 32" className="size-5" aria-hidden="true">
-          <rect x="8" y="6" width="16" height="20" rx="2" fill="none" stroke="hsl(var(--lemon))" strokeWidth="2.4" />
-          <path d="M12 12.5h8M12 16.5h8M12 20.5h5" stroke="hsl(var(--lemon))" strokeWidth="2.4" strokeLinecap="round" />
-        </svg>
+      <div className="grid size-9 place-items-center rounded-[11px] bg-[hsl(228_39%_13%)] shadow-[0_6px_18px_-6px_hsl(var(--gold)/0.5)] ring-1 ring-gold/30">
+        <Mark className="size-8" />
       </div>
       <div className="leading-none">
-        <p className="text-[16px] font-semibold tracking-[-0.025em]">Offerdex</p>
-        <p className="mt-0.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground">job search</p>
+        <p className="font-display text-[19px] font-medium tracking-[-0.01em]">Questlog</p>
+        <p className="mt-0.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground">your job search</p>
       </div>
     </div>
   );
@@ -131,17 +145,36 @@ function NavContents({ className }: { className?: string }) {
         <div
           ref={pill}
           aria-hidden="true"
-          className="absolute inset-x-0 top-0 rounded-xl bg-surface opacity-0 shadow-card ring-1 ring-border/80 transition-[transform,height] duration-500 ease-spring before:absolute before:inset-y-2.5 before:-left-3.5 before:w-[3px] before:rounded-r-full before:bg-lemon before:shadow-[0_0_12px_hsl(var(--lemon))]"
+          className="absolute inset-x-0 top-0 rounded-xl bg-surface opacity-0 shadow-card ring-1 ring-border/80 transition-[transform,height] duration-500 ease-spring before:absolute before:inset-y-2.5 before:-left-3.5 before:w-[3px] before:rounded-r-full before:bg-gold before:shadow-[0_0_12px_hsl(var(--gold))]"
         />
         <NavItem to="/" end icon={<Sunrise />} label="Today" />
-        <NavItem to="/listings" icon={<BriefcaseBusiness />} label="Jobs" match={isJobsPath} />
+        <NavItem to="/listings" icon={<MapIcon />} label="Quests" match={isJobsPath} />
         <NavItem to="/documents" icon={<FileText />} label="Documents" />
+        <NavItem to="/journal" icon={<BookOpen />} label="Journal" />
       </div>
       <div className="mt-auto space-y-3">
+        <JourneyCard />
         <NavItem to="/settings" icon={<SettingsIcon />} label="Settings" standalone />
         <ThemeSwitch />
       </div>
     </nav>
+  );
+}
+
+/** Where you are in the story, at a glance. Opens the journal. */
+function JourneyCard() {
+  const j = useJourney();
+  if (!j) return null;
+  const { level } = j;
+  return (
+    <Link to="/journal" className="block rounded-xl px-3 py-2.5 transition hover:bg-accent/50">
+      <p className="flex items-baseline justify-between gap-2 text-[12.5px]">
+        <span className="font-medium">Chapter {level.level} <span className="text-muted-foreground">· {level.title}</span></span>
+      </p>
+      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted">
+        <div className="h-full rounded-full bg-gold transition-[width] duration-700" style={{ width: `${Math.min(100, (level.into / level.span) * 100)}%` }} />
+      </div>
+    </Link>
   );
 }
 
@@ -166,8 +199,8 @@ function NavDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: bo
   );
 }
 
-const WIDTH_KEY = 'offerdex:chat-width';
-const OPEN_KEY = 'offerdex:assistant-open';
+const WIDTH_KEY = 'questlog:chat-width';
+const OPEN_KEY = 'questlog:assistant-open';
 
 /** Ask-from-page buttons bring the agent forward. */
 function useAskOpens(open: () => void) {
@@ -192,11 +225,12 @@ function Page() {
 
 const TITLES: Record<string, [string, string?]> = {
   '': ['Today'],
-  listings: ['Jobs'],
-  map: ['Jobs'],
-  moonshots: ['Jobs'],
-  pipeline: ['Jobs'],
-  jobs: ['Jobs', 'Job'],
+  listings: ['Quests'],
+  map: ['Quests'],
+  moonshots: ['Quests'],
+  pipeline: ['Quests'],
+  jobs: ['Quests', 'Quest'],
+  journal: ['Journal'],
   documents: ['Documents', 'Document'],
   settings: ['Settings'],
   review: ['Review'],
@@ -204,7 +238,7 @@ const TITLES: Record<string, [string, string?]> = {
 
 function pageTitle(pathname: string) {
   const [, section = '', id] = pathname.split('/');
-  const t = TITLES[section] ?? ['Offerdex'];
+  const t = TITLES[section] ?? ['Questlog'];
   return (id && t[1]) || t[0];
 }
 
@@ -218,9 +252,9 @@ function TabButton({ active, onClick, icon, label, dot }: { active: boolean; onC
         active ? 'text-foreground' : 'text-muted-foreground',
       )}
     >
-      <span className={cn('relative grid h-7 w-12 place-items-center rounded-full transition-colors', active && 'bg-lemon-soft ring-1 ring-lemon/50')}>
+      <span className={cn('relative grid h-7 w-12 place-items-center rounded-full transition-colors', active && 'bg-gold-soft ring-1 ring-gold/50')}>
         {icon}
-        {dot && <span className="absolute right-2 top-0.5 size-2 rounded-full bg-lemon ring-2 ring-background" />}
+        {dot && <span className="absolute right-2 top-0.5 size-2 rounded-full bg-gold ring-2 ring-background" />}
       </span>
       {label}
     </button>
@@ -394,7 +428,7 @@ function DesktopShell() {
           {!open && (
             <div className="sticky top-0 z-10 flex justify-end p-3">
               <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="shadow-soft">
-                <Sparkles className="text-lemon" /> Agent <PanelRightOpen className="text-muted-foreground" />
+                <Sparkles className="text-gold" /> Agent <PanelRightOpen className="text-muted-foreground" />
               </Button>
             </div>
           )}
@@ -417,7 +451,7 @@ function DesktopShell() {
       <div className={cn('relative shrink-0 border-l', open ? 'flex' : 'hidden')} style={{ width }}>
           <div
             onPointerDown={drag}
-            className="absolute -left-1 top-0 z-10 h-full w-2 cursor-col-resize transition-colors hover:bg-lemon/40"
+            className="absolute -left-1 top-0 z-10 h-full w-2 cursor-col-resize transition-colors hover:bg-gold/40"
             aria-hidden="true"
           />
           <div className="min-w-0 flex-1"><ErrorBoundary><ChatPanel onClose={() => setOpen(false)} /></ErrorBoundary></div>
@@ -432,13 +466,22 @@ function Shell() {
   const nav = useRef(navigate);
   nav.current = navigate;
   useEffect(() => serveTools({ navigate: (p) => nav.current(p) }), []);
-  return useIsMobile() ? <MobileShell /> : <DesktopShell />;
+  const mobile = useIsMobile();
+  return (
+    <>
+      {mobile ? <MobileShell /> : <DesktopShell />}
+      {isDesktop() && <WorkspaceWelcome />}
+      <Milestones />
+    </>
+  );
 }
 
 export default function App() {
   useEffect(() => {
     void adoptBaseResumes();
     void navigator.storage?.persist?.();
+    // Print views are hidden windows of their own; only the main window keeps the folder in step.
+    if (!location.pathname.startsWith('/print/')) void startDisk();
   }, []);
 
   return (
@@ -457,6 +500,7 @@ export default function App() {
               <Route path="documents" element={<Documents />} />
               <Route path="documents/:id" element={<DocumentView />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="journal" element={<Journal />} />
               <Route path="review" element={<Review />} />
             </Route>
           </Routes>

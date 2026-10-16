@@ -8,29 +8,39 @@ import { Forms } from './forms';
 import { loginPath } from './paths';
 import { ToolBridge } from './bridge';
 import { log, logDir } from './log';
+import { legacyData, legacyTaken, useDataFolder } from './legacy';
+import { LocalFolders } from './local';
+import { Workspace, type WsFile } from './workspace';
 
 /**
- * Offerdex on the desktop: the same web app in a window, plus what a browser
+ * Questlog on the desktop: the same web app in a window, plus what a browser
  * tab can't do. It can fill in an application form on any site, attach a
  * real PDF of your resume, and run Claude Code, Codex or OpenCode as the
- * agent, with Offerdex's own tools handed to it.
+ * agent, with Questlog's own tools handed to it.
  */
 
-const DEV_URL = process.env.OFFERDEX_DEV_URL;
+const DEV_URL = process.env.QUESTLOG_DEV_URL;
 const WEB = path.join(__dirname, '..', 'web');
-const ORIGIN = DEV_URL ? new URL(DEV_URL).origin : 'app://offerdex';
+const ORIGIN = DEV_URL ? new URL(DEV_URL).origin : 'app://questlog';
 // Tests run with a throwaway profile and hidden windows.
-if (process.env.OFFERDEX_PROFILE) app.setPath('userData', process.env.OFFERDEX_PROFILE);
-const HIDDEN = process.env.OFFERDEX_HIDDEN === '1';
+if (process.env.QUESTLOG_PROFILE) app.setPath('userData', process.env.QUESTLOG_PROFILE);
+else useDataFolder();
+const HIDDEN = process.env.QUESTLOG_HIDDEN === '1';
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } },
 ]);
 
-/** The built web app, with every unknown path falling back to index.html for the router. */
-function serveApp() {
+/**
+ * The built web app, with every unknown path falling back to index.html for
+ * the router. In development the app comes from the dev server, and app://
+ * only serves the blank page the old name's data is read through.
+ */
+function serveApp(dev: boolean) {
   protocol.handle('app', (req) => {
     const rel = decodeURIComponent(new URL(req.url).pathname);
+    if (rel === '/__blank') return new Response('<!doctype html><title></title>', { headers: { 'content-type': 'text/html' } });
+    if (dev) return new Response('Not found', { status: 404 });
     let file = path.normalize(path.join(WEB, rel));
     if (!file.startsWith(WEB + path.sep) || !existsSync(file) || statSync(file).isDirectory()) file = path.join(WEB, 'index.html');
     return net.fetch(pathToFileURL(file).href);
@@ -41,6 +51,8 @@ let win: BrowserWindow | null = null;
 const bridge = new ToolBridge(() => win?.webContents);
 const forms = new Forms();
 const agents = new Agents(bridge, () => win?.webContents);
+const workspace = new Workspace(() => win?.webContents);
+const local = new LocalFolders();
 
 function createWindow() {
   win = new BrowserWindow({
@@ -49,7 +61,7 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     show: false,
-    title: 'Offerdex',
+    title: 'Questlog',
     backgroundColor: '#0b0d12',
     autoHideMenuBar: true,
     webPreferences: {
@@ -58,7 +70,7 @@ function createWindow() {
       sandbox: true,
       // The application form loads in a <webview>, which unlike an iframe works on any site.
       webviewTag: true,
-      additionalArguments: HIDDEN ? ['--offerdex-test'] : [],
+      additionalArguments: HIDDEN ? ['--questlog-test'] : [],
     },
   });
   if (!HIDDEN) win.once('ready-to-show', () => win?.show());
@@ -76,7 +88,7 @@ function createWindow() {
       void shell.openExternal(url);
     }
   });
-  // The form's page gets nothing from Offerdex: no preload, no Node.
+  // The form's page gets nothing from Questlog: no preload, no Node.
   wc.on('will-attach-webview', (_e, prefs, params) => {
     delete prefs.preload;
     prefs.nodeIntegration = false;
@@ -203,7 +215,7 @@ const BRAND_SCAN = `(() => {
 /**
  * A company's website as a person would see it, for designing a resume that
  * fits the company: two screenshots plus the colors and type it uses. The page
- * runs in its own throwaway session with no access to Offerdex.
+ * runs in its own throwaway session with no access to Questlog.
  */
 async function viewSite(url: string) {
   if (!/^https?:\/\//i.test(url)) throw new Error('Give a full http(s) URL.');
@@ -246,7 +258,29 @@ handle('pdf:save', async (docId: string, fileName?: string) => {
 });
 handle('pdf:reveal', (file: string) => shell.showItemInFolder(file));
 handle('logs:open', () => shell.openPath(logDir()));
+handle('legacy:data', () => legacyData());
+handle('ws:info', () => workspace.info());
+handle('ws:choose', () => workspace.choose(win));
+handle('ws:useDefault', () => workspace.open(workspace.defaultRoot()));
+handle('ws:reveal', () => workspace.reveal());
+handle('ws:readAll', () => workspace.readAll());
+handle('ws:read', (paths: string[]) => workspace.read(paths));
+handle('ws:write', (files: WsFile[], message: string) => workspace.write(files, message));
+handle('ws:remove', (paths: string[], message: string) => workspace.remove(paths, message));
+handle('history:list', () => workspace.history.list());
+handle('history:restore', (oid: string) => workspace.history.restore(oid));
+handle('history:undo', () => workspace.history.undo());
+handle('history:clear', () => workspace.history.clear());
+handle('legacy:taken', () => legacyTaken());
 handle('site:view', (url: string) => viewSite(url));
+
+handle('local:grant', () => local.grant(win));
+handle('local:grants', () => local.grants());
+handle('local:revoke', (folder: string) => local.revoke(folder));
+handle('local:list', (p?: string, depth?: number) => local.list(p, depth));
+handle('local:read', (p: string, offset?: number, limit?: number) => local.read(p, offset, limit));
+handle('local:search', (query: string, p?: string) => local.search(query, p));
+handle('local:git', (p?: string, opts?: { emails?: string[] }) => local.gitHistory(p, opts));
 
 handle('form:status', () => forms.status());
 handle('form:read', () => forms.read());
@@ -278,8 +312,9 @@ app.whenReady().then(async () => {
   // Apps opened from a dock or launcher don't get the shell's PATH, which is
   // where claude, codex and opencode usually live.
   process.env.PATH = await loginPath();
-  if (!DEV_URL) serveApp();
+  serveApp(!!DEV_URL);
   await bridge.start();
+  await workspace.start();
   createWindow();
   app.on('activate', () => BrowserWindow.getAllWindows().length === 0 && createWindow());
 });

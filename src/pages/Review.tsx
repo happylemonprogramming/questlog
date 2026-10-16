@@ -85,7 +85,7 @@ export default function Review() {
       <Link to="/" className="mb-6 inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground max-lg:hidden">
         <ArrowLeft className="size-3.5" /> Today
       </Link>
-      <h1 className="text-[28px] font-semibold tracking-[-0.03em] sm:text-[32px]">{trim ? `Pick your top ${QUEUE_SIZE}` : 'Line up a few'}</h1>
+      <h1 className="font-display text-[30px] font-normal tracking-[-0.01em] sm:text-[36px]">{trim ? `Pick your top ${QUEUE_SIZE}` : 'Line up a few'}</h1>
       <p className="mt-2 text-[15px] text-muted-foreground">
         {trim
           ? `You have ${total} roles in Next up. Keep the ${QUEUE_SIZE} you'd most like to send; the rest go back to Saved, nothing is lost.`
@@ -95,7 +95,7 @@ export default function Review() {
       <div className="mt-6 flex items-center gap-3">
         <div className="flex gap-1.5">
           {Array.from({ length: QUEUE_SIZE }, (_, n) => (
-            <span key={n} className={cn('h-1.5 w-6 rounded-full transition-colors duration-500', n < kept ? 'bg-lemon shadow-[0_0_8px_hsl(var(--lemon))]' : 'bg-muted-foreground/20')} />
+            <span key={n} className={cn('h-1.5 w-6 rounded-full transition-colors duration-500', n < kept ? 'bg-gold shadow-[0_0_8px_hsl(var(--gold))]' : 'bg-muted-foreground/20')} />
           ))}
         </div>
         <span className="text-[13px] text-muted-foreground">{Math.min(kept, QUEUE_SIZE)} of {QUEUE_SIZE} lined up</span>
@@ -108,7 +108,7 @@ export default function Review() {
 
       {done ? (
         <div className="pop mt-6 rounded-[28px] border bg-surface p-8 text-center shadow-card">
-          <div className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-lemon text-lemon-foreground shadow-glow"><Check className="size-6" strokeWidth={3} /></div>
+          <div className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-gold text-gold-foreground shadow-glow"><Check className="size-6" strokeWidth={3} /></div>
           <p className="text-[19px] font-semibold">{kept ? 'Your queue is set' : 'That’s everything for now'}</p>
           <p className="mx-auto mt-1 max-w-sm text-[14px] text-muted-foreground">
             {rest.length
@@ -116,8 +116,8 @@ export default function Review() {
               : kept ? 'Today will walk you through them one at a time.' : 'No new roles to review. Ask the agent to find some.'}
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
-            {rest.length > 0 && <Button variant="lemon" onClick={setAsideRest}>Set {rest.length} aside</Button>}
-            <Button variant={rest.length ? 'outline' : 'lemon'} onClick={() => navigate('/')}>Back to Today</Button>
+            {rest.length > 0 && <Button variant="gold" onClick={setAsideRest}>Set {rest.length} aside</Button>}
+            <Button variant={rest.length ? 'outline' : 'gold'} onClick={() => navigate('/')}>Back to Today</Button>
           </div>
         </div>
       ) : job ? (
@@ -126,7 +126,7 @@ export default function Review() {
             <CompanyMark job={job} size={52} className="rounded-2xl" />
             <div className="min-w-0 flex-1">
               <p className="text-[13.5px] font-medium text-muted-foreground">{job.company}</p>
-              <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="mt-0.5 block text-[20px] font-semibold leading-tight tracking-[-0.02em] hover:underline">{job.title}</Link>
+              <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="mt-0.5 block font-display text-[22px] font-medium leading-tight tracking-[-0.01em] hover:underline">{job.title}</Link>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
                 {job.location && <span className="flex items-center gap-1.5"><MapPin className="size-3.5" />{job.location}</span>}
                 {job.pay && <span className="flex items-center gap-1.5 font-mono text-[12.5px]"><Wallet className="size-3.5" />{shortPay(job.pay)}</span>}
@@ -145,7 +145,7 @@ export default function Review() {
           <div className="mt-7 grid grid-cols-3 gap-2">
             <Button variant="outline" size="lg" onClick={() => decide('no')} className="flex-col gap-0.5 h-auto py-2.5"><X /> <span className="text-[12.5px]">Not for me</span></Button>
             <Button variant="outline" size="lg" onClick={() => decide('later')} className="flex-col gap-0.5 h-auto py-2.5"><Clock /> <span className="text-[12.5px]">Later</span></Button>
-            <Button variant="lemon" size="lg" onClick={() => decide('keep')} className="flex-col gap-0.5 h-auto py-2.5"><Check /> <span className="text-[12.5px]">{trim ? 'Keep' : 'Line it up'}</span></Button>
+            <Button variant="gold" size="lg" onClick={() => decide('keep')} className="flex-col gap-0.5 h-auto py-2.5"><Check /> <span className="text-[12.5px]">{trim ? 'Keep' : 'Line it up'}</span></Button>
           </div>
           <p className="mt-4 text-center font-mono text-[11px] text-muted-foreground max-sm:hidden">{i + 1} of {total} · ← not for me · ↓ later · → {trim ? 'keep' : 'line it up'}</p>
         </div>

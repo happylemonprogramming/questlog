@@ -3,7 +3,7 @@ import { desktop, type ToolImage } from '@/lib/desktop';
 import { buildTools, type ToolHost } from './tools';
 
 /**
- * In the desktop app, hand Offerdex's tools to an external agent (Claude Code,
+ * In the desktop app, hand Questlog's tools to an external agent (Claude Code,
  * Codex, OpenCode). The agent sees them through an MCP server; each call
  * lands here and runs against this window's data, so the pages update live
  * exactly as they do for the built-in agent.

@@ -41,7 +41,7 @@ export default function Pipeline() {
               }}
               className={cn(
                 'relative flex w-[264px] shrink-0 snap-start flex-col overflow-hidden rounded-[22px] bg-sunken/50 p-2 ring-1 ring-border/50 transition-[background-color,box-shadow] duration-300 max-sm:w-[80vw]',
-                over === stage && 'bg-lemon-soft/50 ring-lemon/60',
+                over === stage && 'bg-gold-soft/50 ring-gold/60',
               )}
             >
               {/* A thin glow along the top in the stage's color. */}

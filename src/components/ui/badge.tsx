@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 const tones = {
   neutral: 'bg-muted text-muted-foreground',
-  lemon: 'bg-lemon-soft text-foreground ring-1 ring-inset ring-lemon/60',
+  gold: 'bg-gold-soft text-foreground ring-1 ring-inset ring-gold/60',
   success: 'bg-success/12 text-success',
   warning: 'bg-warning/12 text-warning',
   danger: 'bg-danger/12 text-danger',

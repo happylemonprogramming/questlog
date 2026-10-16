@@ -1,100 +1,118 @@
-# Offerdex
+# Questlog
 
-A job-search workspace that runs entirely in your browser: listings, a pipeline, ranked long shots, and resumes and cover letters you can tailor with an AI assistant. There's no account and no server. Everything is stored in IndexedDB on your device, and you can export it as one JSON file at any time.
+A calm quest log for your job search. Questlog tracks the roles you're after, writes and designs a resume for each one from your own career record, fills in application forms for you to review, and keeps it all as plain files in a folder you own. There's no account and no server.
+
+Looking for work can feel futile. Questlog is built to make it feel like steady progress instead: one quest at a time, points for the effort you put in (never taken away when a company says no), and a clear place to stop each day.
+
+## Install
+
+macOS and Linux:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/happylemonprogramming/questlog/main/scripts/install.sh | bash
+```
+
+Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/happylemonprogramming/questlog/main/scripts/install.ps1 | iex
+```
+
+Then run `questlog`, or open it from your app launcher. `questlog update` updates it and `questlog uninstall` removes it; your files stay. See [docs/install.md](docs/install.md) for details.
+
+Questlog's agent is a coding agent you may already have: [Claude Code](https://claude.com/claude-code), [Codex](https://github.com/openai/codex) or [OpenCode](https://opencode.ai). OpenCode includes free models, so you can start without a subscription. Any OpenAI-compatible provider works too.
 
 ## What it does
 
-- **Today:** one application at a time, in three steps (tailor the resume, fill in the form, mark it sent), with a daily goal. Next up holds about five roles; a one-card review trims or refills it. Everything else waits behind "See everything".
-- **Jobs:** every role you're tracking, as a list, a pipeline you drag cards across, a map, or ranked moonshots. A listing leads with Apply and the verdict; fit, posting, documents and notes fold away.
-- **Company logos:** taken from each company's own website, even for jobs found on LinkedIn or a job board. Each logo is a request to Google's favicon service; turn them off in Settings to show initials instead.
-- **Map view:** your listings on a globe or flat map, merged into bubbles where they crowd together and colored by how far along each one is. It opens on the stretch of the world that holds the most listings. Chips name the countries left off screen, and tapping one flies there. Free-text locations like "Emeryville or Santa Clara, CA (on-site)" or "Greater Houston" are matched against a place list that ships with the app, so locations are never sent to a geocoding service. The map works offline after the first visit.
-- **Moonshots view:** a separately ranked list of long shots.
-- **Documents:** resumes, cover letters and short application answers, rendered as a one-page drawing sheet with a live page-fit check. Each resume and letter carries its own stylesheet, so you or the assistant can redesign it completely (type, color, layout, columns) in the Design tab, the way you'd edit a resume website's CSS. Export goes through the browser's print-to-PDF, which keeps the real text layer that applicant tracking systems read.
-- **Assistant:** a chat panel on every page, powered by [Porygon](https://jsr.io/@porygon/core). It can:
-  - read public Greenhouse, Ashby and Lever job boards
-  - save and evaluate listings against your rules
-  - write and design each resume for its listing, using only the facts in your career record
+- **Today:** one application at a time, in three steps: make the resume, fill in the form, turn it in. Set a daily goal; when you reach it, Today says so and lets you stop. Up next holds about five roles, and a one-card review trims or refills it.
+- **Quests:** every role you're tracking, as a list, a pipeline you drag cards across, a world map, or ranked moonshots. A listing leads with Apply and the verdict; fit, posting, documents and notes fold away.
+- **Journal:** your progress as a story. Points for tracking roles, writing for them, sending them, following up and interviewing; chapters as they add up; a weekly quest; a run of active weeks where one quiet week is a rest, not a break; and keepsakes, including one for hearing no and keeping going.
+- **Documents:** resumes, cover letters and short answers, each rendered as one page with a live fit check. Every resume is written for its listing from your career record, using only facts you've confirmed, and designed for that company: the agent looks at the company's website and starts from its real colors and type. Each document carries its own stylesheet, so you or the agent can redesign it completely.
+- **Fills in application forms:** the Apply pane loads any career site, including Workday and LinkedIn. The agent reads the form (iframes included), fills it in, picks from dropdowns, moves between steps and attaches your resume as an exact PDF. **It never submits.** Any button that would send the application is refused; you review and press Submit yourself. Questions it can't answer truthfully are left for you and listed in the chat.
+- **Reads your work:** grant the agent a folder and it can look through your projects, or summarize your git history on this computer, to propose entries for your career record. Nothing it finds goes into a resume until you confirm it.
+- **Your files:** everything lives in `~/Documents/Questlog` (or wherever you choose) as Markdown, JSON and CSS you can read, back up and edit. Changes you make there show up in the app. Every change is kept in a history you can undo, with nothing to install; the history lives outside the folder, so OneDrive and iCloud can't damage it.
 
-  It never submits an application.
-- **Apply here:** opens a listing's application form inside Offerdex, with one-tap copy buttons above it for your contact details, answers and cover letter, and a link to the resume PDF. Greenhouse, Ashby, Lever, BambooHR and Workable forms load in the frame. Workday, LinkedIn, iCIMS and SmartRecruiters block framing, so those open in a new tab. In the browser the agent can't see or fill the form; you paste and submit. The desktop app fills it in for you (below).
-- **Phones:** below 1024px wide, the app shows one pane at a time: the page, the assistant, or the application. Switch between them with the tab bar. All three stay loaded, so a chat or a half-filled form survives switching.
+## Your folder
 
-## Bring your own model
+```
+Questlog/
+  profile/about.md        name and contact
+  profile/career.md       your full career record; every resume is written from it
+  profile/rules.md        what you're looking for: pay, places, roles, deal-breakers
+  jobs/acme-senior-engineer/
+    job.md                details at the top, your notes below
+    posting.md            the posting
+    resume.json, resume.css, letter.json, letter.css, answer-why-acme.md
+  documents/              documents not tied to one job
+```
 
-Any OpenAI-compatible endpoint works. Pick one in **Settings → AI provider**:
+PDFs are made again whenever they're needed, so deleting them is safe. **Settings → Your files** opens the folder, moves it, and shows the history with Undo.
+
+## The agent
+
+Pick it in **Settings → Agent**:
+
+- **Claude Code, Codex, OpenCode or Goose**, connected over the [Agent Client Protocol](https://agentclientprotocol.com). Each uses the login and models you already have. Questlog's tools reach the agent as an MCP server, so it works the app the same way whichever you pick. Claude Code is limited to Questlog's tools plus web search. If another agent wants to use its own tools (a shell, reading or editing files), you're asked first. Agents run in an empty folder of their own.
+- **The built-in agent**, with any OpenAI-compatible endpoint:
 
 | Provider | Base URL |
 | --- | --- |
-| [Meridian](https://github.com/rynfar/meridian) (Claude subscription) | `http://127.0.0.1:3456/v1` |
 | OpenRouter | `https://openrouter.ai/api/v1` |
 | OpenAI | `https://api.openai.com/v1` |
 | Ollama | `http://127.0.0.1:11434/v1` |
+| [Meridian](https://github.com/rynfar/meridian) (Claude subscription) | `http://127.0.0.1:3456/v1` |
 
-The assistant's tools always run in your browser. With Meridian, the proxy hands tool calls back to the page instead of running them, so the model never gets shell or file access on your machine. Meridian accepts requests from any web page, so consider setting `MERIDIAN_API_KEY` and entering the same key in Offerdex.
+API keys stay on your computer and are left out of exports.
 
-API keys are stored only in this browser and are left out of exports.
-
-## Desktop app
-
-`desktop/` wraps the same app in Electron and adds what a browser tab can't do:
-
-- **Fills in application forms.** The Apply pane loads any career site, including Workday and LinkedIn. The agent reads the form's fields (iframes included), fills them in, picks from dropdowns and autocompletes, moves between steps, and attaches your resume or cover letter. **It never submits.** Submit buttons are refused, and you review and press Submit yourself. Questions it can't answer truthfully, such as legal attestations, are left for you and listed in the chat.
-- **Exact PDFs.** Resumes and letters print to PDF with the same engine that shows them, so the file matches the preview and keeps real text for applicant tracking systems. There's no print dialog.
-- **Your coding agent as the agent.** In **Settings → Agent**, pick Claude Code, Codex or OpenCode (or Goose), connected over the [Agent Client Protocol](https://agentclientprotocol.com). Each uses the login and models you already have, and OpenCode includes free models. Offerdex's tools reach the agent as an MCP server, so it works the app exactly as the built-in agent does. Claude Code is limited to Offerdex's tools plus web search; if another agent wants to run its own tools (a shell, file edits), you're asked first. Agents run in an empty folder of their own.
-
-The desktop app keeps its own copy of your data. Move it across with **Settings → Data** (export from the browser, import on the desktop).
-
-```bash
-npm --prefix desktop install
-npm run desktop             # starts the web app's dev server and opens the window; closing it stops both
-npm run desktop:dist        # package it (AppImage, dmg or exe) into desktop/dist
-```
-
-The packaged app doesn't carry its own copy of Claude Code or Codex. It uses the ones on your PATH, so install and log in to them first (`claude`, `codex login`, `opencode auth login`).
+The agent can read public Greenhouse, Ashby and Lever job boards, save and judge listings against your rules, write and design documents, fill in forms, and read folders you grant it. It never submits an application or contacts anyone.
 
 ## Bring your data
 
-Drop files on **Settings → Data**:
+Drop files on **Settings → Data**: a `.zip` of a job-search folder, a Questlog or Offerdex backup (`.json`), an ai-job-search `seen_jobs.json`, or a tracker CSV with `date,company,role,status,…` columns. Imports merge with what's there and never move a listing back a stage. Files Questlog doesn't recognize are kept for the agent, which reads them and fills in your profile, listings and documents without inventing anything. A `README.md` or `CONTEXT.md` at the top of a zip helps it understand the rest.
 
-- a **`.zip`** of your job-search folder
-- an Offerdex backup (`.json`)
-- an ai-job-search `seen_jobs.json`
-- a tracker CSV with `date,company,role,status,…` columns
+## In a browser
 
-Imports merge with what's already there and never move a listing back to an earlier stage.
-
-A zip can hold anything: notes, postings, tailored resumes, cover letters, form answers. Files Offerdex recognizes import directly. The rest are kept in IndexedDB, and the assistant reads them and fills in your profile, working notes, listings and documents. It doesn't invent anything that isn't in the files. **Documents → Sources** shows every uploaded file and what it was used for. A `README.md` or `CONTEXT.md` at the top of the zip helps the assistant understand the rest.
+The same app also runs as a web page, as a lighter way to try it. Data stays in the browser's IndexedDB (export it from Settings → Data), the agent is the built-in one, and application forms can't be filled in for you: browsers don't let one site reach into another's page. Greenhouse, Ashby, Lever, BambooHR and Workable forms still open inside the app, with copy buttons for your answers.
 
 ## Develop
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
-npm run build      # typecheck and production build
-npm run geo        # refresh the map data in public/geo (optional; it's committed)
+npm --prefix desktop install
+npm run desktop       # dev server and the desktop window; closing the window stops both
+npm run dev           # just the web app, at http://localhost:5173
+npm run build         # typecheck and production build of the web app
+npm run desktop:dist  # package the desktop app into desktop/dist
+npm run geo           # refresh the map data in public/geo (optional; it's committed)
 ```
 
-The stack is Vite, React 18, TypeScript, Tailwind and Dexie. The agent loop is `@porygon/core`, installed from JSR through `.npmrc`.
+Releases are built by GitHub Actions when a `v*` tag is pushed; see [docs/install.md](docs/install.md).
 
-Main source files:
+The stack is Vite, React 18, TypeScript, Tailwind and Dexie, with Electron for the desktop. The built-in agent loop is [Porygon](https://jsr.io/@porygon/core), installed from JSR through `.npmrc`.
 
 | Path | Contents |
 | --- | --- |
 | `src/agent/` | tools, system prompt, runtime |
-| `src/lib/db.ts` | IndexedDB schema |
+| `src/lib/db.ts` | IndexedDB schema (a cache of the folder on the desktop) |
+| `src/lib/disk.ts` | the folder's file formats, and keeping it and the cache in step |
+| `src/lib/quest.ts` | points, chapters, runs and keepsakes |
 | `src/lib/boards.ts` | job-board clients |
 | `src/lib/geo.ts` | location matching and map framing |
 | `src/components/Sheet.tsx` | resume and letter renderer |
-| `src/styles/sheet.css` | default drawing-sheet design |
 | `src/lib/design.ts` | per-document designs: sanitizing, shadow-root stylesheets, markup guide |
-| `src/agent/formTools.ts` | desktop form tools: read, fill, attach, click |
+| `src/agent/formTools.ts` | form tools: read, fill, attach, click |
 | `desktop/src/main.ts` | Electron main process: window, `app://` origin, PDFs |
+| `desktop/src/workspace.ts` | the folder: confined reads and writes, watching for outside edits |
+| `desktop/src/history.ts` | the folder's history, with isomorphic-git |
+| `desktop/src/local.ts` | folders the user granted the agent, and git history |
 | `desktop/src/forms.ts` | the script that reads and fills forms in the page |
 | `desktop/src/agents.ts` | ACP client for Claude Code, Codex, OpenCode and Goose |
-| `desktop/src/mcp-bridge.ts` | the MCP server agents launch to reach Offerdex's tools |
+| `desktop/src/mcp-bridge.ts` | the MCP server agents launch to reach Questlog's tools |
+
+Questlog was called Offerdex. The desktop app moves its old data folder across on first start, and imports accept Offerdex backups.
 
 ## License
 
 AGPL-3.0-or-later, the same license as Porygon.
 
-Map data: place names from [GeoNames](https://www.geonames.org/) (CC BY 4.0), country shapes from [Natural Earth](https://www.naturalearthdata.com/) (public domain) via world-atlas, US state shapes from the US Census Bureau via us-atlas.
+Map data: place names from [GeoNames](https://www.geonames.org/) (CC BY 4.0), country shapes from [Natural Earth](https://www.naturalearthdata.com/) (public domain) via world-atlas, US state shapes from the US Census Bureau via us-atlas. Typefaces: Fraunces, Inter and JetBrains Mono (SIL Open Font License).

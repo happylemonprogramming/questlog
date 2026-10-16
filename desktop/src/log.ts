@@ -18,7 +18,7 @@ export function log(event: string, detail?: unknown) {
   try {
     if (!file) {
       mkdirSync(logDir(), { recursive: true });
-      file = path.join(logDir(), 'offerdex.log');
+      file = path.join(logDir(), 'questlog.log');
     }
     try {
       if (statSync(file).size > MAX) renameSync(file, `${file}.1`);

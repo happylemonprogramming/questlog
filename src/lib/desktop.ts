@@ -1,5 +1,5 @@
 /**
- * The desktop app's bridge, when Offerdex runs inside it (desktop/src/preload.ts).
+ * The desktop app's bridge, when Questlog runs inside it (desktop/src/preload.ts).
  * The web app works without it; features that need the desktop check
  * `isDesktop()` first.
  */
@@ -83,9 +83,83 @@ export interface SiteLook {
   mimeType: string;
 }
 
+export interface WorkspaceInfo {
+  root: string | null;
+  defaultRoot: string;
+  /** Off when the folder is already inside the user's own git repository. */
+  history: boolean;
+}
+
+export interface WsFile {
+  path: string;
+  text: string;
+}
+
+export interface Snapshot {
+  oid: string;
+  message: string;
+  at: number;
+}
+
 export interface ToolImage {
   data: string;
   mimeType: string;
+}
+
+export interface LocalEntry {
+  /** Relative to the listed folder, with forward slashes. */
+  path: string;
+  type: 'file' | 'dir';
+  size?: number;
+}
+
+export interface LocalListing {
+  root: string;
+  entries: LocalEntry[];
+  /** Entries left out: secrets, dependencies, build output, ignored files, links leading out. */
+  hidden: number;
+  truncated: boolean;
+}
+
+export interface LocalRead {
+  path: string;
+  size: number;
+  binary: boolean;
+  text?: string;
+  from?: number;
+  to?: number;
+  lines?: number;
+}
+
+export interface LocalHit {
+  path: string;
+  nameMatch: boolean;
+  lines: { line: number; text: string }[];
+}
+
+export interface RepoSummary {
+  name: string;
+  path: string;
+  remote?: string;
+  commits: number;
+  emails: string[];
+  total: number;
+  capped?: boolean;
+  first?: string;
+  last?: string;
+  languages: { language: string; files: number }[];
+  subjects: { date: string; subject: string }[];
+  /** The most frequent authors, when none of the user's emails matched. */
+  authors?: { email: string; commits: number }[];
+  error?: string;
+}
+
+export interface GitHistory {
+  emails: string[];
+  backend: 'git' | 'isomorphic-git';
+  repos: RepoSummary[];
+  truncated: boolean;
+  ms: number;
 }
 
 export interface DesktopBridge {
@@ -93,8 +167,44 @@ export interface DesktopBridge {
   platform: string;
   /** Open the folder with the desktop app's log. */
   openLogs(): Promise<string>;
+  /** The workspace folder that holds the user's files (desktop/src/workspace.ts). */
+  workspace: {
+    info(): Promise<WorkspaceInfo>;
+    choose(): Promise<WorkspaceInfo | null>;
+    useDefault(): Promise<WorkspaceInfo>;
+    reveal(): Promise<void>;
+    readAll(): Promise<WsFile[]>;
+    read(paths: string[]): Promise<{ path: string; text: string | null }[]>;
+    write(files: WsFile[], message: string): Promise<number>;
+    remove(paths: string[], message: string): Promise<void>;
+    onChanged(fn: (msg: { paths: string[] }) => void): Off;
+  };
+  /** Snapshots of the workspace, shown as History and Undo. */
+  history: {
+    list(): Promise<Snapshot[]>;
+    restore(oid: string): Promise<string | null>;
+    /** Returns what was undone. */
+    undo(): Promise<string | null>;
+    clear(): Promise<void>;
+  };
+  /** Records kept under the app's first name, Offerdex, read once so they carry over. */
+  legacy: {
+    data(): Promise<Record<string, unknown[]> | null>;
+    taken(): Promise<void>;
+  };
   /** A website's look: screenshots (base64) plus the colors and fonts it uses. */
   viewSite(url: string): Promise<SiteLook>;
+  /** Folders on this computer the user lets the agent read (desktop/src/local.ts). */
+  local: {
+    /** Opens a folder picker; null when the user cancels. */
+    grant(): Promise<{ folder: string; grants: string[] } | null>;
+    grants(): Promise<string[]>;
+    revoke(folder: string): Promise<string[]>;
+    list(path?: string, depth?: number): Promise<LocalListing[]>;
+    read(path: string, offset?: number, limit?: number): Promise<LocalRead>;
+    search(query: string, path?: string): Promise<{ query: string; results: LocalHit[]; scanned: number; truncated: boolean }>;
+    git(path?: string, opts?: { emails?: string[] }): Promise<GitHistory>;
+  };
   pdf: {
     make(docId: string, fileName?: string): Promise<{ path: string; name: string }>;
     save(docId: string, fileName?: string): Promise<string | null>;
@@ -127,9 +237,9 @@ export interface DesktopBridge {
 
 declare global {
   interface Window {
-    offerdexDesktop?: DesktopBridge;
+    questlogDesktop?: DesktopBridge;
   }
 }
 
-export const desktop = (): DesktopBridge | undefined => window.offerdexDesktop;
-export const isDesktop = () => !!window.offerdexDesktop;
+export const desktop = (): DesktopBridge | undefined => window.questlogDesktop;
+export const isDesktop = () => !!window.questlogDesktop;

@@ -1,15 +1,22 @@
 {
-  "name": "offerdex-desktop",
+  "name": "questlog",
   "private": true,
   "version": "0.1.0",
-  "description": "Offerdex for the desktop: fills in application forms and runs Claude Code, Codex or OpenCode as its agent.",
+  "description": "Questlog for the desktop: fills in application forms and runs Claude Code, Codex or OpenCode as its agent.",
   "license": "AGPL-3.0-or-later",
+  "homepage": "https://github.com/happylemonprogramming/questlog",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/happylemonprogramming/questlog.git"
+  },
   "main": "build/main.cjs",
+  "desktopName": "questlog.desktop",
   "dependencies": {
     "@agentclientprotocol/claude-agent-acp": "^0.90.0",
     "@agentclientprotocol/codex-acp": "^2.2.2",
     "@agentclientprotocol/sdk": "^1.8.0",
-    "@modelcontextprotocol/sdk": "^1.32.1"
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "isomorphic-git": "^1.44.2"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
@@ -30,8 +37,11 @@
     "dist": "npm run build:web && npm run build:main && electron-builder"
   },
   "build": {
-    "appId": "wtf.offerdex.desktop",
-    "productName": "Offerdex",
+    "appId": "io.github.happylemonprogramming.questlog",
+    "productName": "Questlog",
+    "directories": {
+      "buildResources": "resources"
+    },
     "files": [
       "build/**",
       "web/**",
@@ -45,22 +55,57 @@
       "node_modules/@openai/**",
       "node_modules/@anthropic-ai/**"
     ],
+    "publish": null,
     "linux": {
       "target": [
-        "AppImage"
+        {
+          "target": "tar.gz",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
-      "category": "Office"
+      "executableName": "questlog",
+      "artifactName": "${productName}-linux-${arch}.${ext}",
+      "category": "Office",
+      "extraResources": [
+        {
+          "from": "resources/icon.png",
+          "to": "icon.png"
+        },
+        {
+          "from": "resources/icon.svg",
+          "to": "icon.svg"
+        }
+      ]
     },
     "mac": {
       "target": [
-        "dmg"
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
       ],
-      "category": "public.app-category.productivity"
+      "artifactName": "${productName}-mac-${arch}.${ext}",
+      "category": "public.app-category.productivity",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "notarize": false
     },
     "win": {
       "target": [
-        "nsis"
-      ]
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-win-${arch}.${ext}"
     }
   }
 }

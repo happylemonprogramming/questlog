@@ -44,7 +44,7 @@ function JobViews() {
 export function JobsHeader({ sub, children }: { sub?: ReactNode; children?: ReactNode }) {
   return (
     <>
-      <PageHeader title="Jobs" sub={sub}>{children}</PageHeader>
+      <PageHeader title="Quests" sub={sub}>{children}</PageHeader>
       <JobViews />
     </>
   );

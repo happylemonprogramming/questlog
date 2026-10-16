@@ -1,0 +1,29 @@
+# Plan
+
+Where Questlog is headed, and what's done. Questlog was called Offerdex until October 2026.
+
+## Decisions
+
+- **The desktop app is the product.** Only a desktop app can fill in forms on any site, run Claude Code, Codex and OpenCode over ACP, and keep files on disk. The web build stays as a lighter way to try it.
+- **Your files live in a folder you own**, `~/Documents/Questlog` by default, as Markdown, JSON and CSS. IndexedDB is a cache of it. Chats and settings stay in the app's own data folder.
+- **History without git to install:** isomorphic-git, shown only as History and Undo. It lives in the app's data folder, not the workspace, because Documents is often synced by OneDrive or iCloud. PDFs are left out.
+- **Install from GitHub alone**, no domain: a raw `install.sh` / `install.ps1` that downloads from GitHub Releases and checks SHA-256 sums, and a `questlog` command with `update` and `uninstall`. The same pattern as Spectra.
+- **Brand: Questlog**, in the spirit of Zelda's quest log: calm, a journal rather than a fantasy game. Warm paper and ink navy, aged gold for progress, a book face (Fraunces) for headings. Not lemon-themed; Bountyboard was set aside as too aggressive for something meant for anyone.
+- **Gamification lowers stress:** points reward effort, never outcomes, and are never taken away; weekly rather than daily streaks, where one quiet week is a rest; a clear stopping point each day; no leaderboards.
+
+## Done
+
+- Security: agent tools approved only by exact name, local file reads always ask, any submitting button refused, CSS-escape URL bypass closed, bad regexes caught.
+- Rename to Questlog, with the old data folder and backups carried over.
+- Workspace folder with outside-edit watching, history, Undo and Clear history.
+- Local folders the agent may read, and a git-history summary for building the career record (proposals only, confirmed by the user).
+- One-line installers, the `questlog` command, and a release workflow.
+- New identity, and the Journal: chapters, weekly quest, runs, keepsakes, and a rest-at-camp end to the day.
+
+## Next
+
+- Put each job's PDFs in its folder in the workspace, next to the documents they come from.
+- Test the installers and packaged app on macOS and Windows, and decide about code signing if SmartScreen or Gatekeeper get in the way.
+- Offer to install OpenCode from the installer, so people without a subscription can start with its free models.
+- Opt-in accountability partners over Nostr.
+- A browser extension, if people want form filling without the desktop app.

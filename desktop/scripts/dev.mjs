@@ -1,6 +1,6 @@
 // One command for desktop development: start the web app's dev server, build
 // the shell, open Electron on it, and stop everything when the window closes.
-// Uses OFFERDEX_DEV_URL instead of starting a server when it's set.
+// Uses QUESTLOG_DEV_URL instead of starting a server when it's set.
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,7 +9,7 @@ const desktop = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const root = path.dirname(desktop);
 
 let server;
-let url = process.env.OFFERDEX_DEV_URL;
+let url = process.env.QUESTLOG_DEV_URL;
 if (!url) {
   // Tailwind and PostCSS resolve their config from the working directory.
   process.chdir(root);
@@ -26,7 +26,7 @@ if (build.status) process.exit(build.status);
 const electron = spawn(path.join(desktop, 'node_modules/.bin/electron'), ['.', ...process.argv.slice(2)], {
   cwd: desktop,
   stdio: 'inherit',
-  env: { ...process.env, OFFERDEX_DEV_URL: url },
+  env: { ...process.env, QUESTLOG_DEV_URL: url },
 });
 const stop = async (code) => {
   await server?.close();

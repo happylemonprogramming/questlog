@@ -55,7 +55,7 @@ function DocCard({ doc, job, width }: { doc: Doc; job?: Job; width: number }) {
       </div>
       <div className="mt-2.5 px-0.5">
         <p className="flex items-center gap-1.5 truncate text-[13.5px] font-medium">
-          {doc.base && <Star className="size-3.5 shrink-0 fill-lemon text-lemon" aria-label="Base" />}
+          {doc.base && <Star className="size-3.5 shrink-0 fill-gold text-gold" aria-label="Base" />}
           {doc.title}
         </p>
         <p className="truncate text-[12px] text-muted-foreground">
@@ -105,7 +105,7 @@ export default function Documents() {
           <button
             key={k}
             onClick={() => setTab(k)}
-            className={cn('-mb-px shrink-0 border-b-2 px-3 pb-2.5 text-[13.5px] font-medium transition', tab === k ? 'border-lemon text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}
+            className={cn('-mb-px shrink-0 border-b-2 px-3 pb-2.5 text-[13.5px] font-medium transition', tab === k ? 'border-gold text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}
           >
             {label}
             <span className="ml-1.5 font-mono text-[11px] text-muted-foreground">{k === 'all' ? docs.length : k === 'sources' ? fileCount : docs.filter((d) => d.kind === k).length}</span>

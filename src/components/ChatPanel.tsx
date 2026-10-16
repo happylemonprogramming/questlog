@@ -15,7 +15,7 @@ import { Tip } from '@/components/ui/tooltip';
 import { cn, timeAgo } from '@/lib/utils';
 import { useWorkspace } from '@/lib/workspace';
 
-const CHAT_KEY = 'offerdex:chat';
+const CHAT_KEY = 'questlog:chat';
 
 /** Friendly verbs for tool calls, so the transcript reads like a log of work. */
 function describe(name: string, args: Record<string, unknown>): string {
@@ -129,19 +129,19 @@ function Transcript({ messages }: { messages: ChatMessage[] }) {
   );
 }
 
-/** An external agent asking to use one of its own tools (not Offerdex's), with the choices it offers. */
+/** An external agent asking to use one of its own tools (not Questlog's), with the choices it offers. */
 function PermissionCard({ ask }: { ask: PermissionAsk }) {
   const input = ask.input === undefined ? '' : typeof ask.input === 'string' ? ask.input : JSON.stringify(ask.input, null, 1);
   // The agent waits on this, so it must not sit unseen below the fold.
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => ref.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), [ask.id]);
   return (
-    <div ref={ref} className="pop rounded-2xl border border-lemon/50 bg-lemon-soft/40 p-3.5 text-[13px]">
+    <div ref={ref} className="pop rounded-2xl border border-gold/50 bg-gold-soft/40 p-3.5 text-[13px]">
       <p className="font-medium">The agent wants to {ask.title ? <span className="font-mono text-[12px]">{ask.title}</span> : 'use a tool'}</p>
       {input && <pre className="scroll-thin mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-background/70 p-2 font-mono text-[11px] text-muted-foreground">{input.slice(0, 2000)}</pre>}
       <div className="mt-3 flex flex-wrap gap-1.5">
         {ask.options.map((o) => (
-          <Button key={o.optionId} size="sm" variant={o.kind === 'allow_once' ? 'lemon' : 'outline'} onClick={() => answerPermission(o.optionId)}>{o.name}</Button>
+          <Button key={o.optionId} size="sm" variant={o.kind === 'allow_once' ? 'gold' : 'outline'} onClick={() => answerPermission(o.optionId)}>{o.name}</Button>
         ))}
         <Button size="sm" variant="ghost" onClick={() => answerPermission(null)}>Stop</Button>
       </div>
@@ -259,10 +259,10 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
   return (
     <aside className="flex h-full min-w-0 flex-col bg-surface">
       <div className="flex h-14 shrink-0 items-center gap-1 border-b border-border/60 px-3 max-lg:[&_button]:size-10">
-        <Sparkles className="ml-1 size-4 text-lemon" />
+        <Sparkles className="ml-1 size-4 text-gold" />
         <div className="ml-1.5 min-w-0 flex-1 leading-tight">
           <p className="truncate text-[13.5px] font-semibold">{chat && chat.messages.length ? chat.title : 'Agent'}</p>
-          <p className="truncate text-[11px] text-muted-foreground">Runs everything in Offerdex</p>
+          <p className="truncate text-[11px] text-muted-foreground">Runs everything in Questlog</p>
         </div>
         <Menu>
           <Tip label="History"><MenuTrigger asChild><Button variant="ghost" size="icon" aria-label="History"><History /></Button></MenuTrigger></Tip>
@@ -294,12 +294,12 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
             <div className="rise mb-5">
               {/* A slowly breathing glow behind the mark. */}
               <div className="relative mb-5 size-12">
-                <div className="absolute -inset-4 animate-[breathe_4s_ease-in-out_infinite] rounded-full bg-[radial-gradient(closest-side,hsl(var(--lemon)/0.35),transparent)]" />
-                <div className="relative grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-lemon to-[hsl(36_100%_58%)] text-lemon-foreground shadow-[0_8px_24px_-8px_hsl(var(--lemon)/0.8)]">
+                <div className="absolute -inset-4 animate-[breathe_4s_ease-in-out_infinite] rounded-full bg-[radial-gradient(closest-side,hsl(var(--gold)/0.35),transparent)]" />
+                <div className="relative grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-gold to-[hsl(36_100%_58%)] text-gold-foreground shadow-[0_8px_24px_-8px_hsl(var(--gold)/0.8)]">
                   <Sparkles className="size-6" />
                 </div>
               </div>
-              <p className="text-[19px] font-semibold tracking-[-0.02em]">Tell me what to <span className="text-gradient">get done</span>.</p>
+              <p className="font-display text-[21px] font-medium tracking-[-0.01em]">What should we <span className="text-gradient">take on</span>?</p>
               <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">
                 I’m not just a chat. I work the app for you, with the same controls you have, and each change shows up on the page as I make it.
               </p>
@@ -323,7 +323,7 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
                 <button
                   key={s}
                   onClick={() => submit(s)}
-                  className="rise group flex w-full items-center gap-2 rounded-2xl border border-border/70 bg-background/60 px-3.5 py-2.5 text-left text-[13.5px] transition-[background-color,border-color,transform] duration-200 hover:-translate-y-px hover:border-lemon/40 hover:bg-accent/60 active:scale-[0.99]"
+                  className="rise group flex w-full items-center gap-2 rounded-2xl border border-border/70 bg-background/60 px-3.5 py-2.5 text-left text-[13.5px] transition-[background-color,border-color,transform] duration-200 hover:-translate-y-px hover:border-gold/40 hover:bg-accent/60 active:scale-[0.99]"
                   style={{ '--i': i + 2 } as React.CSSProperties}
                 >
                   <span className="flex-1">{s}</span>
@@ -363,15 +363,15 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
 
       <div className="shrink-0 p-3 pt-0">
         {settings && !engine && !provider?.model && (
-          <Link to="/settings" className="mb-2 flex items-center gap-2 rounded-xl bg-lemon-soft px-3 py-2 text-[12.5px] ring-1 ring-lemon/50 hover:brightness-[0.98]">
+          <Link to="/settings" className="mb-2 flex items-center gap-2 rounded-xl bg-gold-soft px-3 py-2 text-[12.5px] ring-1 ring-gold/50 hover:brightness-[0.98]">
             <Plug className="size-3.5" />
             {isDesktop() ? 'Pick who runs the agent: Claude Code, Codex, OpenCode, or an AI provider.' : 'Connect an AI provider to start. Meridian works out of the box.'}
           </Link>
         )}
-        <div className="rounded-[20px] border border-border/80 bg-background shadow-card transition-[border-color,box-shadow] duration-300 focus-within:border-lemon/50 focus-within:shadow-[0_0_0_4px_hsl(var(--lemon)/0.12),0_10px_30px_-12px_hsl(var(--lemon)/0.4)]">
+        <div className="rounded-[20px] border border-border/80 bg-background shadow-card transition-[border-color,box-shadow] duration-300 focus-within:border-gold/50 focus-within:shadow-[0_0_0_4px_hsl(var(--gold)/0.12),0_10px_30px_-12px_hsl(var(--gold)/0.4)]">
           {view.label && (
             <div className="flex items-center gap-1.5 px-3 pt-2.5 text-[11.5px] text-muted-foreground">
-              <span className="size-1.5 rounded-full bg-lemon" />
+              <span className="size-1.5 rounded-full bg-gold" />
               <span className="truncate">{view.applying ? 'Applying to' : 'Looking at'} {view.job ? `${view.job.company}: ${view.job.title}` : view.doc?.title}</span>
             </div>
           )}
@@ -402,7 +402,7 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
                 <Square className="!size-3 fill-current" />
               </Button>
             ) : (
-              <Button size="icon" variant="lemon" onMouseDown={(e) => e.preventDefault()} onClick={() => submit()} disabled={!draft.trim()} className="rounded-full max-lg:size-10" aria-label="Send">
+              <Button size="icon" variant="gold" onMouseDown={(e) => e.preventDefault()} onClick={() => submit()} disabled={!draft.trim()} className="rounded-full max-lg:size-10" aria-label="Send">
                 <ArrowUp />
               </Button>
             )}

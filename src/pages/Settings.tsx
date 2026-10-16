@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { CheckCircle2, Building2, Download, ExternalLink, Loader2, Palette, Plug, RefreshCw, RotateCcw, ScrollText, Sparkles, Trash2, Upload, User, Database, XCircle } from 'lucide-react';
+import { CheckCircle2, Building2, Download, ExternalLink, Loader2, Palette, Plug, RefreshCw, RotateCcw, ScrollText, Sparkles, Trash2, Upload, User, Database, XCircle, FolderOpen, FolderSearch } from 'lucide-react';
+import { WorkspaceSettings } from '@/components/WorkspacePanel';
+import { FolderGrants } from '@/components/FolderGrants';
 import { db, exportAll, getProfile, getSettings, uid, DEFAULT_SETTINGS } from '@/lib/db';
 import { PRESETS, listModels } from '@/lib/providers';
 import { importFile, type ImportResult } from '@/lib/importers';
@@ -108,12 +110,12 @@ function ProviderEditor() {
               onClick={() => pick(p)}
               className={cn(
                 'rounded-xl border bg-surface p-3.5 text-left transition hover:border-foreground/25',
-                selected && 'border-lemon ring-2 ring-lemon/40',
+                selected && 'border-gold ring-2 ring-gold/40',
               )}
             >
               <div className="flex items-center gap-2">
                 <p className="text-[14px] font-semibold">{p.name}</p>
-                {p.id === 'meridian' && <span className="rounded bg-lemon px-1.5 py-px font-mono text-[9.5px] font-bold uppercase text-lemon-foreground">Bring your own agent</span>}
+                {p.id === 'meridian' && <span className="rounded bg-gold px-1.5 py-px font-mono text-[9.5px] font-bold uppercase text-gold-foreground">Bring your own agent</span>}
                 {connected && <CheckCircle2 className="ml-auto size-4 text-success" />}
               </div>
               <p className="mt-1 text-[12.5px] leading-snug text-muted-foreground">{p.blurb}</p>
@@ -122,7 +124,7 @@ function ProviderEditor() {
         })}
         <button
           onClick={() => { setDraft({ id: uid(), name: 'Custom', baseURL: '' }); setStatus(null); setModels([]); }}
-          className={cn('rounded-xl border border-dashed p-3.5 text-left transition hover:border-foreground/25', draft && !preset && 'border-lemon ring-2 ring-lemon/40')}
+          className={cn('rounded-xl border border-dashed p-3.5 text-left transition hover:border-foreground/25', draft && !preset && 'border-gold ring-2 ring-gold/40')}
         >
           <p className="text-[14px] font-semibold">Custom</p>
           <p className="mt-1 text-[12.5px] text-muted-foreground">Any OpenAI-compatible endpoint.</p>
@@ -143,7 +145,7 @@ function ProviderEditor() {
           </Field>
           {preset?.id === 'meridian' && (
             <p className="rounded-xl bg-sunken p-3 text-[12.5px] leading-relaxed text-muted-foreground">
-              Run <code className="rounded bg-muted px-1 font-mono text-foreground">meridian</code> on this computer. Offerdex sends its own tools, and Meridian returns the calls here to run in your browser, so the model never touches your files. If you set <code className="rounded bg-muted px-1 font-mono text-foreground">MERIDIAN_API_KEY</code>, enter it above.
+              Run <code className="rounded bg-muted px-1 font-mono text-foreground">meridian</code> on this computer. Questlog sends its own tools, and Meridian returns the calls here to run in your browser, so the model never touches your files. If you set <code className="rounded bg-muted px-1 font-mono text-foreground">MERIDIAN_API_KEY</code>, enter it above.
             </p>
           )}
           <Field label="Model">
@@ -302,18 +304,18 @@ function DataTools() {
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => { e.preventDefault(); void onFiles(e.dataTransfer.files); }}
         onClick={() => fileRef.current?.click()}
-        className="cursor-pointer rounded-2xl border-2 border-dashed bg-surface p-8 text-center transition hover:border-lemon hover:bg-lemon-soft/30"
+        className="cursor-pointer rounded-2xl border-2 border-dashed bg-surface p-8 text-center transition hover:border-gold hover:bg-gold-soft/30"
       >
         {busy ? <Loader2 className="mx-auto mb-2 size-6 animate-spin text-muted-foreground" /> : <Upload className="mx-auto mb-2 size-6 text-muted-foreground" />}
         <p className="text-[14px] font-medium">Drop files to import</p>
         <p className="mx-auto mt-1 max-w-md text-[12.5px] text-muted-foreground">
-          A <b>.zip</b> of your job-search folder, an Offerdex backup, a <code className="font-mono">seen_jobs.json</code>, or a tracker <code className="font-mono">.csv</code>. Known formats import directly. The agent reads everything else in a zip and fills in your profile, listings and documents.
+          A <b>.zip</b> of your job-search folder, a Questlog backup, a <code className="font-mono">seen_jobs.json</code>, or a tracker <code className="font-mono">.csv</code>. Known formats import directly. The agent reads everything else in a zip and fills in your profile, listings and documents.
         </p>
         <input ref={fileRef} type="file" accept=".zip,.json,.csv" multiple hidden onChange={(e) => onFiles(e.target.files)} />
       </div>
       {msg && <p className={cn('text-[13px]', msg.ok ? 'text-success' : 'text-danger')}>{msg.text}</p>}
       {bundles.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-lemon-soft/60 px-4 py-3 text-[13px] ring-1 ring-lemon/50">
+        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-gold-soft/60 px-4 py-3 text-[13px] ring-1 ring-gold/50">
           <Sparkles className="size-4 text-foreground" />
           <span className="flex-1">
             {connected ? 'The agent is reading your files now. Follow along in the chat panel.' : 'Connect an AI provider above, then let the agent read your files.'}
@@ -324,15 +326,15 @@ function DataTools() {
         </div>
       )}
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" onClick={async () => download(`offerdex-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(await exportAll(), null, 2))}>
+        <Button variant="outline" onClick={async () => download(`questlog-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(await exportAll(), null, 2))}>
           <Download /> Export backup
         </Button>
         {confirmWipe ? (
           <Button variant="danger" className="bg-danger/10" onClick={async () => { await db.delete(); location.href = '/'; }}>
-            <Trash2 /> Yes, erase everything
+            <Trash2 /> {isDesktop() ? 'Yes, clear it' : 'Yes, erase everything'}
           </Button>
         ) : (
-          <Button variant="danger" onClick={() => setConfirmWipe(true)}><Trash2 /> Erase all data</Button>
+          <Button variant="danger" onClick={() => setConfirmWipe(true)}><Trash2 /> {isDesktop() ? 'Clear the app\'s copy (your folder stays)' : 'Erase all data'}</Button>
         )}
       </div>
     </div>
@@ -354,13 +356,13 @@ function EnginePicker() {
   };
   const rows: { id: EngineChoice; label: string; note: string; available: boolean; missing?: string; login?: string }[] = [
     ...engines,
-    { id: 'builtin', label: 'Built-in agent', note: 'Runs in Offerdex with the AI provider below, on any device.', available: true },
+    { id: 'builtin', label: 'Built-in agent', note: 'Runs in Questlog with the AI provider below, on any device.', available: true },
   ];
   return (
     <div className="mb-8 space-y-2">
       {rows.map((e) => (
-        <label key={e.id} className={cn('flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition', current === e.id ? 'border-lemon/60 bg-lemon-soft/40' : 'hover:bg-accent/40', !e.available && 'cursor-not-allowed opacity-60')}>
-          <input type="radio" name="engine" checked={current === e.id} disabled={!e.available} onChange={() => choose(e.id)} className="mt-1 accent-[hsl(var(--lemon))]" />
+        <label key={e.id} className={cn('flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition', current === e.id ? 'border-gold/60 bg-gold-soft/40' : 'hover:bg-accent/40', !e.available && 'cursor-not-allowed opacity-60')}>
+          <input type="radio" name="engine" checked={current === e.id} disabled={!e.available} onChange={() => choose(e.id)} className="mt-1 accent-[hsl(var(--gold))]" />
           <span className="min-w-0">
             <span className="block text-[14px] font-medium">{e.label}</span>
             <span className="block text-[12.5px] text-muted-foreground">{e.available ? e.note : `Not found: ${e.missing}.`}</span>
@@ -381,7 +383,7 @@ function LogoSettings() {
   return (
     <div className="space-y-4">
       <label className="flex cursor-pointer items-start gap-3">
-        <input type="checkbox" checked={on} onChange={(e) => setLogos(e.target.checked)} className="mt-0.5 size-4 accent-[hsl(var(--lemon))]" />
+        <input type="checkbox" checked={on} onChange={(e) => setLogos(e.target.checked)} className="mt-0.5 size-4 accent-[hsl(var(--gold))]" />
         <span className="text-[14px]">
           Show company logos
           <span className="block text-[12.5px] text-muted-foreground">Each logo is fetched from Google’s favicon service, which sees the company’s website but nothing else. Off shows initials instead.</span>
@@ -390,7 +392,7 @@ function LogoSettings() {
       {on && !!missing && (
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="outline" size="sm" onClick={() => ask('Find the website of every company in my listings that has none (list_jobs with noWebsite), then save them all with set_company_websites. Only include ones you are sure of.')}>
-            <Sparkles className="text-lemon" /> Find the missing ones
+            <Sparkles className="text-gold" /> Find the missing ones
           </Button>
           <span className="text-[12.5px] text-muted-foreground">{missing} {missing === 1 ? 'company has' : 'companies have'} no website yet. The agent can look them up.</span>
         </div>
@@ -402,7 +404,7 @@ function LogoSettings() {
 export default function Settings() {
   return (
     <>
-      <PageHeader eyebrow="Settings" title="Settings" sub={isDesktop() ? 'Everything is stored on this computer. There\'s no account and no server.' : "Everything is stored in this browser's IndexedDB. There's no account and no server."} />
+      <PageHeader eyebrow="Settings" title="Settings" sub={isDesktop() ? 'Everything is stored on this computer, in a folder you own. There\'s no account and no server.' : "Everything is stored in this browser's IndexedDB. There's no account and no server."} />
       <Section icon={<Plug />} title={isDesktop() ? 'Agent' : 'AI provider'} sub={isDesktop() ? 'Who does the work. Claude Code, Codex and OpenCode use the login you already have; the built-in agent uses any OpenAI-compatible provider.' : 'Bring your own model. Any OpenAI-compatible endpoint works, including Meridian for a Claude subscription.'}>
         {isDesktop() && <EnginePicker />}
         <ProviderEditor />
@@ -416,6 +418,16 @@ export default function Settings() {
       <Section icon={<Building2 />} title="Company logos" sub="Logos come from each company's own website, even when you found the job on LinkedIn or a job board.">
         <LogoSettings />
       </Section>
+      {isDesktop() && (
+        <Section icon={<FolderOpen />} title="Your files" sub="Your profile, jobs and documents live in this folder as plain files, with a history of every change.">
+          <WorkspaceSettings />
+        </Section>
+      )}
+      {isDesktop() && (
+        <Section icon={<FolderSearch />} title="Folders the agent may read" sub="Share a folder of projects or code, and the agent can look through it, or through your commits, to suggest entries for your career record. Nothing goes into a resume until you confirm it.">
+          <FolderGrants />
+        </Section>
+      )}
       <Section icon={<Database />} title="Data" sub="Bring in an existing search, or take everything with you.">
         <DataTools />
       </Section>

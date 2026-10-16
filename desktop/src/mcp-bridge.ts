@@ -4,12 +4,12 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 
 /**
  * The MCP server an external agent (Claude Code, Codex, OpenCode) starts to
- * reach Offerdex. It holds nothing itself: every list and call goes to the
+ * reach Questlog. It holds nothing itself: every list and call goes to the
  * running app, which owns the data.
  */
 
-const URL_ = process.env.OFFERDEX_BRIDGE_URL;
-const TOKEN = process.env.OFFERDEX_BRIDGE_TOKEN;
+const URL_ = process.env.QUESTLOG_BRIDGE_URL;
+const TOKEN = process.env.QUESTLOG_BRIDGE_TOKEN;
 
 async function post(route: string, body: unknown) {
   const res = await fetch(`${URL_}${route}`, {
@@ -20,7 +20,7 @@ async function post(route: string, body: unknown) {
   return res.json();
 }
 
-const server = new Server({ name: 'offerdex', version: '0.1.0' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'questlog', version: '0.1.0' }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: await post('/list', {}) }));
 
@@ -34,7 +34,7 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const images = (out.images ?? []).map((i) => ({ type: 'image' as const, data: i.data, mimeType: i.mimeType }));
     return { content: [{ type: 'text', text: out.text }, ...images], isError: !!out.isError };
   } catch (e) {
-    return { content: [{ type: 'text', text: `Offerdex isn't reachable: ${(e as Error).message}` }], isError: true };
+    return { content: [{ type: 'text', text: `Questlog isn't reachable: ${(e as Error).message}` }], isError: true };
   }
 });
 

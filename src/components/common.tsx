@@ -59,7 +59,7 @@ export function CompanyMark({ job, size = 36, className }: { job: MarkJob; size?
 export const STAGE_TONE: Record<Stage, Tone> = {
   inbox: 'neutral',
   saved: 'outline',
-  next: 'lemon',
+  next: 'gold',
   applied: 'info',
   interviewing: 'violet',
   offer: 'success',
@@ -69,7 +69,7 @@ export const STAGE_TONE: Record<Stage, Tone> = {
 export const STAGE_DOT: Record<Stage, string> = {
   inbox: 'bg-muted-foreground/40',
   saved: 'bg-muted-foreground',
-  next: 'bg-lemon',
+  next: 'bg-gold',
   applied: 'bg-info',
   interviewing: 'bg-violet',
   offer: 'bg-success',
@@ -80,7 +80,7 @@ export const STAGE_DOT: Record<Stage, string> = {
 export const STAGE_VAR: Record<Stage, string> = {
   inbox: '--muted-foreground',
   saved: '--muted-foreground',
-  next: '--lemon',
+  next: '--gold',
   applied: '--info',
   interviewing: '--violet',
   offer: '--success',
@@ -102,11 +102,11 @@ export function PageHeader({ eyebrow, title, children, sub }: { eyebrow?: string
       <div className="min-w-0">
         {eyebrow && (
           <p className="eyebrow-label mb-2.5 flex items-center gap-2">
-            <span className="size-1.5 rounded-full bg-lemon shadow-[0_0_10px_hsl(var(--lemon))]" />
+            <span className="size-1.5 rounded-full bg-gold shadow-[0_0_10px_hsl(var(--gold))]" />
             {eyebrow}
           </p>
         )}
-        <h1 className="text-[28px] font-semibold leading-[1.1] tracking-[-0.03em] md:text-[34px]">{title}</h1>
+        <h1 className="font-display text-[30px] font-normal leading-[1.1] tracking-[-0.01em] md:text-[38px]">{title}</h1>
         {sub && <p className="mt-2 text-[14.5px] text-muted-foreground">{sub}</p>}
       </div>
       {children && <div className="flex items-center gap-2">{children}</div>}
@@ -117,7 +117,7 @@ export function PageHeader({ eyebrow, title, children, sub }: { eyebrow?: string
 export function Empty({ icon, title, children }: { icon: ReactNode; title: string; children?: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border/80 px-6 py-16 text-center">
-      <div className="mb-4 grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-lemon/25 to-violet/20 text-foreground ring-1 ring-border [&_svg]:size-5">{icon}</div>
+      <div className="mb-4 grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-gold/25 to-violet/20 text-foreground ring-1 ring-border [&_svg]:size-5">{icon}</div>
       <p className="font-medium">{title}</p>
       {children && <div className="mt-1 max-w-sm text-sm text-muted-foreground">{children}</div>}
     </div>

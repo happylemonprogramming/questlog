@@ -22,8 +22,8 @@
   --rule: #c5cad3;
   --link: #1f5fbf;
   --link-hover: #0b3f8f;
-  --lemon: #ffe14d;
-  --lemon-ink: #16181d;
+  --gold: #ffe14d;
+  --gold-ink: #16181d;
   --card: #fafaf7;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', 'Noto Sans', 'Liberation Sans', Arial, sans-serif;
   --font-mono: 'JetBrains Mono', 'JetBrainsMono NF', ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
@@ -231,8 +231,8 @@
   font-weight: 800;
   letter-spacing: 0.1em;
   text-decoration: none;
-  background: var(--lemon);
-  color: var(--lemon-ink);
+  background: var(--gold);
+  color: var(--gold-ink);
   transition: background 0.15s;
 }
 
@@ -286,8 +286,8 @@
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0;
-  background: var(--lemon);
-  color: var(--lemon-ink);
+  background: var(--gold);
+  color: var(--gold-ink);
 }
 
 .objective-text {
@@ -351,7 +351,7 @@
 
 .project-card:hover {
   transform: translate(-2px, -2px);
-  box-shadow: 4px 4px 0 var(--lemon);
+  box-shadow: 4px 4px 0 var(--gold);
 }
 
 .project-card-header {
@@ -394,8 +394,8 @@
   align-self: flex-start;
   margin-bottom: 0.3rem;
   padding: 0.05rem 0.35rem;
-  background: var(--lemon);
-  color: var(--lemon-ink);
+  background: var(--gold);
+  color: var(--gold-ink);
   border: 1px solid var(--ink);
   font-family: var(--font-mono);
   font-size: 0.54rem;
@@ -480,8 +480,8 @@
   display: inline-block;
   margin-left: 0.45rem;
   padding: 0.05rem 0.35rem;
-  background: var(--lemon);
-  color: var(--lemon-ink);
+  background: var(--gold);
+  color: var(--gold-ink);
   border: 1px solid var(--ink);
   font-family: var(--font-mono);
   font-size: 0.55rem;
@@ -527,7 +527,7 @@
   top: 0.48em;
   width: 0.36rem;
   height: 0.36rem;
-  background: var(--lemon);
+  background: var(--gold);
   border: 1px solid var(--ink);
 }
 
@@ -595,7 +595,7 @@
 .tx-re {
   grid-column: 1 / -1;
   border-bottom: 0;
-  background: var(--lemon);
+  background: var(--gold);
 }
 
 .transmittal dt {
@@ -607,7 +607,7 @@
 }
 
 .tx-re dt {
-  color: var(--lemon-ink);
+  color: var(--gold-ink);
 }
 
 .transmittal dd {
@@ -618,7 +618,7 @@
 }
 
 .tx-re dd {
-  color: var(--lemon-ink);
+  color: var(--gold-ink);
 }
 
 .tx-sub {
@@ -646,7 +646,7 @@
   padding: 0.65rem 0.75rem;
   background: var(--card);
   border: 1px solid var(--ink);
-  box-shadow: 4px 4px 0 var(--lemon);
+  box-shadow: 4px 4px 0 var(--gold);
 }
 
 .letter-points li {
@@ -724,7 +724,7 @@
   .project-card {
     break-inside: avoid;
     transform: translate(-2px, -2px);
-    box-shadow: 4px 4px 0 var(--lemon);
+    box-shadow: 4px 4px 0 var(--gold);
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }

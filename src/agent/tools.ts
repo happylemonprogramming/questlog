@@ -11,6 +11,7 @@ import { getDesignGuide } from '@/lib/designGuide';
 import { companyDomain, normalizeWebsite } from '@/lib/logo';
 import { desktop, type ToolImage } from '@/lib/desktop';
 import { formTools } from './formTools';
+import { localTools } from './localTools';
 
 const json = (v: unknown) => JSON.stringify(v, null, 1);
 
@@ -498,6 +499,7 @@ function makeTools(host: ToolHost): Record<string, Tool> {
     }),
 
     ...formTools(),
+    ...localTools(),
   };
 }
 

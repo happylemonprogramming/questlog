@@ -24,7 +24,7 @@ interface Pin {
 
 type Shapes = Awaited<ReturnType<typeof loadShapes>>;
 
-const PROJECTION_KEY = 'offerdex:map-projection';
+const PROJECTION_KEY = 'questlog:map-projection';
 
 /** Map colors per theme, picked to sit next to the app's own surfaces. */
 const PALETTE = {
@@ -105,7 +105,7 @@ const topStage = (jobs: Job[]) => jobs.reduce<Stage>((s, j) => (STAGES.indexOf(j
 const PIN_TEXT: Record<Stage, string> = {
   inbox: 'text-foreground',
   saved: 'text-background',
-  next: 'text-lemon-foreground',
+  next: 'text-gold-foreground',
   applied: 'text-background',
   interviewing: 'text-background',
   offer: 'text-background',

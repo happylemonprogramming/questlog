@@ -18,7 +18,7 @@ export interface ToolOutcome {
 }
 
 /**
- * Offerdex's tools live in the window, next to the data they read and write.
+ * Questlog's tools live in the window, next to the data they read and write.
  * An external agent reaches them through a small MCP server it launches
  * (mcp-bridge), which calls back here over localhost with a secret token, and
  * each call is run by the window.
@@ -54,12 +54,12 @@ export class ToolBridge {
 
   private ask(kind: 'list' | 'call', payload: unknown, timeoutMs: number): Promise<unknown> {
     const wc = this.window();
-    if (!wc) return Promise.reject(new Error('The Offerdex window is closed.'));
+    if (!wc) return Promise.reject(new Error('The Questlog window is closed.'));
     const id = randomUUID();
     return new Promise((resolve, reject) => {
       const t = setTimeout(() => {
         this.pending.delete(id);
-        reject(new Error('Offerdex did not answer in time.'));
+        reject(new Error('Questlog did not answer in time.'));
       }, timeoutMs);
       this.pending.set(id, (r) => {
         clearTimeout(t);
@@ -77,10 +77,10 @@ export class ToolBridge {
     const started = Date.now();
     try {
       const out = (await this.ask('call', { name, args }, 180_000)) as ToolOutcome;
-      log('offerdex-tool', { name, ms: Date.now() - started, error: out.isError ? out.text.slice(0, 300) : undefined });
+      log('questlog-tool', { name, ms: Date.now() - started, error: out.isError ? out.text.slice(0, 300) : undefined });
       return out;
     } catch (e) {
-      log('offerdex-tool:failed', { name, ms: Date.now() - started, error: (e as Error).message });
+      log('questlog-tool:failed', { name, ms: Date.now() - started, error: (e as Error).message });
       throw e;
     }
   }

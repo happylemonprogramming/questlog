@@ -13,6 +13,8 @@ export default {
       fontFamily: {
         sans: ['"Inter Variable"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono Variable"', 'ui-monospace', 'monospace'],
+        // Quest titles and headings: a book face, like chapter titles in a journal.
+        display: ['"Fraunces Variable"', 'ui-serif', 'Georgia', 'serif'],
       },
       colors: {
         border: hsl('border'),
@@ -25,7 +27,7 @@ export default {
         primary: { DEFAULT: hsl('primary'), foreground: hsl('primary-foreground') },
         muted: { DEFAULT: hsl('muted'), foreground: hsl('muted-foreground') },
         accent: { DEFAULT: hsl('accent'), foreground: hsl('accent-foreground') },
-        lemon: { DEFAULT: hsl('lemon'), foreground: hsl('lemon-foreground'), soft: hsl('lemon-soft') },
+        gold: { DEFAULT: hsl('gold'), foreground: hsl('gold-foreground'), soft: hsl('gold-soft'), ink: hsl('gold-ink') },
         success: hsl('success'),
         warning: hsl('warning'),
         danger: hsl('danger'),
@@ -38,7 +40,7 @@ export default {
         soft: '0 1px 2px hsl(var(--shadow) / 0.06), 0 4px 16px -4px hsl(var(--shadow) / 0.08)',
         lift: '0 2px 4px hsl(var(--shadow) / 0.06), 0 12px 32px -8px hsl(var(--shadow) / 0.16)',
         card: 'inset 0 1px 0 hsl(0 0% 100% / 0.04), 0 1px 2px hsl(var(--shadow) / 0.05), 0 8px 24px -12px hsl(var(--shadow) / 0.12)',
-        glow: '0 0 0 1px hsl(var(--lemon) / 0.35), 0 10px 40px -12px hsl(var(--lemon) / 0.45)',
+        glow: '0 0 0 1px hsl(var(--gold) / 0.35), 0 10px 40px -12px hsl(var(--gold) / 0.45)',
       },
     },
   },

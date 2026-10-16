@@ -47,7 +47,7 @@ export const logoUrl = (domain: string) => `https://www.google.com/s2/favicons?d
 /** Logos that turned out to be missing or too small, so they aren't requested again this session. */
 export const missingLogos = new Set<string>();
 
-const KEY = 'offerdex:logos';
+const KEY = 'questlog:logos';
 const listeners = new Set<() => void>();
 
 /** Logos are on unless turned off in Settings; each one is a request to Google's favicon service. */

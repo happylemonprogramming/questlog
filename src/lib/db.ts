@@ -2,6 +2,7 @@ import Dexie, { type EntityTable } from 'dexie';
 import { STAGE_LABEL, type Chat, type Doc, type Job, type Profile, type Settings, type SourceFile, type Stage } from './types';
 
 /** Everything lives in this one IndexedDB database, on this device only. */
+// Named for the app's first name, Offerdex, so existing data carries over.
 export const db = new Dexie('offerdex') as Dexie & {
   jobs: EntityTable<Job, 'id'>;
   docs: EntityTable<Doc, 'id'>;
@@ -88,7 +89,7 @@ export async function moveJob(job: Job, stage: Stage, note?: string) {
 /** Everything, as one JSON file the user owns. */
 export async function exportAll() {
   return {
-    app: 'offerdex',
+    app: 'questlog',
     version: 1,
     exportedAt: new Date().toISOString(),
     jobs: await db.jobs.toArray(),

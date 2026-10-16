@@ -16,6 +16,6 @@ createRoot(document.getElementById('root')!).render(
 // Lets the app install to a home screen and open offline. Not in dev, where
 // a cached build would shadow live edits.
 // The desktop app ships its files with it, so it needs no service worker.
-if (import.meta.env.PROD && 'serviceWorker' in navigator && !window.offerdexDesktop) {
+if (import.meta.env.PROD && 'serviceWorker' in navigator && !window.questlogDesktop) {
   window.addEventListener('load', () => void navigator.serviceWorker.register('/sw.js'));
 }

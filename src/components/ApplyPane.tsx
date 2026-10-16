@@ -74,7 +74,7 @@ function AttachChip({ docId }: { docId: string }) {
       onClick={attach}
       disabled={state === 'busy'}
       title={state.length > 6 ? state : 'Attach your resume to the form as a PDF'}
-      className={cn('flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium transition [&_svg]:size-3.5', state === 'done' ? 'bg-success/15 text-success' : state.length > 6 ? 'bg-danger/10 text-danger' : 'bg-lemon text-lemon-foreground hover:brightness-95')}
+      className={cn('flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium transition [&_svg]:size-3.5', state === 'done' ? 'bg-success/15 text-success' : state.length > 6 ? 'bg-danger/10 text-danger' : 'bg-gold text-gold-foreground hover:brightness-95')}
     >
       {state === 'busy' ? <Loader2 className="animate-spin" /> : state === 'done' ? <Check /> : <Paperclip />}
       {state === 'done' ? 'Resume attached' : state.length > 6 ? 'Couldn’t attach' : 'Attach resume'}
@@ -93,7 +93,7 @@ function Materials({ jobId }: { jobId: string }) {
       chips.push(<AttachChip key={d.id} docId={d.id} />);
     } else if (d.kind === 'resume') {
       chips.push(
-        <a key={d.id} href={`/print/${d.id}`} target="_blank" rel="noopener" className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-lemon px-3 text-[12.5px] font-medium text-lemon-foreground hover:brightness-95 [&_svg]:size-3.5">
+        <a key={d.id} href={`/print/${d.id}`} target="_blank" rel="noopener" className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-gold px-3 text-[12.5px] font-medium text-gold-foreground hover:brightness-95 [&_svg]:size-3.5">
           <FileDown /> Resume PDF
         </a>,
       );
@@ -116,7 +116,7 @@ function Materials({ jobId }: { jobId: string }) {
     <div className="scroll-thin flex gap-1.5 overflow-x-auto border-b bg-sunken/60 px-3 py-2">
       {isDesktop() && (
         <button onClick={() => ask(`Fill out the application form for listing ${jobId}. Attach my resume for it, fill everything you can answer truthfully, and tell me what's left for me.`)} className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 text-[12.5px] font-medium text-primary-foreground hover:opacity-90 [&_svg]:size-3.5">
-          <Sparkles className="text-lemon" /> Fill it in for me
+          <Sparkles className="text-gold" /> Fill it in for me
         </button>
       )}
       {chips}
@@ -188,7 +188,7 @@ export function ApplyPane({ jobId, mobile }: { jobId: string | null; mobile?: bo
             key={`${job.id}:${reload}`}
             src={page.url}
             title={`${job.company} application`}
-            // Forms, uploads and sign-in pop-ups work; the page can't navigate Offerdex itself.
+            // Forms, uploads and sign-in pop-ups work; the page can't navigate Questlog itself.
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-modals"
             allow="clipboard-read; clipboard-write"
             referrerPolicy="strict-origin-when-cross-origin"

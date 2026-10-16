@@ -1,7 +1,8 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowRight, ArrowUpRight, CalendarClock, Check, ChevronDown, ClipboardPen, FileText, Layers, MapPin, NotebookPen, PartyPopper, Rocket, Send, Sparkles, Wallet } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, BookOpen, CalendarClock, Check, ChevronDown, ClipboardPen, FileText, Layers, MapPin, NotebookPen, PartyPopper, Rocket, Send, Sparkles, Tent, Wallet } from 'lucide-react';
+import { useJourney } from '@/lib/quest';
 import { Markdown } from '@/components/Markdown';
 import { db, getProfile, moveJob, today } from '@/lib/db';
 import { Card, CardHeader, CompanyMark, Empty, JobRow, shortPay } from '@/components/common';
@@ -10,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { ask } from '@/agent/runtime';
 import { applicationPage, openApplication } from '@/lib/workspace';
 import { candidates, QUEUE_SIZE } from '@/lib/queue';
-import type { Doc, Job, Stage } from '@/lib/types';
+import { STAGE_LABEL, type Doc, type Job, type Stage } from '@/lib/types';
 import { cn, timeAgo } from '@/lib/utils';
 
 function greeting() {
@@ -28,8 +29,8 @@ function momentum(c: Record<Stage, number>, sentThisWeek: number) {
   return 'Add a listing or ask the agent to search a job board to get started.';
 }
 
-const GOAL_KEY = 'offerdex:daily-goal';
-const PROGRESS_KEY = 'offerdex:progress';
+const GOAL_KEY = 'questlog:daily-goal';
+const PROGRESS_KEY = 'questlog:progress';
 
 /** How many applications to aim for today. Tap to change; it's remembered. */
 function useGoal() {
@@ -63,11 +64,11 @@ function Goal({ sent, goal, onCycle }: { sent: number; goal: number; onCycle: ()
     <button onClick={onCycle} title="Change today's goal" className="group flex items-center gap-3 rounded-full border border-border/70 bg-surface/70 py-1.5 pl-2 pr-4 shadow-soft transition hover:border-foreground/20">
       <span className="flex gap-1">
         {Array.from({ length: goal }, (_, i) => (
-          <span key={i} className={cn('size-2.5 rounded-full transition-colors duration-500', i < sent ? 'bg-lemon shadow-[0_0_8px_hsl(var(--lemon))]' : 'bg-muted-foreground/20')} />
+          <span key={i} className={cn('size-2.5 rounded-full transition-colors duration-500', i < sent ? 'bg-gold shadow-[0_0_8px_hsl(var(--gold))]' : 'bg-muted-foreground/20')} />
         ))}
       </span>
       <span className="text-[13px] font-medium">
-        {Math.min(sent, goal)} of {goal} <span className="text-muted-foreground">sent today</span>
+        {Math.min(sent, goal)} of {goal} <span className="text-muted-foreground">turned in today</span>
       </span>
     </button>
   );
@@ -75,11 +76,11 @@ function Goal({ sent, goal, onCycle }: { sent: number; goal: number; onCycle: ()
 
 function Step({ n, done, current, title, detail, children }: { n: number; done: boolean; current: boolean; title: string; detail?: ReactNode; children?: ReactNode }) {
   return (
-    <li className={cn('flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-2xl px-3 py-3 transition-colors duration-300 sm:px-4', current && 'bg-lemon-soft/60 ring-1 ring-lemon/40')}>
+    <li className={cn('flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-2xl px-3 py-3 transition-colors duration-300 sm:px-4', current && 'bg-gold-soft/60 ring-1 ring-gold/40')}>
       <span
         className={cn(
           'grid size-8 shrink-0 place-items-center rounded-full text-[13px] font-semibold transition-colors duration-300',
-          done ? 'bg-lemon text-lemon-foreground' : current ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground',
+          done ? 'bg-gold text-gold-foreground' : current ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground',
         )}
       >
         {done ? <Check className="size-4" strokeWidth={3} /> : n}
@@ -105,14 +106,14 @@ function Focus({ job, resume, baseOk, opened, onMark }: { job: Job; resume?: Doc
     else if (job.url) window.open(job.url, '_blank', 'noopener,noreferrer');
   };
   return (
-    <div key={job.id} className="pop relative rounded-[28px] bg-gradient-to-br from-lemon/60 via-border to-violet/50 p-px shadow-glow">
+    <div key={job.id} className="pop relative rounded-[28px] bg-gradient-to-br from-gold/60 via-border to-violet/50 p-px shadow-glow">
       <div className="relative overflow-hidden rounded-[27px] bg-surface p-5 sm:p-7">
-        <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[radial-gradient(closest-side,hsl(var(--lemon)/0.14),transparent)]" />
+        <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[radial-gradient(closest-side,hsl(var(--gold)/0.14),transparent)]" />
         <div className="flex items-start gap-4">
           <CompanyMark job={job} size={56} className="rounded-2xl max-sm:hidden" />
           <div className="min-w-0 flex-1">
             <p className="text-[13.5px] font-medium text-muted-foreground">{job.company}</p>
-            <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="mt-0.5 block text-[21px] font-semibold leading-tight tracking-[-0.02em] hover:underline sm:text-[24px]">
+            <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="mt-0.5 block font-display text-[23px] font-medium leading-tight tracking-[-0.01em] hover:underline sm:text-[27px]">
               {job.title}
             </Link>
             <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
@@ -129,7 +130,7 @@ function Focus({ job, resume, baseOk, opened, onMark }: { job: Job; resume?: Doc
             ) : baseOk ? null : (
               <>
                 <Button size="sm" variant="ghost" onClick={() => onMark('resume')} className="text-muted-foreground">I have one</Button>
-                <Button size="sm" variant={step === 1 ? 'lemon' : 'outline'} onClick={() => ask(`Make my resume for ${job.company}: ${job.title} (listing ${job.id}), written from my career record and designed for this company.`)}>
+                <Button size="sm" variant={step === 1 ? 'gold' : 'outline'} onClick={() => ask(`Make my resume for ${job.company}: ${job.title} (listing ${job.id}), written from my career record and designed for this company.`)}>
                   <Sparkles /> Make it
                 </Button>
               </>
@@ -137,13 +138,13 @@ function Focus({ job, resume, baseOk, opened, onMark }: { job: Job; resume?: Doc
           </Step>
           <Step n={2} done={opened} current={step === 2} title="Fill in the application" detail={inApp ? 'Opens here, next to your answers' : 'Opens the company’s site in a new tab'}>
             {(inApp || job.url) && (
-              <Button size="sm" variant={step === 2 ? 'lemon' : 'outline'} onClick={open}>
+              <Button size="sm" variant={step === 2 ? 'gold' : 'outline'} onClick={open}>
                 {inApp ? <ClipboardPen /> : <ArrowUpRight />} Open it
               </Button>
             )}
           </Step>
-          <Step n={3} done={false} current={step === 3} title="Mark it sent" detail="Once you’ve hit submit">
-            <Button size="sm" variant={step === 3 ? 'lemon' : 'outline'} onClick={() => moveJob(job, 'applied')}>
+          <Step n={3} done={false} current={step === 3} title="Turn it in" detail="Press submit on their form, then mark it here">
+            <Button size="sm" variant={step === 3 ? 'gold' : 'outline'} onClick={() => moveJob(job, 'applied')}>
               <Send /> I sent it
             </Button>
           </Step>
@@ -153,6 +154,34 @@ function Focus({ job, resume, baseOk, opened, onMark }: { job: Job; resume?: Doc
           <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="font-medium text-muted-foreground transition hover:text-foreground">Read the listing</Link>
           <button onClick={() => moveJob(job, 'saved', 'Set aside from Today')} className="font-medium text-muted-foreground transition hover:text-foreground">Not now</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** The day's goal is met: a clear place to stop, with the option to carry on. */
+function Camp({ sent, onContinue, more }: { sent: number; onContinue: () => void; more: boolean }) {
+  const j = useJourney();
+  const todays = j?.deeds.filter((d) => d.at === today()) ?? [];
+  const xp = todays.reduce((n, d) => n + d.xp, 0);
+  return (
+    <div className="pop relative overflow-hidden rounded-[28px] border border-gold/40 bg-surface p-7 text-center shadow-glow sm:p-9">
+      <div className="pointer-events-none absolute inset-x-0 -bottom-24 mx-auto size-72 rounded-full bg-[radial-gradient(closest-side,hsl(var(--gold)/0.22),transparent)]" />
+      <div className="relative mx-auto mb-4 grid size-14 place-items-center rounded-2xl bg-gold-soft text-gold-ink ring-1 ring-gold/40 [&_svg]:size-6"><Tent /></div>
+      <p className="relative font-display text-[26px] font-medium tracking-[-0.01em] sm:text-[30px]">Today’s quest is done</p>
+      <p className="relative mx-auto mt-2 max-w-md text-[14.5px] leading-relaxed text-muted-foreground">
+        You turned in {sent} application{sent === 1 ? '' : 's'} today{xp ? `, and earned ${xp} points` : ''}. Rest at camp. The road will still be here tomorrow.
+      </p>
+      {todays.length > 0 && (
+        <ul className="relative mx-auto mt-5 max-w-sm space-y-1 text-left text-[13px]">
+          {todays.slice(0, 5).map((d, i) => (
+            <li key={i} className="flex gap-3"><span className="flex-1 truncate">{d.text}</span><span className="font-mono text-gold-ink">+{d.xp}</span></li>
+          ))}
+        </ul>
+      )}
+      <div className="relative mt-6 flex flex-wrap justify-center gap-2">
+        <Link to="/journal" className="inline-flex h-9 items-center gap-2 rounded-xl px-4 text-[13.5px] font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground"><BookOpen className="size-4" /> Open your journal</Link>
+        {more && <Button variant="outline" onClick={onContinue}>Keep going anyway</Button>}
       </div>
     </div>
   );
@@ -188,6 +217,7 @@ export default function Today() {
   const [goal, cycleGoal] = useGoal();
   const [progress, mark] = useProgress();
   const [more, setMore] = useState(false);
+  const [onward, setOnward] = useState(false);
   const navigate = useNavigate();
   const list = jobs ?? [];
 
@@ -221,16 +251,16 @@ export default function Today() {
     <div className="mx-auto max-w-[720px]">
       <section className="mb-8">
         <p className="eyebrow-label rise mb-4 flex items-center gap-2">
-          <span className="size-1.5 rounded-full bg-lemon shadow-[0_0_10px_hsl(var(--lemon))]" />
+          <span className="size-1.5 rounded-full bg-gold shadow-[0_0_10px_hsl(var(--gold))]" />
           {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
         </p>
-        <h1 className="rise text-[34px] font-semibold leading-[1.05] tracking-[-0.04em] sm:text-[44px]" style={{ '--i': 1 } as CSSProperties}>
+        <h1 className="rise font-display text-[36px] font-normal leading-[1.05] tracking-[-0.015em] sm:text-[48px]" style={{ '--i': 1 } as CSSProperties}>
           {greeting()},{' '}
           <span className="text-gradient">{first || 'friend'}</span>
           <span className="text-gradient">.</span>
         </h1>
         <p className="rise mt-3 text-[15.5px] leading-relaxed text-muted-foreground sm:text-[17px]" style={{ '--i': 2 } as CSSProperties}>
-          {!jobs ? '\u00a0' : focus ? (sentToday >= goal ? 'You hit today’s goal. Keep going, or call it a day.' : 'One application at a time. Here’s the next one.') : momentum(counts, sentThisWeek)}
+          {!jobs ? '\u00a0' : sentToday >= goal ? 'You hit today’s goal.' : focus ? 'One quest at a time. Here’s the next one.' : momentum(counts, sentThisWeek)}
         </p>
         {focus && <div className="rise mt-5" style={{ '--i': 3 } as CSSProperties}><Goal sent={sentToday} goal={goal} onCycle={cycleGoal} /></div>}
       </section>
@@ -244,18 +274,20 @@ export default function Today() {
       )}
 
       <div className="rise" style={{ '--i': 4 } as CSSProperties}>
-        {focus ? (
+        {jobs && sentToday >= goal && !onward ? (
+          <Camp sent={sentToday} more={!!focus} onContinue={() => setOnward(true)} />
+        ) : focus ? (
           <Focus job={focus} resume={resume} baseOk={!!progress[focus.id]?.resume} opened={!!progress[focus.id]?.opened} onMark={(step) => mark(focus.id, step)} />
         ) : jobs ? (
           <Card className="p-8 text-center">
-            <div className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-lemon/25 to-violet/20 ring-1 ring-border [&_svg]:size-5">
+            <div className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-gold/25 to-violet/20 ring-1 ring-border [&_svg]:size-5">
               {counts.applied || counts.interviewing ? <PartyPopper /> : <CalendarClock />}
             </div>
             <p className="text-[17px] font-semibold">Nothing lined up right now</p>
             <p className="mx-auto mt-1 max-w-sm text-[14px] text-muted-foreground">Pick a few roles you’d like to send next, or ask the agent to find some.</p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
-              {candidates(list).length > 0 && <Button variant="lemon" onClick={() => navigate('/review')}><Layers /> Pick from your saved roles</Button>}
-              <Button variant={candidates(list).length ? 'outline' : 'lemon'} onClick={() => ask(`What should I apply to next? Pick up to ${QUEUE_SIZE} and line them up.`)}><Sparkles /> Ask the agent</Button>
+              {candidates(list).length > 0 && <Button variant="gold" onClick={() => navigate('/review')}><Layers /> Pick from your saved roles</Button>}
+              <Button variant={candidates(list).length ? 'outline' : 'gold'} onClick={() => ask(`What should I apply to next? Pick up to ${QUEUE_SIZE} and line them up.`)}><Sparkles /> Ask the agent</Button>
             </div>
           </Card>
         ) : null}
@@ -300,7 +332,7 @@ export default function Today() {
               <CardHeader title="Moonshots" icon={<Rocket />} action={<Link to="/moonshots" className="grid size-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-accent hover:text-foreground" aria-label="All moonshots"><ArrowRight className="size-4" /></Link>} />
               <div className="px-3 pb-4">
                 {moonshots.length ? moonshots.map((j, i) => (
-                  <JobRow key={j.id} job={j} compact right={j.stage === 'applied' ? <Badge tone="info">Applied</Badge> : <span />} rank={<span className="w-4 text-center font-mono text-[12px] text-muted-foreground">{i + 1}</span>} />
+                  <JobRow key={j.id} job={j} compact right={j.stage === 'applied' ? <Badge tone="info">{STAGE_LABEL.applied}</Badge> : <span />} rank={<span className="w-4 text-center font-mono text-[12px] text-muted-foreground">{i + 1}</span>} />
                 )) : <p className="px-3 py-4 text-[13px] text-muted-foreground">Long shots worth a try will show up here.</p>}
               </div>
             </Card>
@@ -311,7 +343,7 @@ export default function Today() {
                 {docs.slice(0, 4).map((d) => (
                   <Link key={d.id} to={`/documents/${d.id}`} className="group flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-accent/60">
                     <div className="grid h-10 w-8 shrink-0 place-items-center rounded-[5px] border bg-background shadow-sm transition-transform duration-300 ease-spring group-hover:-rotate-3 group-hover:scale-105">
-                      <span className="h-0.5 w-3.5 rounded bg-lemon" />
+                      <span className="h-0.5 w-3.5 rounded bg-gold" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[14px] font-medium">{d.title}</p>
@@ -329,7 +361,7 @@ export default function Today() {
               <ol className="relative mx-6 mb-5 space-y-3.5 border-l border-border/80 pl-4">
                 {activity.map((a, i) => (
                   <li key={i} className="relative text-[13px]">
-                    <span className={cn('absolute -left-[21px] top-1.5 size-2 rounded-full border-2 border-surface', i === 0 ? 'bg-lemon shadow-[0_0_8px_hsl(var(--lemon))]' : 'bg-muted-foreground/50')} />
+                    <span className={cn('absolute -left-[21px] top-1.5 size-2 rounded-full border-2 border-surface', i === 0 ? 'bg-gold shadow-[0_0_8px_hsl(var(--gold))]' : 'bg-muted-foreground/50')} />
                     <Link to={`/jobs/${encodeURIComponent(a.job.id)}`} className="font-medium hover:underline">{a.job.company}</Link>
                     <span className="text-muted-foreground">: {a.text}</span>
                     <p className="font-mono text-[11px] text-muted-foreground">{a.at}</p>

@@ -6,7 +6,7 @@ import { reducedMotion } from './motion';
  * application goes out. One short-lived canvas, removed when the pieces land.
  */
 
-const COLORS = ['--lemon', '--violet', '--info', '--success', '--warning'];
+const COLORS = ['--gold', '--violet', '--info', '--success', '--warning'];
 
 export function celebrate(size: 'big' | 'small' = 'big') {
   if (reducedMotion() || document.visibilityState !== 'visible') return;

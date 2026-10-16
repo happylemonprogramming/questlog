@@ -4,7 +4,7 @@ import { adoptBaseResumes } from './career';
 import type { Chat, Doc, Job, Profile, Settings, SourceFile, Stage } from './types';
 
 /**
- * Importers for the files a job search usually already has: an Offerdex
+ * Importers for the files a job search usually already has: a Questlog
  * backup, an ai-job-search `seen_jobs.json`, or a tracker CSV.
  */
 
@@ -121,7 +121,7 @@ function recognize(name: string, text: string): 'backup' | 'seen' | 'tracker' | 
   if (!/\.json$/i.test(name)) return null;
   try {
     const data = JSON.parse(text);
-    if (data?.app === 'offerdex') return 'backup';
+    if (data?.app === 'questlog' || data?.app === 'offerdex') return 'backup';
     const seen = data?.seen ?? data;
     const values = seen && typeof seen === 'object' && !Array.isArray(seen) ? Object.values(seen) : [];
     if (values.length && values.every((v) => v && typeof v === 'object' && 'title' in v && 'company' in v)) return 'seen';
@@ -216,7 +216,7 @@ export async function importText(name: string, text: string): Promise<ImportResu
 
   const data = JSON.parse(text);
 
-  if (data?.app === 'offerdex') {
+  if (data?.app === 'questlog' || data?.app === 'offerdex') {
     await db.transaction('rw', [db.jobs, db.docs, db.chats, db.profile, db.settings, db.files], async () => {
       for (const j of (data.jobs ?? []) as Job[]) { await db.jobs.put(j); result.jobs++; }
       for (const d of (data.docs ?? []) as Doc[]) { await db.docs.put(d); result.docs++; }
@@ -247,5 +247,5 @@ export async function importText(name: string, text: string): Promise<ImportResu
     return result;
   }
 
-  throw new Error('Unrecognized file. Expected an Offerdex backup, a seen_jobs.json, or a tracker CSV.');
+  throw new Error('Unrecognized file. Expected a Questlog backup, a seen_jobs.json, or a tracker CSV.');
 }

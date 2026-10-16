@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 export type Theme = 'system' | 'light' | 'dark';
-const KEY = 'offerdex:theme';
+const KEY = 'questlog:theme';
 
 const Ctx = createContext<{ theme: Theme; setTheme: (t: Theme) => void }>({ theme: 'system', setTheme: () => {} });
 

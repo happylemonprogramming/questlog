@@ -13,13 +13,43 @@ function on(channel: string, fn: (msg: any) => void) {
   return () => void ipcRenderer.off(channel, h);
 }
 
-if (process.argv.includes('--offerdex-test')) contextBridge.exposeInMainWorld('offerdexTest', { capture: (file: string) => invoke('test:capture', file) });
+if (process.argv.includes('--questlog-test')) contextBridge.exposeInMainWorld('questlogTest', { capture: (file: string) => invoke('test:capture', file) });
 
-contextBridge.exposeInMainWorld('offerdexDesktop', {
+contextBridge.exposeInMainWorld('questlogDesktop', {
   version: process.env.npm_package_version ?? '0.1.0',
   platform: process.platform,
   openLogs: () => invoke('logs:open'),
+  workspace: {
+    info: () => invoke('ws:info'),
+    choose: () => invoke('ws:choose'),
+    useDefault: () => invoke('ws:useDefault'),
+    reveal: () => invoke('ws:reveal'),
+    readAll: () => invoke('ws:readAll'),
+    read: (paths: string[]) => invoke('ws:read', paths),
+    write: (files: unknown, message: string) => invoke('ws:write', files, message),
+    remove: (paths: string[], message: string) => invoke('ws:remove', paths, message),
+    onChanged: (fn: (msg: unknown) => void) => on('ws:changed', fn),
+  },
+  history: {
+    list: () => invoke('history:list'),
+    restore: (oid: string) => invoke('history:restore', oid),
+    undo: () => invoke('history:undo'),
+    clear: () => invoke('history:clear'),
+  },
+  legacy: {
+    data: () => invoke('legacy:data'),
+    taken: () => invoke('legacy:taken'),
+  },
   viewSite: (url: string) => invoke('site:view', url),
+  local: {
+    grant: () => invoke('local:grant'),
+    grants: () => invoke('local:grants'),
+    revoke: (folder: string) => invoke('local:revoke', folder),
+    list: (p?: string, depth?: number) => invoke('local:list', p, depth),
+    read: (p: string, offset?: number, limit?: number) => invoke('local:read', p, offset, limit),
+    search: (query: string, p?: string) => invoke('local:search', query, p),
+    git: (p?: string, opts?: { emails?: string[] }) => invoke('local:git', p, opts),
+  },
   pdf: {
     make: (docId: string, fileName?: string) => invoke('pdf:make', docId, fileName),
     save: (docId: string, fileName?: string) => invoke('pdf:save', docId, fileName),

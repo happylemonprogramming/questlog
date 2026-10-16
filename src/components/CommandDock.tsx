@@ -74,11 +74,11 @@ export function CommandDock({ className, mobile }: { className?: string; mobile?
       onSubmit={(e) => { e.preventDefault(); submit(); }}
       className={cn(
         'group pointer-events-auto flex w-full items-center gap-2 rounded-full border border-border/80 bg-surface/90 p-1.5 pl-4 shadow-lift backdrop-blur-xl transition-[border-color,box-shadow] duration-300',
-        'focus-within:border-lemon/60 focus-within:shadow-[0_0_0_4px_hsl(var(--lemon)/0.14),0_16px_40px_-16px_hsl(var(--lemon)/0.5)]',
+        'focus-within:border-gold/60 focus-within:shadow-[0_0_0_4px_hsl(var(--gold)/0.14),0_16px_40px_-16px_hsl(var(--gold)/0.5)]',
         className,
       )}
     >
-      <Sparkles className={cn('size-4 shrink-0 text-lemon', busy && 'animate-pulse')} />
+      <Sparkles className={cn('size-4 shrink-0 text-gold', busy && 'animate-pulse')} />
       <div className="relative min-w-0 flex-1">
         <input
           ref={input}
@@ -94,7 +94,7 @@ export function CommandDock({ className, mobile }: { className?: string; mobile?
         />
         {!text && (
           <span key={example} className="pointer-events-none absolute inset-y-0 left-0 flex max-w-full items-center truncate text-[14px] text-muted-foreground animate-in fade-in-0 duration-500">
-            {busy ? 'The agent is working… add to it in the panel' : <>Tell Offerdex what to do: <span className="ml-1 truncate text-foreground/60">“{example}”</span></>}
+            {busy ? 'The agent is working… add to it in the panel' : <>Tell Questlog what to do: <span className="ml-1 truncate text-foreground/60">“{example}”</span></>}
           </span>
         )}
       </div>
@@ -103,7 +103,7 @@ export function CommandDock({ className, mobile }: { className?: string; mobile?
         type="submit"
         disabled={!text.trim() || busy}
         aria-label="Send to the agent"
-        className="grid size-9 shrink-0 place-items-center rounded-full bg-lemon text-lemon-foreground transition disabled:opacity-40 [&_svg]:size-4"
+        className="grid size-9 shrink-0 place-items-center rounded-full bg-gold text-gold-foreground transition disabled:opacity-40 [&_svg]:size-4"
       >
         <ArrowUp />
       </button>

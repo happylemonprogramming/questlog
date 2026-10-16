@@ -4,21 +4,29 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#faf9f7" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0e1117" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f6f2e9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1424" media="(prefers-color-scheme: dark)" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <title>Offerdex</title>
+    <title>Questlog</title>
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="apple-mobile-web-app-title" content="Offerdex" />
+    <meta name="apple-mobile-web-app-title" content="Questlog" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="description" content="A local-first job search with a bring-your-own-model assistant." />
+    <meta name="description" content="A calm quest log for your job search, with an agent that does the busywork." />
     <script>
       // Apply the saved theme before first paint so there's no flash.
       (function () {
-        var t = localStorage.getItem('offerdex:theme') || 'system';
+        // Settings saved under the app's first name, Offerdex, carry over.
+        for (var i = localStorage.length - 1; i >= 0; i--) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf('offerdex:') === 0) {
+            if (localStorage.getItem('questlog:' + k.slice(9)) === null) localStorage.setItem('questlog:' + k.slice(9), localStorage.getItem(k));
+            localStorage.removeItem(k);
+          }
+        }
+        var t = localStorage.getItem('questlog:theme') || 'system';
         var dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
         document.documentElement.classList.toggle('dark', dark);
       })();

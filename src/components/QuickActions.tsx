@@ -69,7 +69,7 @@ export function QuickPills({ job, className }: { job: Job; className?: string })
           onClick={runner(a)}
           className={cn(
             'flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium transition active:scale-95 [&_svg]:size-3.5',
-            a.primary ? 'bg-lemon text-lemon-foreground' : 'bg-muted text-foreground/80',
+            a.primary ? 'bg-gold text-gold-foreground' : 'bg-muted text-foreground/80',
           )}
         >
           {a.icon}
@@ -90,7 +90,7 @@ export function QuickActions({ job, className }: { job: Job; className?: string 
             onClick={runner(a)}
             className={cn(
               'grid size-8 place-items-center rounded-lg transition-[background-color,color,transform] duration-150 active:scale-90 [&_svg]:size-4',
-              a.primary ? 'bg-lemon text-lemon-foreground shadow-soft hover:brightness-105' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+              a.primary ? 'bg-gold text-gold-foreground shadow-soft hover:brightness-105' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
             )}
           >
             {a.icon}

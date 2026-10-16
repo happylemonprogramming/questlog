@@ -17,7 +17,7 @@ interface Workspace {
   applyJobId: string | null;
 }
 
-const APPLY_KEY = 'offerdex:apply';
+const APPLY_KEY = 'questlog:apply';
 
 let state: Workspace = { pane: 'page', behind: 'page', applyJobId: localStorage.getItem(APPLY_KEY) };
 const listeners = new Set<() => void>();

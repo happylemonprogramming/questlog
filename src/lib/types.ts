@@ -4,12 +4,13 @@ import type { ChatMessage } from '@porygon/core';
 export const STAGES = ['inbox', 'saved', 'next', 'applied', 'interviewing', 'offer', 'closed'] as const;
 export type Stage = (typeof STAGES)[number];
 
+/** What the user sees: a quest log's words, kept plain enough to need no explaining. */
 export const STAGE_LABEL: Record<Stage, string> = {
-  inbox: 'New',
-  saved: 'Saved',
+  inbox: 'Found',
+  saved: 'Tracked',
   next: 'Up next',
-  applied: 'Applied',
-  interviewing: 'Interviewing',
+  applied: 'Turned in',
+  interviewing: 'In progress',
   offer: 'Offer',
   closed: 'Closed',
 };
@@ -24,10 +25,10 @@ export const shownStage = (s: Stage): Stage => (s === 'interviewing' || s === 'o
 
 /** What each stage means, in a phrase. */
 export const STAGE_HINT: Record<Stage, string> = {
-  inbox: 'Found, not looked at yet',
+  inbox: 'Heard about, not looked at yet',
   saved: 'Worth keeping, not applying yet',
   next: 'Applying soon; Today walks you through these',
-  applied: 'Sent',
+  applied: 'Application sent',
   interviewing: 'Talking with them',
   offer: 'An offer is in',
   closed: 'Passed on, or finished',

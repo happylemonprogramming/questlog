@@ -105,7 +105,7 @@ export async function send(chatId: string, text: string, view: ViewContext, host
           headers: {
             ...(init.headers as Record<string, string>),
             ...(provider.apiKey ? { Authorization: `Bearer ${provider.apiKey}` } : {}),
-            'x-session-affinity': `offerdex-${chatId}`,
+            'x-session-affinity': `questlog-${chatId}`,
           },
         }),
     }),
@@ -168,8 +168,8 @@ export async function setSessionOption(chatId: string, engine: EngineId, configI
   }
 }
 
-/** Tool names as the engines report them ("mcp__offerdex__save_job", "offerdex.save_job") back to Offerdex's own. */
-const toolName = (title: string) => title.replace(/^(mcp__)?offerdex(__|_|\.|\/|: ?)/i, '').trim();
+/** Tool names as the engines report them ("mcp__questlog__save_job", "questlog.save_job") back to Questlog's own. */
+const toolName = (title: string) => title.replace(/^(mcp__)?questlog(__|_|\.|\/|: ?)/i, '').trim();
 
 function toolText(u: ToolUpdate): string {
   const parts = (u.content ?? []).map((c) => c.content?.text ?? '').filter(Boolean);
@@ -226,7 +226,7 @@ async function sendAcp(chatId: string, engine: EngineId, settings: Settings, mes
   });
   try {
     const last = messages.at(-1)?.content ?? '';
-    const where = view.label ? `[The user is looking at ${view.label}, at ${view.path} in Offerdex.]` : `[The user is at ${view.path} in Offerdex.]`;
+    const where = view.label ? `[The user is looking at ${view.label}, at ${view.path} in Questlog.]` : `[The user is at ${view.path} in Questlog.]`;
     const res = await d.agent.prompt({
       chatId,
       engine,

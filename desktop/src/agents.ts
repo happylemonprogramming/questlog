@@ -11,9 +11,9 @@ import { log } from './log';
 import { which } from './paths';
 
 /**
- * Coding agents as Offerdex's agent, over the Agent Client Protocol. Each
- * engine runs as a child process; each Offerdex chat is one session in it.
- * Offerdex's tools reach the agent as an MCP server (mcp-bridge), so Claude
+ * Coding agents as Questlog's agent, over the Agent Client Protocol. Each
+ * engine runs as a child process; each Questlog chat is one session in it.
+ * Questlog's tools reach the agent as an MCP server (mcp-bridge), so Claude
  * Code or Codex work the app exactly as the built-in agent does.
  */
 
@@ -125,17 +125,17 @@ function agentEnv(): NodeJS.ProcessEnv {
 }
 
 /**
- * Whether a tool call is one of Offerdex's own tools, by the exact name each
- * engine gives an MCP tool: Claude Code "mcp__offerdex__save_job", Codex
- * "mcp.offerdex.save_job", OpenCode "offerdex_save_job". The whole name has to
- * match, so a shell command that merely mentions offerdex (the agent's folder
+ * Whether a tool call is one of Questlog's own tools, by the exact name each
+ * engine gives an MCP tool: Claude Code "mcp__questlog__save_job", Codex
+ * "mcp.questlog.save_job", OpenCode "questlog_save_job". The whole name has to
+ * match, so a shell command that merely mentions questlog (the agent's folder
  * is under it) doesn't pass.
  */
-const OUR_TOOL = /^(mcp__offerdex__|mcp\.offerdex\.|offerdex[_.\/:]|offerdex__)[a-z][a-z_]*$/i;
+const OUR_TOOL = /^(mcp__questlog__|mcp\.questlog\.|questlog[_.\/:]|questlog__)[a-z][a-z_]*$/i;
 
 function isOurs(tc: acp.ToolCallUpdate, earlier?: { title?: string | null }): boolean {
   const meta = (tc._meta as { claudeCode?: { toolName?: string; mcpServer?: { name?: string } } } | undefined)?.claudeCode;
-  if (meta?.mcpServer) return meta.mcpServer.name === 'offerdex';
+  if (meta?.mcpServer) return meta.mcpServer.name === 'questlog';
   if (meta?.toolName) return OUR_TOOL.test(meta.toolName);
   // Codex asks about an MCP call by id alone; its name came in the call's first update.
   return [tc.title, earlier?.title].some((t) => !!t && OUR_TOOL.test(t.trim()));
@@ -151,7 +151,7 @@ export interface PromptRequest {
   chatId: string;
   engine: EngineId;
   text: string;
-  /** Offerdex's instructions: the profile, rules and how to work. Sent when a session starts. */
+  /** Questlog's instructions: the profile, rules and how to work. Sent when a session starts. */
   system: string;
   /** Preferred config choices, e.g. { model: 'opus' }, applied when a session starts. */
   options?: Record<string, string>;
@@ -234,7 +234,7 @@ export class Agents {
     const stream = ndJsonStream(Writable.toWeb(proc.stdin!) as WritableStream<Uint8Array>, Readable.toWeb(proc.stdout!) as ReadableStream<Uint8Array>);
     const conn = new ClientSideConnection((_agent: Agent) => this.client(), stream);
     const init = await Promise.race([
-      conn.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false }, clientInfo: { name: 'offerdex', version: app.getVersion() } }),
+      conn.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false }, clientInfo: { name: 'questlog', version: app.getVersion() } }),
       new Promise<never>((_, rej) => proc.once('exit', () => rej(new Error(`${def.label} quit while starting. ${stderr.join('').slice(-600)}`)))),
       new Promise<never>((_, rej) => setTimeout(() => rej(new Error(`${def.label} didn't respond.`)), 60_000)),
     ]);
@@ -258,7 +258,7 @@ export class Agents {
         const chatId = this.chatOf.get(req.sessionId);
         const allow = req.options.find((o) => o.kind === 'allow_once') ?? req.options.find((o) => o.kind === 'allow_always');
         const tc = req.toolCall;
-        // Offerdex's own tools are what the agent is for, and reading the web
+        // Questlog's own tools are what the agent is for, and reading the web
         // changes nothing; both run without asking.
         const ours = isOurs(tc, { title: this.callTitles.get(tc.toolCallId) });
         if (allow && (ours || WEB_ONLY.has(tc.kind ?? ''))) {
@@ -287,13 +287,13 @@ export class Agents {
     const bridge = path.join(__dirname, 'mcp-bridge.cjs').replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
     const node = which('node');
     return {
-      name: 'offerdex',
+      name: 'questlog',
       command: node ?? process.execPath,
       args: [bridge],
       env: [
         ...(node ? [] : [{ name: 'ELECTRON_RUN_AS_NODE', value: '1' }]),
-        { name: 'OFFERDEX_BRIDGE_URL', value: this.bridge.url },
-        { name: 'OFFERDEX_BRIDGE_TOKEN', value: this.bridge.token },
+        { name: 'QUESTLOG_BRIDGE_URL', value: this.bridge.url },
+        { name: 'QUESTLOG_BRIDGE_TOKEN', value: this.bridge.token },
       ],
     };
   }
@@ -306,8 +306,8 @@ export class Agents {
       cwd: this.workdir,
       mcpServers: [this.mcpServer()],
       _meta: {
-        // Claude Code: add Offerdex's instructions to its own, and keep only
-        // its web tools. It works through Offerdex's tools, not a shell.
+        // Claude Code: add Questlog's instructions to its own, and keep only
+        // its web tools. It works through Questlog's tools, not a shell.
         systemPrompt: { append: req.system },
         claudeCode: { options: { tools: ['WebSearch', 'WebFetch'] } },
       },
@@ -335,8 +335,8 @@ export class Agents {
     log('prompt:start', { chatId: req.chatId, engine: req.engine, text: req.text.slice(0, 300) });
     try {
       const { run, s } = await this.session(req);
-      // Engines without a system prompt option get Offerdex's instructions up front.
-      const text = s.primed ? req.text : `<offerdex_instructions>\n${req.system}\n</offerdex_instructions>\n\n${req.text}`;
+      // Engines without a system prompt option get Questlog's instructions up front.
+      const text = s.primed ? req.text : `<questlog_instructions>\n${req.system}\n</questlog_instructions>\n\n${req.text}`;
       s.primed = true;
       const res = await run.conn.prompt({ sessionId: s.id, prompt: [{ type: 'text', text }] });
       await this.settle(s.id);

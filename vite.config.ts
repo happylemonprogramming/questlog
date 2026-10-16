@@ -10,7 +10,7 @@ import react from '@vitejs/plugin-react';
  */
 function serviceWorker(): Plugin {
   return {
-    name: 'offerdex-sw',
+    name: 'questlog-sw',
     apply: 'build',
     generateBundle(_, bundle) {
       const pub = (dir: string): string[] =>
@@ -25,7 +25,7 @@ function serviceWorker(): Plugin {
         type: 'asset',
         fileName: 'sw.js',
         source: `// Generated at build time.
-const CACHE = 'offerdex-${version}';
+const CACHE = 'questlog-${version}';
 const FILES = ${JSON.stringify(files)};
 
 self.addEventListener('install', (e) => {
@@ -35,7 +35,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('offerdex-') && k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('questlog-') && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });

@@ -145,7 +145,7 @@ export default function JobView() {
         <CompanyMark job={job} size={64} className="rounded-[20px] max-sm:hidden" />
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-medium text-muted-foreground">{job.company}</p>
-          <h1 className="mt-0.5 text-[24px] font-semibold leading-[1.1] tracking-[-0.03em] sm:text-[30px]">{job.title}</h1>
+          <h1 className="mt-0.5 font-display text-[26px] font-normal leading-[1.1] tracking-[-0.01em] sm:text-[34px]">{job.title}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
             {job.location && <Fact icon={<MapPin />}>{job.location}</Fact>}
             {job.pay && <Fact icon={<Wallet />}><span className="font-mono text-[12.5px]">{job.pay}</span></Fact>}
@@ -156,15 +156,15 @@ export default function JobView() {
 
       <div className="rise mb-6 flex flex-wrap items-center gap-2" style={{ '--i': 1 } as CSSProperties}>
         {applicationPage(job) ? (
-          <Button variant="lemon" size="lg" onClick={() => openApplication(job.id)}><ClipboardPen /> Apply here</Button>
+          <Button variant="gold" size="lg" onClick={() => openApplication(job.id)}><ClipboardPen /> Apply here</Button>
         ) : job.url ? (
-          <Button variant="lemon" size="lg" onClick={() => window.open(job.url, '_blank', 'noopener')}><ExternalLink /> Apply on their site</Button>
+          <Button variant="gold" size="lg" onClick={() => window.open(job.url, '_blank', 'noopener')}><ExternalLink /> Apply on their site</Button>
         ) : null}
         {resume ? (
           <Button size="lg" variant="outline" onClick={() => navigate(`/documents/${resume.id}`)}><FileText /> Your resume for this</Button>
         ) : (
           <Button size="lg" variant="outline" onClick={() => ask(`Make a resume for listing ${job.id}, written from my career record for this role and designed for this company.`)}>
-            <Sparkles className="text-lemon" /> Make my resume
+            <Sparkles className="text-gold" /> Make my resume
           </Button>
         )}
         <div className="flex items-center gap-2 sm:ml-auto">
@@ -195,7 +195,7 @@ export default function JobView() {
         ) : (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-[14.5px] text-muted-foreground">No read on this one yet.</p>
-            <Button size="sm" variant="outline" onClick={evaluate}><Sparkles className="text-lemon" /> Is it a fit?</Button>
+            <Button size="sm" variant="outline" onClick={evaluate}><Sparkles className="text-gold" /> Is it a fit?</Button>
           </div>
         )}
       </Card>
@@ -220,7 +220,7 @@ export default function JobView() {
               ) : <p className="text-[13px] text-muted-foreground">None recorded.</p>}
             </div>
           </div>
-          <Button size="sm" variant="ghost" className="mt-4 -ml-2" onClick={evaluate}><Sparkles className="text-lemon" /> {job.strengths?.length ? 'Re-evaluate' : 'Evaluate'}</Button>
+          <Button size="sm" variant="ghost" className="mt-4 -ml-2" onClick={evaluate}><Sparkles className="text-gold" /> {job.strengths?.length ? 'Re-evaluate' : 'Evaluate'}</Button>
         </Fold>
 
         <Fold title="Posting" icon={<FileText />} hint={words ? `${words.toLocaleString()} words${job.posted ? ` · posted ${job.posted}` : ''}` : 'Not saved'}>
@@ -237,7 +237,7 @@ export default function JobView() {
             </div>
           ) : (
             <Button size="sm" variant="outline" onClick={() => ask(`Read the posting for listing ${job.id}${job.url ? ` (${job.url})` : ''} and save its text as the description.`)}>
-              <Sparkles className="text-lemon" /> Fetch the posting
+              <Sparkles className="text-gold" /> Fetch the posting
             </Button>
           )}
         </Fold>
@@ -246,7 +246,7 @@ export default function JobView() {
           <div className="space-y-1">
             {docs.map((d) => (
               <Link key={d.id} to={`/documents/${d.id}`} className="-mx-3 flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-accent/70">
-                <div className="grid h-9 w-7 shrink-0 place-items-center rounded-[4px] border bg-background shadow-sm"><span className="h-0.5 w-3 rounded bg-lemon" /></div>
+                <div className="grid h-9 w-7 shrink-0 place-items-center rounded-[4px] border bg-background shadow-sm"><span className="h-0.5 w-3 rounded bg-gold" /></div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13.5px] font-medium">{d.title}</p>
                   <p className="text-[12px] capitalize text-muted-foreground">{d.kind} · {timeAgo(d.updatedAt)}</p>

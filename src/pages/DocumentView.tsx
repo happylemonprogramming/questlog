@@ -169,7 +169,7 @@ function AnswerEditor({ doc }: { doc: Doc<AnswerData> }) {
         <Textarea value={text} onChange={(e) => { setText(e.target.value); setDirty(true); }} className="min-h-[320px] border-0 bg-transparent p-5 text-[15px] leading-7 focus-visible:ring-0" />
         <div className="flex items-center justify-between border-t px-4 py-2.5">
           <span className="font-mono text-[11.5px] text-muted-foreground">{words} words · {text.length} chars</span>
-          <Button size="sm" variant={copied ? 'subtle' : 'lemon'} onClick={async () => { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
+          <Button size="sm" variant={copied ? 'subtle' : 'gold'} onClick={async () => { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
             <Copy /> {copied ? 'Copied' : 'Copy'}
           </Button>
         </div>
@@ -235,7 +235,7 @@ export default function DocumentView() {
             </div>
           )}
           <Button variant="outline" onClick={() => ask(`Improve ${doc.kind} ${doc.id} ("${doc.title}")${job ? ` for listing ${job.id}` : ''}. Tell me what you changed.`)}>
-            <Sparkles className="text-lemon" /> Improve
+            <Sparkles className="text-gold" /> Improve
           </Button>
           {job && applicationPage(job) && (
             <Button variant="outline" onClick={() => openApplication(job.id)}>

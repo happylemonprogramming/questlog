@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 const variants = {
   primary: 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm',
-  lemon: 'shine bg-lemon text-lemon-foreground shadow-[0_6px_20px_-8px_hsl(var(--lemon)/0.7)] hover:shadow-[0_8px_26px_-8px_hsl(var(--lemon)/0.9)]',
+  gold: 'shine bg-gold text-gold-foreground shadow-[0_6px_20px_-8px_hsl(var(--gold)/0.7)] hover:shadow-[0_8px_26px_-8px_hsl(var(--gold)/0.9)]',
   outline: 'border border-input/80 bg-surface/80 hover:border-foreground/20 hover:bg-accent',
   ghost: 'hover:bg-accent text-foreground',
   subtle: 'bg-muted hover:bg-accent text-foreground',
