@@ -270,9 +270,34 @@ function pageLib() {
     return { ok: true };
   }
 
+  /** Buttons that would send the application, best first: "Submit application" over "Submit" over a bare form submit. */
+  function submitButtons(frame: number) {
+    return [...document.querySelectorAll('button, input[type=submit], [role=button], a[class*="button" i]')]
+      .filter(shown)
+      .map((b) => {
+        const label = clean((b as HTMLInputElement).value && b.tagName === 'INPUT' ? (b as HTMLInputElement).value : text(b) || b.getAttribute('aria-label'));
+        return { b, label };
+      })
+      .filter(({ b, label }) => submits(b, label) && !/^(apply|sign in|log ?in|continue) with\b|^(sign in|log ?in)\b/i.test(label))
+      .map(({ b, label }) => ({
+        ref: refOf(b, frame),
+        label,
+        score: /submit (my |your )?application/i.test(label) ? 3 : /submit/i.test(label) ? 2 : /send|finish|complete/i.test(label) ? 1 : 0,
+      }));
+  }
+
+  /** Press a button even if it submits. Only the user's own press in Questlog reaches this; the agent's clicks go through click(). */
+  function press(ref: string) {
+    const el = byRef(ref) as HTMLElement | null;
+    if (!el) return { ok: false, note: 'The submit button is gone from the page.' };
+    el.scrollIntoView({ block: 'center' });
+    el.click();
+    return { ok: true };
+  }
+
   const pageText = () => clean(document.body?.innerText).slice(0, 12000);
 
-  w.__odx = { read, fill, pick, click, attach, pageText, holdSubmits };
+  w.__odx = { read, fill, pick, click, attach, pageText, holdSubmits, submitButtons, press };
 }
 
 const LIB = `(${pageLib.toString()})();`;
@@ -377,6 +402,28 @@ export class Forms {
     const b64 = (await readFile(file)).toString('base64');
     const r = await this.run<{ ok: boolean; note?: string }>(this.frameOf(ref), `attach(${JSON.stringify(ref)}, ${JSON.stringify(b64)}, ${JSON.stringify(path.basename(file))})`);
     return { ...r, file: path.basename(file) };
+  }
+
+  /**
+   * Send the application: press its submit button. Called only when the user
+   * presses Submit in Questlog; no agent tool leads here.
+   */
+  async submit(): Promise<{ ok: boolean; label?: string; note?: string }> {
+    const g = await this.page();
+    this.frames = g.mainFrame.framesInSubtree;
+    let best: { frame: WebFrameMain; ref: string; label: string; score: number } | null = null;
+    for (const [i, f] of this.frames.entries()) {
+      try {
+        for (const b of await this.run<{ ref: string; label: string; score: number }[]>(f, `submitButtons(${i})`)) {
+          if (!best || b.score > best.score) best = { frame: f, ...b };
+        }
+      } catch {
+        // As in read().
+      }
+    }
+    if (!best) return { ok: false, note: 'No submit button on this page. The form may have another step.' };
+    const r = await this.run<{ ok: boolean; note?: string }>(best.frame, `press(${JSON.stringify(best.ref)})`);
+    return { ...r, label: best.label };
   }
 
   async text() {

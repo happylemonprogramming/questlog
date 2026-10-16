@@ -69,8 +69,30 @@ function closeDangling(messages: ChatMessage[]): ChatMessage[] {
   return out;
 }
 
+/**
+ * After a long turn, such as getting a batch of quests ready, tell the user
+ * it's done if they've gone to another window.
+ */
+async function noticeDone(chatId: string, started: number) {
+  if (Date.now() - started < 60_000 || !document.hidden || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  const chat = await db.chats.get(chatId);
+  const last = [...(chat?.messages ?? [])].reverse().find((m) => m.role === 'assistant' && m.content.trim());
+  const body = (live?.error ? `Stopped: ${live.error}` : last?.content ?? 'Done.').replace(/[*_`#>[\]]/g, '').replace(/\s+/g, ' ').slice(0, 180);
+  const n = new Notification('The guide is done', { body });
+  n.onclick = () => window.focus();
+}
+
 export async function send(chatId: string, text: string, view: ViewContext, host: ToolHost) {
   if (live) return;
+  const started = Date.now();
+  try {
+    await turn(chatId, text, view, host);
+  } finally {
+    void noticeDone(chatId, started);
+  }
+}
+
+async function turn(chatId: string, text: string, view: ViewContext, host: ToolHost) {
   const settings = await getSettings();
   const provider = settings.providers.find((p) => p.id === settings.activeProviderId) ?? settings.providers[0];
   const chat = await db.chats.get(chatId);

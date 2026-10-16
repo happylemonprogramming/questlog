@@ -1,7 +1,8 @@
 import { defineTool, type Tool } from '@porygon/core';
 import { z } from 'zod';
-import { db, getProfile } from '@/lib/db';
+import { db } from '@/lib/db';
 import { desktop, type FormField } from '@/lib/desktop';
+import { needsYou, saveApplication, uploadName } from '@/lib/turnIn';
 import { applicationPage, openApplication } from '@/lib/workspace';
 
 /**
@@ -21,15 +22,6 @@ function describeField(f: FormField) {
   if (v !== undefined && v !== '' && !(Array.isArray(v) && !v.length) && v !== false) bits.push(`now: ${show(v).slice(0, 120)}`);
   return bits.join(' · ');
 }
-
-const fileName = async (docId: string) => {
-  const [doc, profile] = await Promise.all([db.docs.get(docId), getProfile()]);
-  if (!doc) return undefined;
-  const job = doc.jobId ? await db.jobs.get(doc.jobId) : undefined;
-  const name = profile.name || (doc.data as { header?: { name?: string } }).header?.name || '';
-  const parts = [name, doc.kind === 'letter' ? 'Cover Letter' : 'Resume', job?.company.replace(/\s*\(.*\)/, '')].filter(Boolean);
-  return parts.join(' ').replace(/\s+/g, '_');
-};
 
 export function formTools(): Record<string, Tool> {
   const d = desktop();
@@ -89,7 +81,7 @@ export function formTools(): Record<string, Tool> {
         const doc = await db.docs.get(documentId);
         if (!doc) return { content: `No document ${documentId}.`, isError: true };
         if (doc.kind === 'answer') return { content: 'Short answers are text; put them in a text field with fill_form.', isError: true };
-        const r = await d.form.attach(ref, documentId, await fileName(documentId));
+        const r = await d.form.attach(ref, documentId, await uploadName(documentId));
         return r.ok ? `Attached ${r.file}.` : { content: `Couldn't attach: ${r.note}`, isError: true };
       },
     }),
@@ -107,6 +99,26 @@ export function formTools(): Record<string, Tool> {
       },
     }),
 
+    save_application: defineTool({
+      description:
+        'Keep what you filled in on the open form, so the user can review it in Questlog and send it with one press. ' +
+        'Call it once you have filled a page (before clicking to the next page of a multi-page form), with that page\'s number. ' +
+        'List each question you left for the user in `ask`, with why. Nothing is submitted.',
+      inputSchema: z.object({
+        jobId: z.string(),
+        step: z.number().int().min(1).optional().describe('Which page of the form this is, from 1.'),
+        ask: z.array(z.object({ label: z.string().describe('The question as the form words it.'), why: z.string().describe('Why you left it, in a few words.') })).optional(),
+        note: z.string().optional().describe('Anything the user should know before sending, in a sentence or two.'),
+      }),
+      write: true,
+      timeoutMs: 60_000,
+      run: async ({ jobId, step, ask, note }) => {
+        const { application } = await saveApplication(jobId, { step, ask, note });
+        const open = application.answers.filter(needsYou);
+        return `Saved ${application.answers.length} answers for review${open.length ? `; ${open.length} left for the user: ${open.map((a) => a.label).join('; ')}` : '; nothing left for the user'}.`;
+      },
+    }),
+
     read_page: defineTool({
       description: 'Read the visible text of the page in the Apply pane, e.g. to see instructions, errors after filling, or what a step asks.',
       inputSchema: z.object({}),
@@ -119,4 +131,4 @@ export function formTools(): Record<string, Tool> {
   };
 }
 
-export const FORM_TOOL_NAMES = ['open_application', 'read_form', 'fill_form', 'attach_document', 'click_form', 'read_page'];
+export const FORM_TOOL_NAMES = ['open_application', 'read_form', 'fill_form', 'attach_document', 'click_form', 'save_application', 'read_page'];

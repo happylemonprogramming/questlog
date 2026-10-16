@@ -218,6 +218,8 @@ export interface DesktopBridge {
     fill(fields: { ref: string; value: unknown }[]): Promise<{ ref: string; ok: boolean; note?: string; chose?: string }[]>;
     click(ref: string): Promise<{ ok: boolean; note?: string; refused?: boolean }>;
     text(): Promise<{ url: string; title: string; text: string }>;
+    /** Press the form's submit button. Only for the user's own press; never exposed to the agent. */
+    submit(): Promise<{ ok: boolean; label?: string; note?: string }>;
     attach(ref: string, docId: string, fileName?: string): Promise<{ ok: boolean; note?: string; file?: string }>;
   };
   agent: {

@@ -77,8 +77,44 @@ export interface Job {
   steps?: string[];
   /** Dated log lines. */
   log?: { at: string; text: string }[];
+  /** The application form, filled in ahead and waiting for the user to review and submit. */
+  application?: Application;
   createdAt: number;
   updatedAt: number;
+}
+
+export type AnswerKind = 'text' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'file' | 'combobox';
+
+/** One question on an application form and what goes in it. */
+export interface FormAnswer {
+  /** The question as the form words it; how the answer finds its field again. */
+  label: string;
+  kind: AnswerKind;
+  value: string | boolean | string[];
+  required?: boolean;
+  /** The choices, for a select, radio group or checkbox group. */
+  options?: string[];
+  /** For an upload: the document that goes in it. */
+  docId?: string;
+  /** Left for the user, and why the guide didn't answer it. */
+  ask?: string;
+  /** Which page of a multi-page form it's on, from 1. */
+  step?: number;
+}
+
+/**
+ * An application prepared ahead: the form's questions and their answers, so
+ * the user can read them in Questlog and send it with one press. Kept in the
+ * job's folder as application.json.
+ */
+export interface Application {
+  /** The form it was read from. */
+  url: string;
+  answers: FormAnswer[];
+  /** What the guide wants the user to know before sending. */
+  note?: string;
+  /** ISO time it was prepared. */
+  preparedAt: string;
 }
 
 export type DocKind = 'resume' | 'letter' | 'answer';

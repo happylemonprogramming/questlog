@@ -62,6 +62,7 @@ contextBridge.exposeInMainWorld('questlogDesktop', {
     fill: (fields: unknown) => invoke('form:fill', fields),
     click: (ref: string) => invoke('form:click', ref),
     text: () => invoke('form:text'),
+    submit: () => invoke('form:submit'),
     attach: (ref: string, docId: string, fileName?: string) => invoke('form:attach', ref, docId, fileName),
   },
   agent: {

@@ -47,6 +47,7 @@ function describe(name: string, args: Record<string, unknown>): string {
     case 'fill_form': return `Filled ${Array.isArray(args?.fields) ? args.fields.length : ''} fields`.replace(/\s+/g, ' ');
     case 'attach_document': return 'Attached a document';
     case 'click_form': return 'Clicked on the form';
+    case 'save_application': return 'Saved the application for you to review';
     case 'read_page': return 'Read the page';
     case 'list_folder': return `Looked in ${a('path') || 'a folder'}`;
     case 'read_file': return `Read ${a('path') || 'a file'}`;

@@ -287,6 +287,8 @@ handle('form:read', () => forms.read());
 handle('form:fill', (fields: { ref: string; value: unknown }[]) => forms.fill(fields));
 handle('form:click', (ref: string) => forms.click(ref));
 handle('form:text', () => forms.text());
+// The user's own Submit press. The agent's tools never call this.
+handle('form:submit', () => forms.submit());
 handle('form:attach', async (ref: string, docId: string, fileName?: string) => {
   const pdf = await makePdf(docId, fileName);
   return forms.attach(ref, pdf.path);

@@ -36,6 +36,7 @@ import DocumentView from '@/pages/DocumentView';
 import Settings from '@/pages/Settings';
 import Journal from '@/pages/Journal';
 import Review from '@/pages/Review';
+import TurnIn from '@/pages/TurnIn';
 import PrintView from '@/pages/PrintView';
 
 // The map library and its data are big; only load them when someone opens the map.
@@ -64,7 +65,7 @@ function Wordmark({ small }: { small?: boolean }) {
 }
 
 const PLACES: { to: string; icon: ReactNode; label: string; match: (p: string) => boolean }[] = [
-  { to: '/', icon: <Tent />, label: 'Camp', match: (p) => p === '/' },
+  { to: '/', icon: <Tent />, label: 'Camp', match: (p) => p === '/' || p.startsWith('/turn-in') },
   { to: '/listings', icon: <MapIcon />, label: 'Quests', match: isJobsPath },
   { to: '/documents', icon: <FileText />, label: 'Documents', match: (p) => p.startsWith('/documents') },
   { to: '/journal', icon: <BookOpen />, label: 'Journal', match: (p) => p.startsWith('/journal') },
@@ -235,6 +236,7 @@ const TITLES: Record<string, [string, string?]> = {
   documents: ['Documents', 'Document'],
   settings: ['Settings'],
   review: ['Choose'],
+  'turn-in': ['Camp', 'Turn in'],
 };
 
 function pageTitle(pathname: string) {
@@ -562,6 +564,7 @@ export default function App() {
               <Route path="settings" element={<Settings />} />
               <Route path="journal" element={<Journal />} />
               <Route path="review" element={<Review />} />
+              <Route path="turn-in/:id" element={<TurnIn />} />
             </Route>
           </Routes>
         </BrowserRouter>

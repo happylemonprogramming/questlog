@@ -190,7 +190,8 @@ work, and picks up changes you make here yourself.
 
 - profile/: who you are. career.md is your full career record; every resume is written from it.
 - jobs/: one folder per job. job.md holds its details and your notes, posting.md the posting,
-  and the .json and .css files its resume and cover letter.
+  the .json and .css files its resume and cover letter, and application.json the
+  application form's answers, once they're ready for you to review and send.
 - documents/: resumes, letters and answers not tied to one job.
 
 PDFs are made again whenever they're needed, so deleting them is safe.

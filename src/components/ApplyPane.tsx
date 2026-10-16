@@ -1,13 +1,14 @@
 import { useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Check, Copy, ExternalLink, FileDown, Info, Loader2, Paperclip, RotateCw, ShieldAlert, Sparkles, X } from 'lucide-react';
+import { Check, Copy, ExternalLink, FileDown, Info, Loader2, Paperclip, RotateCw, Send, ShieldAlert, Sparkles, X } from 'lucide-react';
 import { desktop, isDesktop } from '@/lib/desktop';
 import { ask } from '@/agent/runtime';
 import { db, getProfile } from '@/lib/db';
+import { clearTurnIn, confirmSent, turnIn, upNext, useTurnIn } from '@/lib/turnIn';
 import { applicationPage, closeApplication, setPane } from '@/lib/workspace';
 import type { LetterData } from '@/lib/sheet';
-import type { AnswerData, Doc } from '@/lib/types';
+import type { AnswerData, Doc, Job } from '@/lib/types';
 import { Empty } from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { Tip } from '@/components/ui/tooltip';
@@ -124,6 +125,52 @@ function Materials({ jobId }: { jobId: string }) {
   );
 }
 
+/** A turn-in under way on this form: what it's doing, and if it stopped, why and what you can do. */
+function TurnInBar({ job }: { job: Job }) {
+  const t = useTurnIn();
+  const jobs = useLiveQuery(() => db.jobs.where('stage').equals('next').toArray(), []) ?? [];
+  const navigate = useNavigate();
+  if (t?.jobId !== job.id) return null;
+  const working = ['opening', 'filling', 'checking', 'sending'].includes(t.phase);
+  const next = upNext(jobs).find((j) => j.application && j.id !== job.id);
+  const go = (to: string) => {
+    clearTurnIn();
+    setPane('page');
+    navigate(to);
+  };
+  return (
+    <div className={cn('shrink-0 border-b px-3 py-2.5 text-[13px]', t.phase === 'sent' ? 'bg-success/10' : working ? 'bg-gold-soft/40' : 'bg-warning/10')}>
+      <div className="flex flex-wrap items-center gap-2">
+        {working ? <Loader2 className="size-4 shrink-0 animate-spin text-gold" /> : t.phase === 'sent' ? <Send className="size-4 shrink-0 text-success" /> : <Info className="size-4 shrink-0 text-warning" />}
+        <p className="min-w-0 flex-1 font-medium">{t.detail}</p>
+        {t.phase === 'stopped' && (
+          <>
+            <Button size="sm" variant="ghost" onClick={clearTurnIn}>I’ll finish it here</Button>
+            <Button size="sm" variant="gold" onClick={() => void turnIn(job, { anyway: true })}><Send /> Send anyway</Button>
+          </>
+        )}
+        {t.phase === 'unsure' && (
+          <>
+            <Button size="sm" variant="ghost" onClick={clearTurnIn}>Not yet</Button>
+            <Button size="sm" variant="gold" onClick={() => void confirmSent(job)}><Check /> It went through</Button>
+          </>
+        )}
+        {t.phase === 'sent' && (
+          <>
+            <Button size="sm" variant="ghost" onClick={() => go('/')}>Back to camp</Button>
+            {next && <Button size="sm" variant="gold" onClick={() => go(`/turn-in/${encodeURIComponent(next.id)}`)}>Next: {next.company}</Button>}
+          </>
+        )}
+      </div>
+      {t.issues?.length ? (
+        <ul className="mt-1.5 list-disc space-y-0.5 pl-10 text-muted-foreground">
+          {t.issues.map((i) => <li key={i}>{i}</li>)}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 /**
  * The employer's application form in a frame, with your materials above it.
  * Kept mounted while hidden, so a half-filled form survives switching panes.
@@ -160,6 +207,7 @@ export function ApplyPane({ jobId, mobile }: { jobId: string | null; mobile?: bo
         {page && <Tip label="Open in a new tab"><Button variant="ghost" size="icon" onClick={() => window.open(page.url, '_blank', 'noopener')} aria-label="Open in a new tab"><ExternalLink /></Button></Tip>}
         <Tip label="Close application"><Button variant="ghost" size="icon" onClick={closeApplication} aria-label="Close application"><X /></Button></Tip>
       </div>
+      <TurnInBar job={job} />
       <Materials jobId={job.id} />
       {!page ? (
         <div className="grid flex-1 place-items-center p-6">

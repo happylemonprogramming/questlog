@@ -9,6 +9,7 @@ import { letterSchema, resumeSchema } from '@/lib/sheetSchema';
 import { cleanCss, designOf, inheritedDesign, MARKUP_GUIDE } from '@/lib/design';
 import { getDesignGuide } from '@/lib/designGuide';
 import { desktop, type ToolImage } from '@/lib/desktop';
+import { readiness } from '@/lib/turnIn';
 import { formTools } from './formTools';
 import { localTools } from './localTools';
 
@@ -25,6 +26,7 @@ const brief = (j: Job) => ({
   ...(j.moonshot ? { moonshot: true, moonshotRank: j.moonshotRank } : {}),
   ...(j.batch ? { batch: j.batch } : {}),
   ...(j.flags?.length ? { flags: j.flags } : {}),
+  ...(j.application ? { application: readiness(j) === 'ready' ? 'ready to submit' : 'prepared, with questions for the user' } : {}),
 });
 
 const stage = z.enum(STAGES);

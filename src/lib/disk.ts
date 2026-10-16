@@ -76,6 +76,7 @@ function jobFiles(job: Job): WsFile[] {
   data.updated = iso(job.updatedAt);
   const files = [{ path: `${dir}/job.md`, text: frontMatter(data, job.notes) }];
   if (job.description?.trim()) files.push({ path: `${dir}/posting.md`, text: `${job.description.trim()}\n` });
+  if (job.application) files.push({ path: `${dir}/application.json`, text: `${JSON.stringify(job.application, null, 2)}\n` });
   return files;
 }
 
@@ -141,6 +142,15 @@ function parse(files: WsFile[]): Parsed {
       if (!STAGES.includes(job.stage)) job.stage = 'saved';
       job.notes = body || undefined;
       job.description = byPath.get(`${m[1]}/posting.md`)?.trim() || undefined;
+      const app = byPath.get(`${m[1]}/application.json`);
+      if (app) {
+        try {
+          const a = JSON.parse(app);
+          if (a && Array.isArray(a.answers)) job.application = a;
+        } catch {
+          // A hand-broken file; the job keeps no prepared application.
+        }
+      }
       job.createdAt = ms(data.created);
       job.updatedAt = ms(data.updated);
       out.jobs.set(job.id, job);
@@ -235,10 +245,11 @@ export function flush(): Promise<void> {
           const dir = dirOf(job);
           files.push(...jobFiles(job));
           if (!job.description?.trim()) remove.push(`${dir}/posting.md`);
+          if (!job.application) remove.push(`${dir}/application.json`);
           said.push(`Saved ${label('jobs', job)}`);
         } else if (jobDir.has(c.id)) {
           const dir = jobDir.get(c.id)!;
-          remove.push(`${dir}/job.md`, `${dir}/posting.md`);
+          remove.push(`${dir}/job.md`, `${dir}/posting.md`, `${dir}/application.json`);
           jobDir.delete(c.id);
           said.push(`Deleted ${c.label ?? 'a job'}`);
         }
@@ -288,7 +299,7 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 function jobSig(job: Job) {
   const data: Record<string, unknown> = {};
   for (const k of JOB_KEYS) data[k] = job[k];
-  return [data, job.notes?.trim() || '', job.description?.trim() || '', iso(job.updatedAt)];
+  return [data, job.notes?.trim() || '', job.description?.trim() || '', job.application ?? null, iso(job.updatedAt)];
 }
 
 /** Make the cache match the folder. */
