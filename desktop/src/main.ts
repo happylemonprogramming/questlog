@@ -32,7 +32,7 @@ function serveApp() {
   protocol.handle('app', (req) => {
     const rel = decodeURIComponent(new URL(req.url).pathname);
     let file = path.normalize(path.join(WEB, rel));
-    if (!file.startsWith(WEB) || !existsSync(file) || statSync(file).isDirectory()) file = path.join(WEB, 'index.html');
+    if (!file.startsWith(WEB + path.sep) || !existsSync(file) || statSync(file).isDirectory()) file = path.join(WEB, 'index.html');
     return net.fetch(pathToFileURL(file).href);
   });
 }

@@ -37,7 +37,31 @@ function pageLib() {
     const s = getComputedStyle(el);
     return el.getClientRects().length > 0 && s.visibility !== 'hidden' && s.display !== 'none';
   };
-  const SUBMIT = /\b(submit|send)\b|^\s*apply\s*(now)?\s*$/i;
+  const SUBMIT = /\b(submit|send|apply|finish|finali[sz]e|complete|confirm)\b/i;
+  /** Labels that only move between a form's steps. */
+  const STEP = /^(next|continue|save (and|&) continue|proceed|back|previous|add( another)?|upload|attach|edit|remove|delete|cancel|close)\b/i;
+
+  /**
+   * Whether pressing a button could send the application: its label says so,
+   * or it submits a form (a <button> in a form submits unless typed
+   * otherwise) and isn't plainly a step button like "Next".
+   */
+  function submits(el: Element, label: string) {
+    if (SUBMIT.test(label)) return true;
+    const type = (el.getAttribute('type') ?? '').toLowerCase();
+    const formSubmit = (el.tagName === 'INPUT' && (type === 'submit' || type === 'image')) || (el.tagName === 'BUTTON' && (type === '' || type === 'submit') && !!(el as HTMLButtonElement).form);
+    return formSubmit && !STEP.test(label);
+  }
+
+  /** Cancel any form submission in this frame for a moment, e.g. while pressing Enter in a field. */
+  function holdSubmits(ms: number) {
+    const stop = (e: Event) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    };
+    window.addEventListener('submit', stop, true);
+    setTimeout(() => window.removeEventListener('submit', stop, true), ms);
+  }
 
   /** The question a field answers: its label, or the nearest label-like text above it. */
   function labelOf(el: Element, skipOwn = false): string {
@@ -136,7 +160,7 @@ function pageLib() {
       .slice(0, 50)
       .map((b) => {
         const label = clean((b as HTMLInputElement).value && b.tagName === 'INPUT' ? (b as HTMLInputElement).value : text(b) || b.getAttribute('aria-label'));
-        return { ref: refOf(b, frame), text: label, submits: SUBMIT.test(label) };
+        return { ref: refOf(b, frame), text: label, submits: submits(b, label) };
       })
       .filter((b) => b.text);
     return { url: location.href, title: document.title, fields, buttons };
@@ -222,8 +246,8 @@ function pageLib() {
   function click(ref: string) {
     const el = byRef(ref) as HTMLElement | null;
     if (!el) return { ok: false, note: 'not on the page any more; read the form again' };
-    const label = clean((el as HTMLInputElement).value && el.tagName === 'INPUT' ? (el as HTMLInputElement).value : text(el));
-    if (SUBMIT.test(label)) return { ok: false, refused: true, note: `"${label}" would submit the application. Only the user submits.` };
+    const label = clean((el as HTMLInputElement).value && el.tagName === 'INPUT' ? (el as HTMLInputElement).value : text(el) || el.getAttribute('aria-label'));
+    if (submits(el, label)) return { ok: false, refused: true, note: `"${label}" would submit the application. Only the user submits.` };
     el.scrollIntoView({ block: 'center' });
     el.click();
     return { ok: true };
@@ -248,7 +272,7 @@ function pageLib() {
 
   const pageText = () => clean(document.body?.innerText).slice(0, 12000);
 
-  w.__odx = { read, fill, pick, click, attach, pageText };
+  w.__odx = { read, fill, pick, click, attach, pageText, holdSubmits };
 }
 
 const LIB = `(${pageLib.toString()})();`;
@@ -325,7 +349,8 @@ export class Forms {
           await new Promise((res) => setTimeout(res, 700));
           let p = await this.run<{ ok: boolean; note?: string; chose?: string }>(f, `pick(${JSON.stringify(ref)}, ${JSON.stringify(String(value))})`);
           if (!p.ok) {
-            // Some lists only take Enter.
+            // Some lists only take Enter, which in a plain text box would submit the form.
+            await this.run(f, 'holdSubmits(1500)');
             g.sendInputEvent({ type: 'keyDown', keyCode: 'Enter' });
             g.sendInputEvent({ type: 'keyUp', keyCode: 'Enter' });
             p = { ...p, note: `${p.note}; pressed Enter instead, check it with read_form` };

@@ -124,6 +124,29 @@ function agentEnv(): NodeJS.ProcessEnv {
   return env;
 }
 
+/**
+ * Whether a tool call is one of Offerdex's own tools, by the exact name each
+ * engine gives an MCP tool: Claude Code "mcp__offerdex__save_job", Codex
+ * "mcp.offerdex.save_job", OpenCode "offerdex_save_job". The whole name has to
+ * match, so a shell command that merely mentions offerdex (the agent's folder
+ * is under it) doesn't pass.
+ */
+const OUR_TOOL = /^(mcp__offerdex__|mcp\.offerdex\.|offerdex[_.\/:]|offerdex__)[a-z][a-z_]*$/i;
+
+function isOurs(tc: acp.ToolCallUpdate, earlier?: { title?: string | null }): boolean {
+  const meta = (tc._meta as { claudeCode?: { toolName?: string; mcpServer?: { name?: string } } } | undefined)?.claudeCode;
+  if (meta?.mcpServer) return meta.mcpServer.name === 'offerdex';
+  if (meta?.toolName) return OUR_TOOL.test(meta.toolName);
+  // Codex asks about an MCP call by id alone; its name came in the call's first update.
+  return [tc.title, earlier?.title].some((t) => !!t && OUR_TOOL.test(t.trim()));
+}
+
+/**
+ * Tools that only read the web run without asking. Reading files on this
+ * computer, running commands and editing files always ask.
+ */
+const WEB_ONLY = new Set(['search', 'fetch', 'think']);
+
 export interface PromptRequest {
   chatId: string;
   engine: EngineId;
@@ -157,6 +180,8 @@ export class Agents {
   private asks = new Map<string, (optionId: string | null) => void>();
   /** When each session last sent an update, so a turn isn't closed while its last words are in flight. */
   private lastUpdate = new Map<string, number>();
+  /** Each tool call's title as first reported, for permission requests that arrive without one. */
+  private callTitles = new Map<string, string>();
   private workdir: string;
 
   constructor(private bridge: ToolBridge, private window: () => WebContents | undefined) {
@@ -221,7 +246,11 @@ export class Agents {
       sessionUpdate: async (n) => {
         this.lastUpdate.set(n.sessionId, Date.now());
         const chatId = this.chatOf.get(n.sessionId);
-        const u = n.update as { sessionUpdate: string; title?: string; kind?: string; status?: string };
+        const u = n.update as { sessionUpdate: string; toolCallId?: string; title?: string; kind?: string; status?: string };
+        if (u.toolCallId && u.title && !this.callTitles.has(u.toolCallId)) {
+          this.callTitles.set(u.toolCallId, u.title);
+          if (this.callTitles.size > 500) this.callTitles.delete(this.callTitles.keys().next().value!);
+        }
         if (u.status === 'completed' || u.status === 'failed') log('tool', { chatId, title: u.title, kind: u.kind, status: u.status });
         if (chatId) this.send('agent:update', { chatId, update: n.update });
       },
@@ -231,9 +260,8 @@ export class Agents {
         const tc = req.toolCall;
         // Offerdex's own tools are what the agent is for, and reading the web
         // changes nothing; both run without asking.
-        const ours = /offerdex/i.test(`${tc.title ?? ''} ${(tc as { name?: string }).name ?? ''} ${JSON.stringify(tc._meta ?? {})}`);
-        const readOnly = ['read', 'search', 'fetch', 'think'].includes(tc.kind ?? '');
-        if (allow && (ours || readOnly)) {
+        const ours = isOurs(tc, { title: this.callTitles.get(tc.toolCallId) });
+        if (allow && (ours || WEB_ONLY.has(tc.kind ?? ''))) {
           if (!ours) log('permission:auto', { chatId, title: tc.title, kind: tc.kind });
           return { outcome: { outcome: 'selected', optionId: allow.optionId } };
         }

@@ -228,10 +228,15 @@ function makeTools(host: ToolHost): Record<string, Tool> {
       }),
       timeoutMs: 60_000,
       run: async ({ ats, board, title, exclude, location, limit }) => {
+        let t: RegExp | null, x: RegExp | null, l: RegExp | null;
+        try {
+          t = title ? new RegExp(title, 'i') : null;
+          x = exclude ? new RegExp(exclude, 'i') : null;
+          l = location ? new RegExp(location, 'i') : null;
+        } catch (e) {
+          return { content: `Not a valid regex: ${(e as Error).message}`, isError: true };
+        }
         const all = await listBoard(ats as Ats, board);
-        const t = title ? new RegExp(title, 'i') : null;
-        const x = exclude ? new RegExp(exclude, 'i') : null;
-        const l = location ? new RegExp(location, 'i') : null;
         const hits = all.filter((j) => (!t || t.test(j.title)) && (!x || !x.test(j.title)) && (!l || l.test(j.location)));
         const rows = hits.slice(0, limit ?? 60).map((j) => `${j.id} | ${j.title} | ${j.location} | ${j.pay ?? 'pay n/a'}`);
         return `${hits.length} of ${all.length} postings match on ${ats}:${board}${hits.length > rows.length ? ` (showing ${rows.length})` : ''}\n${rows.join('\n')}`;

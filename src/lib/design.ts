@@ -69,8 +69,38 @@ export function cleanCss(src: string): CleanCss {
   return { css, imports, fontFaces, blocked };
 }
 
+const URL_IN = /url\(\s*(['"]?)(.*?)\1\s*\)/gi;
+
+/** Whether every url() in a value is allowed; image-set() never is. */
+const safeValue = (v: string, ok: (u: string) => boolean) =>
+  !/image-set\(/i.test(v) && [...v.matchAll(URL_IN)].every(([, , u]) => /^data:/i.test(u) || ok(u));
+
+function scrubStyle(style: CSSStyleDeclaration, ok: (u: string) => boolean) {
+  for (const prop of [...style]) if (!safeValue(style.getPropertyValue(prop), ok)) style.removeProperty(prop);
+}
+
+/**
+ * A second pass over the parsed stylesheet. The browser has already decoded
+ * CSS escapes here, so a url() spelled with them (\75 rl(...)) shows up as
+ * the url() it is, which the text pass above can't see.
+ */
+function scrubRules(rules: CSSRuleList, ok: (u: string) => boolean = () => false) {
+  for (const rule of [...rules]) {
+    if ('style' in rule) scrubStyle((rule as CSSStyleRule).style, ok);
+    if ('cssRules' in rule) scrubRules((rule as CSSGroupingRule).cssRules, ok);
+  }
+}
+
+/** One rule, or a few, cleaned and scrubbed, as text for a document-level <style>. */
+function scrubbedText(css: string, ok?: (u: string) => boolean) {
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(css);
+  scrubRules(sheet.cssRules, ok);
+  return [...sheet.cssRules].map((r) => r.cssText).join('\n');
+}
+
 /** The design's @page rules, which only apply at document level (the print view). */
-export const pageRules = (css: string | undefined) => (designOf(css).match(PAGE_RULE) ?? []).join('\n');
+export const pageRules = (css: string | undefined) => scrubbedText(cleanCss((designOf(css).match(PAGE_RULE) ?? []).join('\n')).css);
 
 const loaded = new Set<string>();
 const pending: Promise<unknown>[] = [];
@@ -88,7 +118,7 @@ function hoist({ imports, fontFaces }: CleanCss) {
     if (loaded.has(rule)) continue;
     loaded.add(rule);
     const style = document.createElement('style');
-    style.textContent = rule;
+    style.textContent = scrubbedText(rule, (u) => FONT_FILE.test(u));
     document.head.appendChild(style);
   }
 }
@@ -119,6 +149,7 @@ export function sheetStyles(css: string | undefined): CSSStyleSheet[] {
     hoist(clean);
     sheet = new CSSStyleSheet();
     sheet.replaceSync(clean.css);
+    scrubRules(sheet.cssRules);
     sheets.set(src, sheet);
     // Typing in the design editor makes a new stylesheet per pause; keep the recent ones.
     if (sheets.size > 24) sheets.delete(sheets.keys().next().value!);
@@ -156,6 +187,7 @@ export function cleanHtml(html: string): string {
         if (!keep) child.removeAttribute(name);
         else if (name === 'style') child.setAttribute('style', cleanCss(value).css);
       }
+      if (child instanceof HTMLElement) scrubStyle(child.style, () => false);
       if (tag === 'a') {
         child.setAttribute('target', '_blank');
         child.setAttribute('rel', 'noopener noreferrer');
