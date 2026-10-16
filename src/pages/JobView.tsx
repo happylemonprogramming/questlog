@@ -145,7 +145,7 @@ export default function JobView() {
         <CompanyMark job={job} size={64} className="rounded-[20px] max-sm:hidden" />
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-medium text-muted-foreground">{job.company}</p>
-          <h1 className="mt-0.5 font-display text-[26px] font-normal leading-[1.1] tracking-[-0.01em] sm:text-[34px]">{job.title}</h1>
+          <h1 className="mt-0.5 font-display text-[26px] leading-[1.1] sm:text-[34px]">{job.title}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
             {job.location && <Fact icon={<MapPin />}>{job.location}</Fact>}
             {job.pay && <Fact icon={<Wallet />}><span className="font-mono text-[12.5px]">{job.pay}</span></Fact>}

@@ -1,7 +1,6 @@
 @import '@fontsource-variable/inter';
 @import '@fontsource-variable/jetbrains-mono';
-@import '@fontsource-variable/fraunces/opsz.css';
-@import '@fontsource-variable/fraunces/opsz-italic.css';
+@import '@fontsource/pirata-one/index.css';
 
 @tailwind base;
 @tailwind components;
@@ -9,66 +8,71 @@
 
 @layer base {
   :root {
-    /* Questlog: a quest journal. Warm paper and ink by day, ink and lamplight by night, aged gold for progress. */
-    --background: 42 38% 94%;
-    --foreground: 228 39% 13%;
-    --surface: 42 55% 97.5%;
-    --sunken: 40 30% 90%;
-    --muted: 40 26% 88%;
-    --muted-foreground: 228 14% 38%;
-    --border: 38 22% 82%;
-    --input: 38 20% 78%;
-    --ring: 42 54% 50%;
-    --primary: 228 39% 13%;
-    --primary-foreground: 42 38% 95%;
-    --accent: 40 28% 89%;
-    --accent-foreground: 228 39% 13%;
-    --gold: 42 54% 52%;
-    --gold-foreground: 228 39% 11%;
-    --gold-soft: 43 62% 86%;
-    --gold-ink: 38 62% 32%;
-    --success: 142 24% 38%;
-    --warning: 34 68% 42%;
-    --danger: 15 48% 46%;
-    --info: 205 42% 40%;
-    --violet: 252 22% 50%;
-    --shadow: 228 40% 15%;
+    /* Questlog: an adventurer's map. Aged parchment and walnut ink by day; by
+       night the same map by lamplight, deep ink with parchment text. Gold marks progress. */
+    --background: 35 22% 90%;
+    --foreground: 20 12% 15%;
+    --surface: 37 30% 93.5%;
+    --sunken: 34 22% 85%;
+    --muted: 34 18% 84%;
+    --muted-foreground: 24 10% 36%;
+    --border: 33 22% 74%;
+    --input: 33 20% 68%;
+    --ring: 36 62% 42%;
+    --primary: 15 10% 26%;
+    --primary-foreground: 37 30% 93%;
+    --accent: 34 20% 84%;
+    --accent-foreground: 20 12% 15%;
+    --gold: 37 64% 46%;
+    --gold-foreground: 20 30% 10%;
+    --gold-soft: 39 52% 78%;
+    --gold-ink: 30 72% 28%;
+    --success: 120 22% 32%;
+    --warning: 30 72% 38%;
+    --danger: 4 58% 40%;
+    --info: 218 21% 42%;
+    --violet: 270 16% 42%;
+    --shadow: 25 30% 18%;
     --radius: 0.75rem;
     /* Ambient glow behind each page, and the accent gradient for display text. */
-    --glow-a: 42 70% 60% / 0.2;
-    --glow-b: 150 25% 60% / 0.14;
-    --grad-a: 38 62% 36%;
-    --grad-b: 150 24% 34%;
+    --glow-a: 36 80% 55% / 0.16;
+    --glow-b: 20 50% 45% / 0.08;
+    --grad-a: 28 70% 30%;
+    --grad-b: 4 45% 36%;
+    /* Flecks in the paper. */
+    --fleck: 25 45% 25%;
   }
 
   .dark {
-    --background: 226 41% 9%;
-    --foreground: 40 35% 90%;
-    --surface: 226 34% 12.5%;
-    --sunken: 226 44% 6.5%;
-    --muted: 226 26% 17%;
-    --muted-foreground: 226 14% 64%;
-    --border: 226 24% 19%;
-    --input: 226 22% 25%;
-    --ring: 42 62% 60%;
-    --primary: 40 35% 90%;
-    --primary-foreground: 226 41% 9%;
-    --accent: 226 26% 17%;
-    --accent-foreground: 40 35% 90%;
-    --gold: 42 62% 60%;
-    --gold-foreground: 226 41% 9%;
-    --gold-soft: 42 30% 18%;
-    --gold-ink: 42 70% 68%;
-    --success: 142 26% 60%;
-    --warning: 36 72% 60%;
-    --danger: 15 58% 64%;
-    --info: 205 50% 66%;
-    --violet: 252 34% 72%;
-    --shadow: 228 50% 2%;
-    --glow-a: 42 70% 58% / 0.1;
-    --glow-b: 170 40% 50% / 0.1;
-    --grad-a: 42 70% 66%;
-    --grad-b: 150 30% 66%;
+    --background: 24 14% 8%;
+    --foreground: 36 30% 86%;
+    --surface: 26 14% 11.5%;
+    --sunken: 24 16% 6%;
+    --muted: 26 12% 16%;
+    --muted-foreground: 32 12% 60%;
+    --border: 28 14% 19%;
+    --input: 28 12% 25%;
+    --ring: 38 66% 58%;
+    --primary: 36 30% 86%;
+    --primary-foreground: 24 14% 8%;
+    --accent: 26 12% 16%;
+    --accent-foreground: 36 30% 86%;
+    --gold: 38 66% 56%;
+    --gold-foreground: 24 30% 7%;
+    --gold-soft: 36 32% 17%;
+    --gold-ink: 40 72% 66%;
+    --success: 110 22% 58%;
+    --warning: 34 72% 58%;
+    --danger: 6 56% 60%;
+    --info: 214 30% 66%;
+    --violet: 270 22% 70%;
+    --shadow: 20 40% 2%;
+    /* Lamplight: warm glow from above, a touch of ember. */
+    --glow-a: 38 80% 55% / 0.11;
+    --glow-b: 14 60% 45% / 0.07;
+    --grad-a: 40 72% 66%;
+    --grad-b: 20 55% 62%;
+    --fleck: 38 50% 70%;
   }
 
   * {
@@ -84,6 +88,19 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: 'cv11', 'ss01';
+    /* Parchment: a few faint flecks, the way old paper has them. */
+    background-image:
+      radial-gradient(circle at 25% 35%, hsl(var(--fleck) / 0.08) 1px, transparent 1px),
+      radial-gradient(circle at 70% 60%, hsl(var(--fleck) / 0.06) 1px, transparent 1px),
+      radial-gradient(circle at 85% 25%, hsl(var(--fleck) / 0.05) 0.5px, transparent 0.5px);
+    background-size: 120px 80px, 160px 100px, 140px 90px;
+    background-position: 0 0, 30px 20px, 60px 15px;
+  }
+
+  /* Pirata One has one weight, and needs a little air between letters. */
+  .font-display {
+    font-weight: 400;
+    letter-spacing: 0.02em;
   }
 
   ::selection {
@@ -93,6 +110,14 @@
 }
 
 @layer components {
+  /* Pictures in the world of the map: logos and art take on the paper's sepia. */
+  .sepia-art {
+    filter: sepia(0.85) hue-rotate(-10deg) saturate(1.1) brightness(0.97);
+  }
+  .dark .sepia-art {
+    filter: sepia(0.7) hue-rotate(-10deg) saturate(1.05) brightness(0.9);
+  }
+
   .eyebrow-label {
     @apply font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground;
   }

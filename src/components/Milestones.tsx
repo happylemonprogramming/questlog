@@ -71,10 +71,10 @@ export function Milestones() {
         >
           <div className="text-center">
             <p className="eyebrow-label">A new chapter</p>
-            <p className="mt-3 font-display text-[44px] font-normal leading-tight tracking-[-0.01em] sm:text-[60px]">
+            <p className="mt-3 font-display text-[44px] leading-tight sm:text-[60px]">
               Chapter {chapter.level}
             </p>
-            <p className="mt-1 font-display text-[22px] italic text-gold-ink sm:text-[26px]">The {chapter.title}</p>
+            <p className="mt-1 font-display text-[22px] text-gold-ink sm:text-[26px]">The {chapter.title}</p>
             <div className="mx-auto mt-6 h-px w-40 bg-gradient-to-r from-transparent via-gold to-transparent" />
           </div>
         </button>

@@ -113,7 +113,7 @@ function Focus({ job, resume, baseOk, opened, onMark }: { job: Job; resume?: Doc
           <CompanyMark job={job} size={56} className="rounded-2xl max-sm:hidden" />
           <div className="min-w-0 flex-1">
             <p className="text-[13.5px] font-medium text-muted-foreground">{job.company}</p>
-            <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="mt-0.5 block font-display text-[23px] font-medium leading-tight tracking-[-0.01em] hover:underline sm:text-[27px]">
+            <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="mt-0.5 block font-display text-[23px] leading-tight hover:underline sm:text-[27px]">
               {job.title}
             </Link>
             <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
@@ -168,7 +168,7 @@ function Camp({ sent, onContinue, more }: { sent: number; onContinue: () => void
     <div className="pop relative overflow-hidden rounded-[28px] border border-gold/40 bg-surface p-7 text-center shadow-glow sm:p-9">
       <div className="pointer-events-none absolute inset-x-0 -bottom-24 mx-auto size-72 rounded-full bg-[radial-gradient(closest-side,hsl(var(--gold)/0.22),transparent)]" />
       <div className="relative mx-auto mb-4 grid size-14 place-items-center rounded-2xl bg-gold-soft text-gold-ink ring-1 ring-gold/40 [&_svg]:size-6"><Tent /></div>
-      <p className="relative font-display text-[26px] font-medium tracking-[-0.01em] sm:text-[30px]">Today’s quest is done</p>
+      <p className="relative font-display text-[26px] sm:text-[30px]">Today’s quest is done</p>
       <p className="relative mx-auto mt-2 max-w-md text-[14.5px] leading-relaxed text-muted-foreground">
         You turned in {sent} application{sent === 1 ? '' : 's'} today{xp ? `, and earned ${xp} points` : ''}. Rest at camp. The road will still be here tomorrow.
       </p>
@@ -254,7 +254,7 @@ export default function Today() {
           <span className="size-1.5 rounded-full bg-gold shadow-[0_0_10px_hsl(var(--gold))]" />
           {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
         </p>
-        <h1 className="rise font-display text-[36px] font-normal leading-[1.05] tracking-[-0.015em] sm:text-[48px]" style={{ '--i': 1 } as CSSProperties}>
+        <h1 className="rise font-display text-[36px] leading-[1.05] sm:text-[48px]" style={{ '--i': 1 } as CSSProperties}>
           {greeting()},{' '}
           <span className="text-gradient">{first || 'friend'}</span>
           <span className="text-gradient">.</span>

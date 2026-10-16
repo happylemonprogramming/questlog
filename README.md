@@ -115,4 +115,4 @@ Questlog was called Offerdex. The desktop app moves its old data folder across o
 
 AGPL-3.0-or-later, the same license as Porygon.
 
-Map data: place names from [GeoNames](https://www.geonames.org/) (CC BY 4.0), country shapes from [Natural Earth](https://www.naturalearthdata.com/) (public domain) via world-atlas, US state shapes from the US Census Bureau via us-atlas. Typefaces: Fraunces, Inter and JetBrains Mono (SIL Open Font License).
+Map data: place names from [GeoNames](https://www.geonames.org/) (CC BY 4.0), country shapes from [Natural Earth](https://www.naturalearthdata.com/) (public domain) via world-atlas, US state shapes from the US Census Bureau via us-atlas. Typefaces: Pirata One, Inter and JetBrains Mono (SIL Open Font License). The parchment theme follows [Treasures](https://gitlab.com/chad.curtis/treasures)'s Adventure theme.

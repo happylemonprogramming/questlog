@@ -13,8 +13,8 @@ export default {
       fontFamily: {
         sans: ['"Inter Variable"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono Variable"', 'ui-monospace', 'monospace'],
-        // Quest titles and headings: a book face, like chapter titles in a journal.
-        display: ['"Fraunces Variable"', 'ui-serif', 'Georgia', 'serif'],
+        // Headings, the way a map labels its places.
+        display: ['"Pirata One"', 'ui-serif', 'Georgia', 'serif'],
       },
       colors: {
         border: hsl('border'),

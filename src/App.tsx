@@ -46,7 +46,7 @@ export function Mark({ className }: { className?: string }) {
     <svg viewBox="0 0 32 32" className={className} aria-hidden="true">
       <path d="M7 25.6c4.2.2 7.8-1.6 10-5.2" fill="none" stroke="hsl(var(--gold))" strokeWidth="2.2" strokeLinecap="round" strokeDasharray=".01 3.5" opacity=".7" />
       <path d="M19.5 4.8l5.8 6.9-5.8 6.9-5.8-6.9z" fill="hsl(var(--gold))" />
-      <circle cx="19.5" cy="11.7" r="2.1" fill="hsl(228 39% 13%)" />
+      <circle cx="19.5" cy="11.7" r="2.1" fill="hsl(24 17% 11.5%)" />
     </svg>
   );
 }
@@ -58,7 +58,7 @@ function Logo() {
         <Mark className="size-8" />
       </div>
       <div className="leading-none">
-        <p className="font-display text-[19px] font-medium tracking-[-0.01em]">Questlog</p>
+        <p className="font-display text-[19px]">Questlog</p>
         <p className="mt-0.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground">your job search</p>
       </div>
     </div>
@@ -80,7 +80,7 @@ function NavItem({ to, icon, label, end, standalone, match }: { to: string; icon
       )}
     >
       {icon}
-      <span className="flex-1">{label}</span>
+      <span className="flex-1 font-display text-[17.5px]">{label}</span>
     </Link>
   );
 }

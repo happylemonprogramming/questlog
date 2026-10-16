@@ -299,7 +299,7 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
                   <Sparkles className="size-6" />
                 </div>
               </div>
-              <p className="font-display text-[21px] font-medium tracking-[-0.01em]">What should we <span className="text-gradient">take on</span>?</p>
+              <p className="font-display text-[21px]">What should we <span className="text-gradient">take on</span>?</p>
               <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">
                 I’m not just a chat. I work the app for you, with the same controls you have, and each change shows up on the page as I make it.
               </p>

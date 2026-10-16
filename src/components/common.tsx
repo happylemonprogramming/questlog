@@ -21,7 +21,7 @@ export function CompanyMark({ job, size = 36, className }: { job: MarkJob; size?
   const want = domain && !missingLogos.has(domain) ? domain : undefined;
   return (
     <div
-      className={cn('relative grid shrink-0 place-items-center overflow-hidden rounded-[10px] font-semibold tracking-tight', className)}
+      className={cn('sepia-art relative grid shrink-0 place-items-center overflow-hidden rounded-[10px] font-semibold tracking-tight', className)}
       style={{
         width: size,
         height: size,
@@ -34,7 +34,7 @@ export function CompanyMark({ job, size = 36, className }: { job: MarkJob; size?
     >
       <span className="dark:brightness-150">{letters}</span>
       {want && (
-        <span className={cn('absolute inset-0 grid place-items-center bg-white ring-1 ring-inset ring-black/5 transition-opacity duration-300', shown === want ? 'opacity-100' : 'opacity-0')}>
+        <span className={cn('sepia-art absolute inset-0 grid place-items-center bg-white ring-1 ring-inset ring-black/5 transition-opacity duration-300', shown === want ? 'opacity-100' : 'opacity-0')}>
           <img
             key={want}
             src={logoUrl(want)}
@@ -106,7 +106,7 @@ export function PageHeader({ eyebrow, title, children, sub }: { eyebrow?: string
             {eyebrow}
           </p>
         )}
-        <h1 className="font-display text-[30px] font-normal leading-[1.1] tracking-[-0.01em] md:text-[38px]">{title}</h1>
+        <h1 className="font-display text-[30px] leading-[1.1] md:text-[38px]">{title}</h1>
         {sub && <p className="mt-2 text-[14.5px] text-muted-foreground">{sub}</p>}
       </div>
       {children && <div className="flex items-center gap-2">{children}</div>}
@@ -195,7 +195,7 @@ export function CardHeader({ title, icon, action, count }: { title: string; icon
     <div className="flex items-center justify-between px-6 pb-2 pt-5">
       <div className="flex items-center gap-2 [&_svg]:size-4 [&_svg]:text-muted-foreground">
         {icon}
-        <h2 className="text-[14.5px] font-semibold tracking-tight">{title}</h2>
+        <h2 className="font-display text-[19px] leading-none">{title}</h2>
         {count !== undefined && <span className="font-mono text-xs text-muted-foreground">{count}</span>}
       </div>
       {action}

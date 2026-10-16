@@ -11,7 +11,7 @@ function Chapter({ level }: { level: Level }) {
     <Card className="relative overflow-hidden p-6 sm:p-8">
       <div className="pointer-events-none absolute -right-20 -top-24 size-72 rounded-full bg-[radial-gradient(closest-side,hsl(var(--gold)/0.18),transparent)]" />
       <p className="eyebrow-label">Chapter {level.level}</p>
-      <p className="mt-1 font-display text-[34px] font-normal leading-tight tracking-[-0.01em] sm:text-[40px]">The {level.title}</p>
+      <p className="mt-1 font-display text-[34px] leading-tight sm:text-[40px]">The {level.title}</p>
       <div className="mt-5 h-2 overflow-hidden rounded-full bg-muted">
         <div className="h-full rounded-full bg-gold shadow-[0_0_12px_hsl(var(--gold)/0.6)] transition-[width] duration-700 ease-out" style={{ width: `${pct}%` }} />
       </div>
@@ -30,7 +30,7 @@ function WeeklyQuest({ sent }: { sent: number }) {
     <Card className="p-6">
       <div className="flex items-center gap-2 [&_svg]:size-4 [&_svg]:text-muted-foreground">
         <Compass />
-        <h2 className="flex-1 text-[14.5px] font-semibold tracking-tight">This week’s quest</h2>
+        <h2 className="flex-1 font-display text-[19px] leading-none">This week’s quest</h2>
         <button aria-label="Lower the goal" onClick={() => setGoal(goal - 1)} className="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><Minus className="!size-3.5" /></button>
         <button aria-label="Raise the goal" onClick={() => setGoal(goal + 1)} className="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><Plus className="!size-3.5" /></button>
       </div>
@@ -52,9 +52,9 @@ function Run({ weeks, restedLast }: { weeks: number; restedLast: boolean }) {
     <Card className="p-6">
       <div className="flex items-center gap-2 [&_svg]:size-4 [&_svg]:text-muted-foreground">
         <Tent />
-        <h2 className="text-[14.5px] font-semibold tracking-tight">On the road</h2>
+        <h2 className="font-display text-[19px] leading-none">On the road</h2>
       </div>
-      <p className="mt-3 font-display text-[30px] font-normal leading-none">
+      <p className="mt-3 font-display text-[30px] leading-none">
         {weeks} <span className="text-[16px] text-muted-foreground">week{weeks === 1 ? '' : 's'}</span>
       </p>
       <p className="mt-3 text-[13px] text-muted-foreground">

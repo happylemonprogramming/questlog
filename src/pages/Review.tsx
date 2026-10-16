@@ -85,7 +85,7 @@ export default function Review() {
       <Link to="/" className="mb-6 inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground max-lg:hidden">
         <ArrowLeft className="size-3.5" /> Today
       </Link>
-      <h1 className="font-display text-[30px] font-normal tracking-[-0.01em] sm:text-[36px]">{trim ? `Pick your top ${QUEUE_SIZE}` : 'Line up a few'}</h1>
+      <h1 className="font-display text-[30px] sm:text-[36px]">{trim ? `Pick your top ${QUEUE_SIZE}` : 'Line up a few'}</h1>
       <p className="mt-2 text-[15px] text-muted-foreground">
         {trim
           ? `You have ${total} roles in Next up. Keep the ${QUEUE_SIZE} you'd most like to send; the rest go back to Saved, nothing is lost.`
@@ -126,7 +126,7 @@ export default function Review() {
             <CompanyMark job={job} size={52} className="rounded-2xl" />
             <div className="min-w-0 flex-1">
               <p className="text-[13.5px] font-medium text-muted-foreground">{job.company}</p>
-              <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="mt-0.5 block font-display text-[22px] font-medium leading-tight tracking-[-0.01em] hover:underline">{job.title}</Link>
+              <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="mt-0.5 block font-display text-[22px] leading-tight hover:underline">{job.title}</Link>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
                 {job.location && <span className="flex items-center gap-1.5"><MapPin className="size-3.5" />{job.location}</span>}
                 {job.pay && <span className="flex items-center gap-1.5 font-mono text-[12.5px]"><Wallet className="size-3.5" />{shortPay(job.pay)}</span>}
