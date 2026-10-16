@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { CheckCircle2, Building2, Download, ExternalLink, Loader2, Palette, Plug, RefreshCw, RotateCcw, ScrollText, Sparkles, Trash2, Upload, User, Database, XCircle, FolderOpen, FolderSearch } from 'lucide-react';
+import { CheckCircle2, Download, ExternalLink, Loader2, Palette, Plug, RefreshCw, RotateCcw, ScrollText, Sparkles, Trash2, Upload, User, Database, XCircle, FolderOpen, FolderSearch } from 'lucide-react';
 import { WorkspaceSettings } from '@/components/WorkspacePanel';
 import { FolderGrants } from '@/components/FolderGrants';
 import { db, exportAll, getProfile, getSettings, uid, DEFAULT_SETTINGS } from '@/lib/db';
@@ -10,7 +10,6 @@ import { analysisPrompt } from '@/lib/analysis';
 import { DEFAULT_DESIGN_GUIDE } from '@/lib/designGuide';
 import { ask } from '@/agent/runtime';
 import { PageHeader } from '@/components/common';
-import { companyDomain, setLogos, useLogos } from '@/lib/logo';
 import { desktop, isDesktop, type Engine } from '@/lib/desktop';
 import type { EngineChoice } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -210,6 +209,9 @@ function ProfileEditor() {
         <Field label="Name"><Input value={p.name} onChange={(e) => set({ name: e.target.value })} /></Field>
         <Field label="Location"><Input value={p.location ?? ''} onChange={(e) => set({ location: e.target.value })} /></Field>
       </div>
+      <Field label="Pay floor" hint="The lowest yearly pay you'd take, as a plain number. Quests that reach it get a gold coin in the log; ones that fall short get a grey one.">
+        <Input type="number" inputMode="numeric" min={0} step={1000} value={p.payFloor ?? ''} onChange={(e) => set({ payFloor: e.target.value ? Number(e.target.value) : undefined })} placeholder="e.g. 150000" className="max-w-[220px] font-mono" />
+      </Field>
       <Field label="Search rules" hint="Pay floors, locations, seniority, travel, deal-breakers. The agent checks every listing against these.">
         <Textarea value={p.rules} onChange={(e) => set({ rules: e.target.value })} className="min-h-[180px] font-mono text-[12.5px]" placeholder={'- Pay: $150k base or more\n- Location: remote, or within 30 minutes of home\n- No director-level roles'} />
       </Field>
@@ -377,30 +379,6 @@ function EnginePicker() {
   );
 }
 
-function LogoSettings() {
-  const on = useLogos();
-  const missing = useLiveQuery(async () => new Set((await db.jobs.toArray()).filter((j) => !companyDomain(j)).map((j) => j.company.trim().toLowerCase())).size, []);
-  return (
-    <div className="space-y-4">
-      <label className="flex cursor-pointer items-start gap-3">
-        <input type="checkbox" checked={on} onChange={(e) => setLogos(e.target.checked)} className="mt-0.5 size-4 accent-[hsl(var(--gold))]" />
-        <span className="text-[14px]">
-          Show company logos
-          <span className="block text-[12.5px] text-muted-foreground">Each logo is fetched from Google’s favicon service, which sees the company’s website but nothing else. Off shows initials instead.</span>
-        </span>
-      </label>
-      {on && !!missing && (
-        <div className="flex flex-wrap items-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => ask('Find the website of every company in my listings that has none (list_jobs with noWebsite), then save them all with set_company_websites. Only include ones you are sure of.')}>
-            <Sparkles className="text-gold" /> Find the missing ones
-          </Button>
-          <span className="text-[12.5px] text-muted-foreground">{missing} {missing === 1 ? 'company has' : 'companies have'} no website yet. The agent can look them up.</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function Settings() {
   return (
     <>
@@ -414,9 +392,6 @@ export default function Settings() {
       </Section>
       <Section icon={<Palette />} title="Design guide" sub="How the agent designs your resumes and letters. It reads this before every design, so change it to change how they look.">
         <DesignGuideEditor />
-      </Section>
-      <Section icon={<Building2 />} title="Company logos" sub="Logos come from each company's own website, even when you found the job on LinkedIn or a job board.">
-        <LogoSettings />
       </Section>
       {isDesktop() && (
         <Section icon={<FolderOpen />} title="Your files" sub="Your profile, jobs and documents live in this folder as plain files, with a history of every change.">

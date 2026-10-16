@@ -7,7 +7,8 @@ import {
 import { db, logJob, now, today } from '@/lib/db';
 import { ask } from '@/agent/runtime';
 import { applicationPage, openApplication } from '@/lib/workspace';
-import { CompanyMark, Empty, Panel, STAGE_VAR, StageMark } from '@/components/common';
+import { Empty, Panel, STAGE_VAR, StageMark } from '@/components/common';
+import { Signs } from '@/components/Signs';
 import { Plate, Reward } from '@/components/game';
 import { XP } from '@/lib/quest';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,6 @@ import { Input, Textarea } from '@/components/ui/input';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { INTERVIEW_STEPS, SHOWN_STAGES, STAGE_HINT, STAGE_LABEL, STAGES, type Job, type Outcome, type Stage } from '@/lib/types';
 import { cn, timeAgo } from '@/lib/utils';
-import { companyDomain } from '@/lib/logo';
 
 const OUTCOMES: [Outcome, string][] = [
   ['in_progress', 'In progress'],
@@ -179,19 +179,16 @@ export default function JobView() {
         <div className="relative p-5 sm:p-7">
           <div className="flex flex-wrap items-center gap-2">
             <Plate className="border-gold/50 bg-gold-soft/50 text-gold-ink">Quest</Plate>
-            {job.moonshot && <Badge tone="violet"><Rocket /> Long shot{job.moonshotRank ? ` #${job.moonshotRank}` : ''}</Badge>}
             <Reward xp={sent ? XP.turnedIn : XP.turnedIn} label={sent ? 'Earned' : 'Reward'} className="ml-auto" />
           </div>
-          <div className="mt-5 flex items-start gap-5">
-            <CompanyMark job={job} size={64} className="rounded-md max-sm:hidden" />
-            <div className="min-w-0 flex-1">
-              <p className="text-[14px] font-medium text-muted-foreground">{job.company}</p>
-              <h1 className="mt-0.5 font-display text-[28px] leading-[1.08] sm:text-[36px]">{job.title}</h1>
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
-                {job.location && <Fact icon={<MapPin />}>{job.location}</Fact>}
-                {job.pay && <Fact icon={<Wallet />}><span className="font-mono text-[12.5px]">{job.pay}</span></Fact>}
-              </div>
+          <div className="mt-5 min-w-0">
+            <p className="text-[14px] font-medium text-muted-foreground">{job.company}</p>
+            <h1 className="mt-0.5 font-display text-[28px] leading-[1.08] sm:text-[36px]">{job.title}</h1>
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+              {job.location && <Fact icon={<MapPin />}>{job.location}</Fact>}
+              {job.pay && <Fact icon={<Wallet />}><span className="font-mono text-[12.5px]">{job.pay}</span></Fact>}
             </div>
+            <Signs job={job} labels className="mt-3" />
           </div>
 
           <div className="well mt-6 flex flex-wrap items-center justify-between gap-4 px-4 py-3">
@@ -317,9 +314,9 @@ export default function JobView() {
           <p className="mt-1.5 text-[12px] text-muted-foreground">Quests in the same batch are offered together at camp.</p>
           <label className="mt-4 block space-y-1.5">
             <span className="eyebrow-label">Company website</span>
-            <Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder={companyDomain({ url: job.url, portal: job.portal }) ?? 'e.g. anduril.com'} className="bg-background" />
+            <Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="e.g. anduril.com" className="bg-background" />
           </label>
-          <p className="mt-1.5 text-[12px] text-muted-foreground">Used for the logo. Leave it empty to use the posting's site when that's the company's own.</p>
+          <p className="mt-1.5 text-[12px] text-muted-foreground">The guide looks here for the company's colors and type when designing your resume.</p>
         </Fold>
 
         {(['applied', 'interviewing', 'offer', 'closed'] as Stage[]).includes(job.stage) && (

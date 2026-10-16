@@ -16,11 +16,10 @@ export function timeAgo(ms: number): string {
   return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-/** A stable, pleasant hue per company for its monogram. */
-export function hueFor(name: string): number {
-  let h = 0;
-  for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360;
-  return h;
+/** Pay text without its parenthetical, cut to fit a row. */
+export function shortPay(pay: string) {
+  const p = pay.replace(/\s*\(.*\)$/, '');
+  return p.length > 26 ? `${p.slice(0, 25)}…` : p;
 }
 
 export function slugify(s: string): string {

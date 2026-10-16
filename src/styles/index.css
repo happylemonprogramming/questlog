@@ -125,7 +125,7 @@
 }
 
 @layer components {
-  /* Pictures in the world of the map: logos and art take on the paper's sepia. */
+  /* Pictures in the world of the map: art takes on the paper's sepia. */
   .sepia-art {
     filter: sepia(0.85) hue-rotate(-10deg) saturate(1.1) brightness(0.97);
   }

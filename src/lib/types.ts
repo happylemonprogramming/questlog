@@ -42,7 +42,7 @@ export interface Job {
   /** Stable key, e.g. `greenhouse:stripe:7844214`. */
   id: string;
   company: string;
-  /** The company's own website, e.g. "anduril.com", for its logo. */
+  /** The company's own website, e.g. "anduril.com", which the agent reads when designing for it. */
   website?: string;
   title: string;
   location: string;
@@ -123,6 +123,8 @@ export interface Profile {
   email?: string;
   phone?: string;
   links?: { label: string; href: string }[];
+  /** The lowest yearly pay the user would take, in the same units as a listing's payMin and payMax. Sets the pay sign. */
+  payFloor?: number;
   /** Search rules the agent applies: pay floors, locations, seniority, travel. Markdown. */
   rules: string;
   /** Everything the user has done, in full: roles, results, projects, skills. Every resume is written from it. Markdown. */

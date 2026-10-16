@@ -1,60 +1,14 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, MapPin, Rocket, Wallet } from 'lucide-react';
+import { MapPin, Wallet } from 'lucide-react';
 import { Badge, type Tone } from '@/components/ui/badge';
 import { SHOWN_STAGES, STAGE_HINT, STAGE_LABEL, type Job, type Stage } from '@/lib/types';
 import { useSlidingHighlight } from '@/lib/motion';
-import { cn, hueFor } from '@/lib/utils';
-import { companyDomain, logoUrl, missingLogos, useLogos } from '@/lib/logo';
+import { cn, shortPay } from '@/lib/utils';
 import { QuickActions, QuickPills } from '@/components/QuickActions';
+import { Signs } from '@/components/Signs';
 
-type MarkJob = Pick<Job, 'company' | 'website' | 'url' | 'portal'>;
-
-/** The company's logo, or its initials while the logo loads and when there isn't one. */
-export function CompanyMark({ job, size = 36, className }: { job: MarkJob; size?: number; className?: string }) {
-  const name = job.company;
-  const hue = hueFor(name || '?');
-  const letters = (name || '?').replace(/\(.*?\)/g, '').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-  const logos = useLogos();
-  const domain = logos ? companyDomain(job) : undefined;
-  const [shown, setShown] = useState<string>();
-  const want = domain && !missingLogos.has(domain) ? domain : undefined;
-  return (
-    <div
-      className={cn('sepia-art relative grid shrink-0 place-items-center overflow-hidden rounded-md font-semibold tracking-tight', className)}
-      style={{
-        width: size,
-        height: size,
-        fontSize: size * 0.36,
-        background: `hsl(${hue} 70% 50% / 0.13)`,
-        color: `hsl(${hue} 55% 42%)`,
-        boxShadow: `inset 0 0 0 1px hsl(${hue} 60% 50% / 0.18)`,
-      }}
-      aria-hidden="true"
-    >
-      <span className="dark:brightness-150">{letters}</span>
-      {want && (
-        <span className={cn('sepia-art absolute inset-0 grid place-items-center bg-white ring-1 ring-inset ring-black/5 transition-opacity duration-300', shown === want ? 'opacity-100' : 'opacity-0')}>
-          <img
-            key={want}
-            src={logoUrl(want)}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            referrerPolicy="no-referrer"
-            className="size-[68%] object-contain"
-            onLoad={(e) => {
-              // A missing favicon comes back as a tiny generic globe.
-              if (e.currentTarget.naturalWidth < 32) missingLogos.add(want);
-              else setShown(want);
-            }}
-            onError={() => missingLogos.add(want)}
-          />
-        </span>
-      )}
-    </div>
-  );
-}
+export { shortPay };
 
 export const STAGE_TONE: Record<Stage, Tone> = {
   inbox: 'neutral',
@@ -152,9 +106,11 @@ export function Empty({ icon, title, children }: { icon: ReactNode; title: strin
 }
 
 /**
- * One quest as a row: the shape used by every list in the app. The whole
- * row opens the quest; the quick actions on the right move it along
- * without opening it. With `selected`, the row is the one the cursor is on.
+ * One quest as a row: the shape used by every list in the app. Its signs
+ * sit in fixed slots on the right, so a column of rows reads like a table
+ * of what matters. The whole row opens the quest; the quick actions move it
+ * along without opening it. With `selected`, the row is the one the cursor
+ * is on.
  */
 export function JobRow({ job, rank, right, compact, index, actions = true, selected, onPick }: { job: Job; rank?: ReactNode; right?: ReactNode; compact?: boolean; index?: number; actions?: boolean; selected?: boolean; onPick?: () => void }) {
   return (
@@ -168,23 +124,19 @@ export function JobRow({ job, rank, right, compact, index, actions = true, selec
       style={index !== undefined ? ({ '--i': index } as CSSProperties) : undefined}
     >
       {rank}
-      <StageMark stage={job.stage} size={12} className="max-sm:hidden" />
-      <CompanyMark job={job} size={compact ? 30 : 36} />
+      <StageMark stage={job.stage} size={compact ? 12 : 14} />
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <Link
-            to={`/jobs/${encodeURIComponent(job.id)}`}
-            onClick={(e) => {
-              if (!onPick) return;
-              e.preventDefault();
-              onPick();
-            }}
-            className="truncate text-[14.5px] font-medium leading-5 tracking-[-0.005em] outline-none after:absolute after:inset-0 after:rounded-md"
-          >
-            {job.title}
-          </Link>
-          {job.moonshot && <Rocket className="size-3.5 shrink-0 text-violet" aria-label="Long shot" />}
-        </div>
+        <Link
+          to={`/jobs/${encodeURIComponent(job.id)}`}
+          onClick={(e) => {
+            if (!onPick) return;
+            e.preventDefault();
+            onPick();
+          }}
+          className="block truncate text-[14.5px] font-medium leading-5 tracking-[-0.005em] outline-none after:absolute after:inset-0 after:rounded-md"
+        >
+          {job.title}
+        </Link>
         <div className="mt-0.5 flex min-w-0 items-center gap-x-3 text-[12.5px] text-muted-foreground">
           <span className="truncate font-medium text-foreground/75">{job.company}</span>
           {job.location && !compact && (
@@ -200,14 +152,15 @@ export function JobRow({ job, rank, right, compact, index, actions = true, selec
             </span>
           )}
         </div>
+        {compact && <Signs job={job} className="mt-1.5" />}
         {actions && !compact && <QuickPills job={job} className="relative z-[1] mt-2.5 sm:hidden" />}
       </div>
-      {!compact && job.flags?.length ? (
-        <Badge tone="warning" className="hidden lg:inline-flex" title={job.flags.join('\n')}>
-          <AlertTriangle />
-          {job.flags.length === 1 ? job.flags[0] : `${job.flags.length} flags`}
-        </Badge>
-      ) : null}
+      {!compact && (
+        <>
+          <Signs job={job} sockets className="max-sm:hidden" />
+          <Signs job={job} className="sm:hidden" />
+        </>
+      )}
       {actions && (
         <QuickActions
           job={job}
@@ -217,11 +170,6 @@ export function JobRow({ job, rank, right, compact, index, actions = true, selec
       {right ?? <span className={cn(actions && !compact && 'max-sm:hidden')}><StageBadge stage={job.stage} /></span>}
     </div>
   );
-}
-
-export function shortPay(pay: string) {
-  const p = pay.replace(/\s*\(.*\)$/, '');
-  return p.length > 26 ? `${p.slice(0, 25)}…` : p;
 }
 
 /** A framed panel: an ink line, a gap, and a fainter line outside. `hero` adds gold corners. */

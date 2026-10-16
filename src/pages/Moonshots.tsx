@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ChevronDown, ChevronUp, ExternalLink, Rocket } from 'lucide-react';
 import { db, now } from '@/lib/db';
-import { CompanyMark, Empty, Panel, StageBadge } from '@/components/common';
+import { Empty, Panel, StageBadge } from '@/components/common';
+import { Signs } from '@/components/Signs';
 import { JobsHeader } from '@/components/JobsHeader';
 import { Button } from '@/components/ui/button';
 import { roman } from '@/lib/quest';
@@ -45,11 +46,11 @@ export default function Moonshots() {
                 <Button variant="ghost" size="icon" className="size-6 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100" onClick={() => move(list, i, 1)} aria-label="Move down"><ChevronDown /></Button>
               </div>
               <Link to={`/jobs/${encodeURIComponent(j.id)}`} className="flex min-w-0 flex-1 gap-4 p-5 transition-colors hover:bg-accent/30">
-                <CompanyMark job={j} size={46} className="rounded-md max-sm:hidden" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-display text-[20px] leading-tight">{j.title}</p>
                     <StageBadge stage={j.stage} />
+                    <Signs job={j} className="ml-auto" />
                   </div>
                   <p className="mt-0.5 text-[13px] text-muted-foreground">
                     {j.company} · {j.location}{j.pay ? ` · ${j.pay}` : ''}

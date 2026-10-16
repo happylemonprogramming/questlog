@@ -21,7 +21,7 @@ import { STAGES, type Doc, type Job, type Profile } from './types';
  */
 
 const PROFILE_TEXT = { history: 'career', rules: 'rules', facts: 'facts', style: 'style', notes: 'notes' } as const;
-const ABOUT = ['name', 'headline', 'location', 'email', 'phone', 'links'] as const;
+const ABOUT = ['name', 'headline', 'location', 'email', 'phone', 'links', 'payFloor'] as const;
 const JOB_KEYS = [
   'id', 'company', 'title', 'location', 'stage', 'url', 'website', 'portal', 'pay', 'payMin', 'payMax', 'remote', 'posted', 'moonshot', 'moonshotRank',
   'batch', 'verdict', 'strengths', 'gaps', 'flags', 'appliedAt', 'outcome', 'steps', 'log',

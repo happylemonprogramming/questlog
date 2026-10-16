@@ -4,7 +4,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { AlertTriangle, ArrowLeft, Check, Clock, MapPin, ThumbsDown, ThumbsUp, Undo2, Wallet, X } from 'lucide-react';
 import { db, moveJob, now } from '@/lib/db';
 import { candidates, lineup, QUEUE_SIZE } from '@/lib/queue';
-import { CompanyMark, Panel, shortPay } from '@/components/common';
+import { Panel, shortPay } from '@/components/common';
+import { Signs } from '@/components/Signs';
 import { Speech } from '@/components/game';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -127,16 +128,14 @@ export default function Review() {
           {i + 1 < total && <div className="panel absolute inset-x-3 -bottom-2 h-10 opacity-60" aria-hidden="true" />}
           {i + 2 < total && <div className="panel absolute inset-x-6 -bottom-4 h-10 opacity-30" aria-hidden="true" />}
           <Panel hero key={job.id} className="pop relative p-6 sm:p-7">
-            <div className="flex items-start gap-4">
-              <CompanyMark job={job} size={52} className="rounded-md" />
-              <div className="min-w-0 flex-1">
-                <p className="text-[13.5px] font-medium text-muted-foreground">{job.company}</p>
-                <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="mt-0.5 block font-display text-[24px] leading-tight hover:underline">{job.title}</Link>
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
-                  {job.location && <span className="flex items-center gap-1.5"><MapPin className="size-3.5" />{job.location}</span>}
-                  {job.pay && <span className="flex items-center gap-1.5 font-mono text-[12.5px]"><Wallet className="size-3.5" />{shortPay(job.pay)}</span>}
-                </div>
+            <div className="min-w-0">
+              <p className="text-[13.5px] font-medium text-muted-foreground">{job.company}</p>
+              <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="mt-0.5 block font-display text-[24px] leading-tight hover:underline">{job.title}</Link>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
+                {job.location && <span className="flex items-center gap-1.5"><MapPin className="size-3.5" />{job.location}</span>}
+                {job.pay && <span className="flex items-center gap-1.5 font-mono text-[12.5px]"><Wallet className="size-3.5" />{shortPay(job.pay)}</span>}
               </div>
+              <Signs job={job} labels className="mt-3" />
             </div>
             {job.verdict && <p className="mt-5 text-[14.5px] leading-relaxed">{job.verdict}</p>}
             {(job.strengths?.length || job.gaps?.length) ? (

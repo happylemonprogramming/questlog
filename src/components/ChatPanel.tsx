@@ -28,7 +28,6 @@ function describe(name: string, args: Record<string, unknown>): string {
     case 'get_job': return 'Opened a quest';
     case 'save_job': return `Saved ${[a('company'), a('title')].filter(Boolean).join(': ') || 'a quest'}${a('stage') ? ` → ${a('stage')}` : ''}`;
     case 'log_job': return 'Added a note';
-    case 'set_company_websites': return 'Found company logos';
     case 'delete_job': return 'Deleted a quest';
     case 'search_board': return `Searched ${a('board')} on ${a('ats')}`;
     case 'read_posting': return 'Read a posting';

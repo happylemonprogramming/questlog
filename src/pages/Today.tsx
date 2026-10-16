@@ -5,7 +5,8 @@ import { ArrowRight, ArrowUpRight, BookOpen, ClipboardPen, FileText, Layers, Map
 import { useDailyGoal, useJourney, XP } from '@/lib/quest';
 import { Markdown } from '@/components/Markdown';
 import { db, getProfile, moveJob, today } from '@/lib/db';
-import { CompanyMark, JobRow, Panel, PanelHeader, shortPay, StageMark } from '@/components/common';
+import { JobRow, Panel, PanelHeader, shortPay, StageMark } from '@/components/common';
+import { Signs } from '@/components/Signs';
 import { Campfire, Hearts, Objective, Plate, Reward, Speech } from '@/components/game';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -68,18 +69,16 @@ function ActiveQuest({ job, resume, baseOk, opened, onMark }: { job: Job; resume
           <span className="flex items-center gap-1.5 text-[12px] text-muted-foreground"><StageMark stage="next" size={11} /> {STAGE_LABEL.next}</span>
           <Reward xp={XP.turnedIn} className="ml-auto" />
         </div>
-        <div className="mt-5 flex items-start gap-4">
-          <CompanyMark job={job} size={56} className="rounded-md max-sm:hidden" />
-          <div className="min-w-0 flex-1">
-            <p className="text-[13.5px] font-medium text-muted-foreground">{job.company}</p>
-            <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="mt-0.5 block font-display text-[26px] leading-tight hover:underline sm:text-[30px]">
-              {job.title}
-            </Link>
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
-              {job.location && <span className="flex items-center gap-1.5"><MapPin className="size-3.5" />{job.location}</span>}
-              {job.pay && !/^not listed/i.test(job.pay) && <span className="flex items-center gap-1.5 font-mono text-[12.5px]"><Wallet className="size-3.5" />{shortPay(job.pay)}</span>}
-            </div>
+        <div className="mt-5 min-w-0">
+          <p className="text-[13.5px] font-medium text-muted-foreground">{job.company}</p>
+          <Link to={`/jobs/${encodeURIComponent(job.id)}`} className="mt-0.5 block font-display text-[26px] leading-tight hover:underline sm:text-[30px]">
+            {job.title}
+          </Link>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
+            {job.location && <span className="flex items-center gap-1.5"><MapPin className="size-3.5" />{job.location}</span>}
+            {job.pay && !/^not listed/i.test(job.pay) && <span className="flex items-center gap-1.5 font-mono text-[12.5px]"><Wallet className="size-3.5" />{shortPay(job.pay)}</span>}
           </div>
+          <Signs job={job} labels className="mt-3" />
         </div>
 
         <p className="eyebrow-label mt-6 px-3">Objectives</p>
