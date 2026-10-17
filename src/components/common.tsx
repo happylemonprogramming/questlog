@@ -1,4 +1,5 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { memo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useMedia } from '@/lib/useMedia';
 import { Link } from 'react-router-dom';
 import { MapPin, Wallet } from 'lucide-react';
 import { Badge, type Tone } from '@/components/ui/badge';
@@ -112,16 +113,36 @@ export function Empty({ icon, title, children }: { icon: ReactNode; title: strin
  * along without opening it. With `selected`, the row is the one the cursor
  * is on.
  */
-export function JobRow({ job, rank, right, compact, index, actions = true, selected, onPick }: { job: Job; rank?: ReactNode; right?: ReactNode; compact?: boolean; index?: number; actions?: boolean; selected?: boolean; onPick?: () => void }) {
+export const JobRow = memo(JobRowInner, (a, b) => {
+  // Every database change hands back new job objects; a row only redraws when its own job changed.
+  for (const k of Object.keys({ ...a, ...b }) as (keyof JobRowProps)[]) {
+    if (k === 'job' ? a.job.id !== b.job.id || a.job.updatedAt !== b.job.updatedAt : k !== 'onPick' && a[k] !== b[k]) return false;
+  }
+  return true;
+});
+
+interface JobRowProps { job: Job; rank?: ReactNode; right?: ReactNode; compact?: boolean; index?: number; actions?: boolean; selected?: boolean; onPick?: () => void }
+
+function JobRowInner({ job, rank, right, compact, index, actions = true, selected, onPick }: JobRowProps) {
+  const phone = useMedia('(max-width: 639px)');
+  const touch = useMedia('(hover: none)');
+  // The quick actions only appear on hover or focus, so they're only built then.
+  const [hot, setHot] = useState(false);
+  const onPickRef = useRef(onPick);
+  onPickRef.current = onPick;
   return (
     <div
       className={cn(
         'cursor group relative flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors duration-200 max-sm:items-start',
+        // Rows scrolled out of view skip layout and painting.
+        '[contain-intrinsic-size:auto_62px] [content-visibility:auto]',
         selected ? 'bg-gold-soft/45' : 'hover:bg-accent/60',
         index !== undefined && 'rise',
       )}
       data-selected={selected || undefined}
       style={index !== undefined ? ({ '--i': index } as CSSProperties) : undefined}
+      onPointerEnter={hot ? undefined : () => setHot(true)}
+      onFocus={hot ? undefined : () => setHot(true)}
     >
       {rank}
       <StageMark stage={job.stage} size={compact ? 12 : 14} />
@@ -129,9 +150,9 @@ export function JobRow({ job, rank, right, compact, index, actions = true, selec
         <Link
           to={`/jobs/${encodeURIComponent(job.id)}`}
           onClick={(e) => {
-            if (!onPick) return;
+            if (!onPickRef.current) return;
             e.preventDefault();
-            onPick();
+            onPickRef.current();
           }}
           className="block truncate text-[14.5px] font-medium leading-5 tracking-[-0.005em] outline-none after:absolute after:inset-0 after:rounded-md"
         >
@@ -153,18 +174,13 @@ export function JobRow({ job, rank, right, compact, index, actions = true, selec
           )}
         </div>
         {compact && <Signs job={job} className="mt-1.5" />}
-        {actions && !compact && <QuickPills job={job} className="relative z-[1] mt-2.5 sm:hidden" />}
+        {actions && !compact && phone && <QuickPills job={job} className="relative z-[1] mt-2.5" />}
       </div>
-      {!compact && (
-        <>
-          <Signs job={job} sockets className="max-sm:hidden" />
-          <Signs job={job} className="sm:hidden" />
-        </>
-      )}
-      {actions && (
+      {!compact && <Signs job={job} sockets />}
+      {actions && (compact || !phone) && (hot || touch) && (
         <QuickActions
           job={job}
-          className={cn('relative z-[1] opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100', !compact && 'max-sm:hidden')}
+          className="relative z-[1] opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
         />
       )}
       {right ?? <span className={cn(actions && !compact && 'max-sm:hidden')}><StageBadge stage={job.stage} /></span>}

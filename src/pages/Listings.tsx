@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ScrollText, Search, X } from 'lucide-react';
 import { db } from '@/lib/db';
@@ -11,6 +11,21 @@ import { hasSign, matchesSigns, SIGNS, useSignContext, type SignId } from '@/lib
 import { SHOWN_STAGES, shownStage } from '@/lib/types';
 
 const select = 'h-10 rounded-md border border-frame/35 bg-surface px-3 text-[13.5px] transition hover:border-frame/70';
+
+const PAGE = 40;
+
+/** Asks for more rows when it comes within a screen of view, so a long list scrolls on without a button. */
+function MoreRows({ onMore }: { onMore: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const more = useRef(onMore);
+  more.current = onMore;
+  useEffect(() => {
+    const io = new IntersectionObserver((e) => e[0]?.isIntersecting && more.current(), { rootMargin: '0px 0px 100% 0px' });
+    if (ref.current) io.observe(ref.current);
+    return () => io.disconnect();
+  }, []);
+  return <div ref={ref} className="h-10" aria-hidden="true" />;
+}
 
 /** The log: every quest, in one list. Search it, narrow it by stage, batch or sign, and sort it. */
 export default function Listings() {
@@ -25,14 +40,17 @@ export default function Listings() {
   const batches = useMemo(() => [...new Set(jobs.map((j) => j.batch).filter(Boolean))] as string[], [jobs]);
   const counts = useMemo(() => Object.fromEntries(SHOWN_STAGES.map((s) => [s, jobs.filter((j) => shownStage(j.stage) === s).length])), [jobs]);
 
+  // The box shows each key at once; the list catches up a moment later.
+  const query = useDeferredValue(q);
+
   // Everything but the sign filters, so each sign chip can say how many it would leave.
   const pool = useMemo(() => {
-    const needle = q.toLowerCase();
+    const needle = query.toLowerCase();
     return jobs
       .filter((j) => (stage === 'all' ? j.stage !== 'closed' : shownStage(j.stage) === stage))
       .filter((j) => !batch || j.batch === batch)
       .filter((j) => !needle || `${j.company} ${j.title} ${j.location} ${j.batch ?? ''}`.toLowerCase().includes(needle));
-  }, [jobs, q, stage, batch]);
+  }, [jobs, query, stage, batch]);
 
   const signCounts = useMemo(() => {
     const out: Partial<Record<SignId, number>> = {};
@@ -55,6 +73,15 @@ export default function Listings() {
         ),
     [pool, signs, ctx, sort],
   );
+
+  // Only the rows near the screen are built; more are added as you scroll to them.
+  const [limit, setLimit] = useState(PAGE);
+  const filters = `${query}|${stage}|${batch}|${[...signs].join()}|${sort}`;
+  const [lastFilters, setLastFilters] = useState(filters);
+  if (filters !== lastFilters) {
+    setLastFilters(filters);
+    setLimit(PAGE);
+  }
 
   const narrowed = !!q || stage !== 'all' || !!batch || signs.size > 0;
   const clear = () => {
@@ -106,8 +133,9 @@ export default function Listings() {
             )}
           </div>
           <div className="divide-y divide-frame/15">
-            {shown.map((j, i) => <JobRow key={j.id} job={j} index={i < 16 ? i : undefined} />)}
+            {shown.slice(0, limit).map((j, i) => <JobRow key={j.id} job={j} index={i < 16 ? i : undefined} />)}
           </div>
+          {shown.length > limit && <MoreRows onMore={() => setLimit((l) => l + PAGE)} />}
         </Panel>
       ) : (
         <Empty icon={<ScrollText />} title={jobs.length ? 'No quests match' : 'The log is empty'}>

@@ -47,7 +47,8 @@ export function Signs({ job, sockets, labels, className }: { job: Job; sockets?:
       {ids.map((id) => {
         const s = signs[id];
         if (!s) {
-          return <span key={id} title={SIGN_NONE[id]} className="size-[18px] shrink-0 rounded-[4px] ring-1 ring-inset ring-frame/20" />;
+          // On a phone there's no column to line up, so empty slots go.
+          return <span key={id} title={SIGN_NONE[id]} className="size-[18px] shrink-0 rounded-[4px] ring-1 ring-inset ring-frame/20 max-sm:hidden" />;
         }
         const I = iconFor(s);
         return labels ? (

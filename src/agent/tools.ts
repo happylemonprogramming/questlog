@@ -8,9 +8,11 @@ import { measureSheet } from '@/lib/measure';
 import { letterSchema, resumeSchema } from '@/lib/sheetSchema';
 import { cleanCss, designOf, inheritedDesign, MARKUP_GUIDE } from '@/lib/design';
 import { getDesignGuide } from '@/lib/designGuide';
+import { namesIn } from '@/lib/images';
 import { desktop, type ToolImage } from '@/lib/desktop';
 import { readiness } from '@/lib/turnIn';
 import { formTools } from './formTools';
+import { imageTools } from './imageTools';
 import { localTools } from './localTools';
 
 const json = (v: unknown) => JSON.stringify(v, null, 1);
@@ -477,6 +479,7 @@ function makeTools(host: ToolHost): Record<string, Tool> {
       },
     }),
 
+    ...imageTools(host),
     ...formTools(),
     ...localTools(),
   };
@@ -501,7 +504,7 @@ async function saveDoc<T>(kind: Doc['kind'], d: { id?: string; title: string; jo
   await db.docs.put(doc);
   const fit = kind === 'answer' ? '' : ` ${await measureSheet(doc)}`;
   if (!prev) host.navigate(`/documents/${id}`);
-  return `${prev ? 'Updated' : 'Created'} ${kind} "${d.title}" (id ${id}).${fit}`;
+  return `${prev ? 'Updated' : 'Created'} ${kind} "${d.title}" (id ${id}).${fit}${kind === 'answer' ? '' : await missingImages(JSON.stringify(d.data))}`;
 }
 
 /** A resume or letter, or why it can't have a design. */
@@ -516,7 +519,16 @@ async function saveDesign(d: Doc, css: string, host: ToolHost) {
   const custom = css.trim() && css !== designOf(undefined) ? css : undefined;
   await db.docs.update(d.id, { css: custom, updatedAt: now() });
   host.navigate(`/documents/${d.id}`);
-  const { blocked } = cleanCss(custom ?? '');
-  const note = blocked.length ? ` These URLs were blocked; only data: URLs and Google Fonts load: ${blocked.join(', ')}.` : '';
-  return `${custom ? 'Design saved' : 'Restored the default design'} for "${d.title}". ${await measureSheet({ ...d, css: custom })}${note}`;
+  const blocked = cleanCss(custom ?? '').blocked.filter((u) => !/^image:/i.test(u));
+  const note = blocked.length ? ` These URLs were blocked; only image-library names (url("image:name")), data: URLs and Google Fonts load: ${blocked.join(', ')}.` : '';
+  return `${custom ? 'Design saved' : 'Restored the default design'} for "${d.title}". ${await measureSheet({ ...d, css: custom })}${note}${await missingImages(custom)}`;
+}
+
+/** A warning for image names a design or markup uses that aren't in the library. */
+export async function missingImages(text: string | undefined) {
+  const names = namesIn(text);
+  if (!names.length) return '';
+  const have = new Set(await db.images.where('name').anyOf(names).primaryKeys());
+  const missing = names.filter((n) => !have.has(n));
+  return missing.length ? ` Not in the image library, so not shown: ${missing.map((n) => `image:${n}`).join(', ')}. Add them with add_image, or check the names with list_images.` : '';
 }

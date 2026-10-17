@@ -90,9 +90,11 @@ export interface WorkspaceInfo {
   history: boolean;
 }
 
+/** A text file, or with `base64`, an image in images/. */
 export interface WsFile {
   path: string;
-  text: string;
+  text?: string;
+  base64?: string;
 }
 
 export interface Snapshot {
@@ -194,6 +196,8 @@ export interface DesktopBridge {
   };
   /** A website's look: screenshots (base64) plus the colors and fonts it uses. */
   viewSite(url: string): Promise<SiteLook>;
+  /** A picture from the web, fetched outside the page's cross-origin rules. */
+  fetchImage(url: string): Promise<{ type: string; base64: string; url: string }>;
   /** Folders on this computer the user lets the agent read (desktop/src/local.ts). */
   local: {
     /** Opens a folder picker; null when the user cancels. */
@@ -202,6 +206,7 @@ export interface DesktopBridge {
     revoke(folder: string): Promise<string[]>;
     list(path?: string, depth?: number): Promise<LocalListing[]>;
     read(path: string, offset?: number, limit?: number): Promise<LocalRead>;
+    readImage(path: string): Promise<{ name: string; type: string; base64: string }>;
     search(query: string, path?: string): Promise<{ query: string; results: LocalHit[]; scanned: number; truncated: boolean }>;
     git(path?: string, opts?: { emails?: string[] }): Promise<GitHistory>;
   };

@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 const plain = (s: string) => s.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/\*\*?([^*]+)\*\*?/g, '$1');
 
 /** A cover letter as text for a form's cover letter box. */
-export function letterText(l: LetterData): string {
+function letterText(l: LetterData): string {
   return [
     l.salutation,
     l.opening,

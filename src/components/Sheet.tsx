@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { LetterData, ResumeData, Section, SheetHeader } from '@/lib/sheet';
 import type { Doc } from '@/lib/types';
 import { cleanHtml, sheetStyles } from '@/lib/design';
+import { resolveCss, resolveHtml, useImagesVersion } from '@/lib/images';
 import { parseLinks } from '@/lib/utils';
 
 const ext = { target: '_blank', rel: 'noopener noreferrer' } as const;
@@ -47,9 +48,10 @@ function Frame({ children, className, css }: { children: ReactNode; className?: 
     const el = host.current!;
     setRoot(el.shadowRoot ?? el.attachShadow({ mode: 'open' }));
   }, []);
+  const images = useImagesVersion();
   useLayoutEffect(() => {
-    if (root) root.adoptedStyleSheets = sheetStyles(css);
-  }, [root, css]);
+    if (root) root.adoptedStyleSheets = sheetStyles(resolveCss(css));
+  }, [root, css, images]);
   return (
     <div ref={host}>
       {root &&
@@ -183,7 +185,8 @@ function SectionBody({ s }: { s: Section }) {
 }
 
 function HtmlBlock({ html }: { html: string }) {
-  const clean = useMemo(() => cleanHtml(html ?? ''), [html]);
+  const images = useImagesVersion();
+  const clean = useMemo(() => cleanHtml(resolveHtml(html) ?? ''), [html, images]);
   return <div className="html-block" dangerouslySetInnerHTML={{ __html: clean }} />;
 }
 

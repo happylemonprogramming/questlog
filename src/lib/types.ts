@@ -136,6 +136,22 @@ export interface Doc<T = unknown> {
   updatedAt: number;
 }
 
+/**
+ * A picture in the image library: a company's logo, a headshot. Documents use
+ * it by name, `image:<name>`, and it's put inline when the page is drawn, so
+ * a page never loads anything from elsewhere. Kept as images/<name>.<ext>.
+ */
+export interface ImageAsset {
+  /** Lowercase letters, digits and dashes: "arthrex-logo". */
+  name: string;
+  /** image/png, image/jpeg, image/webp, image/gif or image/svg+xml. */
+  type: string;
+  base64: string;
+  /** The picture as it first came in, kept once it's been edited so edits can be undone. */
+  original?: { type: string; base64: string };
+  updatedAt: number;
+}
+
 export interface AnswerData {
   /** The question on the application form, if any. */
   prompt?: string;

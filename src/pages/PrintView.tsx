@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { DocSheet } from '@/components/Sheet';
 import { fontsReady, pageRules } from '@/lib/design';
+import { imagesReady } from '@/lib/images';
 import type { ResumeData } from '@/lib/sheet';
 
 /**
@@ -34,7 +35,8 @@ export default function PrintView() {
     page.textContent = pageRules(doc.css);
     document.head.appendChild(page);
     let cancelled = false;
-    void fontsReady().then(() => setTimeout(() => {
+    // Wait for the fonts and the image library, then a moment for pictures to decode.
+    void Promise.all([fontsReady(), imagesReady()]).then(() => setTimeout(() => {
       if (cancelled) return;
       if (pdf) flag.__printReady = true;
       else window.print();

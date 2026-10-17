@@ -16,14 +16,21 @@ import { log } from './log';
 
 /** Files the app reads back. Anything else in the folder (PDFs, your own notes) is left alone. */
 const TEXT = /\.(md|json|css)$/i;
+/** Pictures in the image library, kept as real image files and passed as base64. */
+const IMAGE = /^images\/(originals\/)?[^/]+\.(png|jpe?g|webp|gif|svg)$/i;
+const IMAGE_EXT = /\.(png|jpe?g|webp|gif|svg)$/i;
 const MAX_FILE = 4 * 1024 * 1024;
+const MAX_IMAGE = 10 * 1024 * 1024;
 
+/** A text file, or with `base64`, an image. */
 export interface WsFile {
   path: string;
-  text: string;
+  text?: string;
+  base64?: string;
 }
 
 const posix = (p: string) => p.split(path.sep).join('/');
+const isImage = (rel: string) => IMAGE.test(rel);
 
 export class Workspace {
   root: string | null = null;
@@ -97,9 +104,13 @@ export class Workspace {
         const abs = path.join(dir, e.name);
         // Links could point anywhere; the workspace is only what's really in it.
         if (e.isDirectory() && depth < 4) await walk(abs, depth + 1);
-        else if (e.isFile() && TEXT.test(e.name)) {
-          const s = await stat(abs);
-          if (s.size <= MAX_FILE) out.push({ path: posix(path.relative(this.root!, abs)), text: await readFile(abs, 'utf8') });
+        else if (e.isFile()) {
+          const rel = posix(path.relative(this.root!, abs));
+          if (isImage(rel)) {
+            if ((await stat(abs)).size <= MAX_IMAGE) out.push({ path: rel, base64: (await readFile(abs)).toString('base64') });
+          } else if (TEXT.test(e.name) && (await stat(abs)).size <= MAX_FILE) {
+            out.push({ path: rel, text: await readFile(abs, 'utf8') });
+          }
         }
       }
     };
@@ -107,20 +118,23 @@ export class Workspace {
     return out;
   }
 
-  /** Some files' text, or null for those that are gone. */
+  /** Some files' text (an image's base64), or null for those that are gone. */
   async read(paths: string[]): Promise<{ path: string; text: string | null }[]> {
-    return Promise.all(paths.map(async (p) => ({ path: p, text: await readFile(this.resolve(p), 'utf8').catch(() => null) })));
+    return Promise.all(paths.map(async (p) => ({ path: p, text: await readFile(this.resolve(p), isImage(posix(p)) ? 'base64' : 'utf8').catch(() => null) })));
   }
 
   async write(files: WsFile[], message: string) {
     let n = 0;
     for (const f of files) {
       const abs = this.resolve(f.path);
-      const prev = await readFile(abs, 'utf8').catch(() => null);
-      if (prev === f.text) continue;
+      const image = f.base64 !== undefined;
+      if (image && !isImage(posix(f.path))) throw new Error(`${f.path}: images go in images/.`);
+      const content = image ? f.base64! : f.text ?? '';
+      const prev = await readFile(abs, image ? 'base64' : 'utf8').catch(() => null);
+      if (prev === content) continue;
       await mkdir(path.dirname(abs), { recursive: true });
-      this.wrote.set(posix(f.path), f.text);
-      await writeFile(abs, f.text);
+      this.wrote.set(posix(f.path), content);
+      await writeFile(abs, image ? Buffer.from(content, 'base64') : content);
       n++;
     }
     if (n) this.history.schedule(message);
@@ -144,7 +158,7 @@ export class Workspace {
       const left = await readdir(dir).catch(() => null);
       if (!left) continue;
       if (!left.length) await rmdir(dir).catch(() => {});
-      else if (!left.some((n) => TEXT.test(n))) await shell.trashItem(dir).catch(() => {});
+      else if (!left.some((n) => TEXT.test(n) || IMAGE_EXT.test(n) || n === 'originals')) await shell.trashItem(dir).catch(() => {});
     }
     this.history.schedule(message);
   }
@@ -155,7 +169,7 @@ export class Workspace {
       this.watcher = watch(this.root!, { recursive: true }, (_e, name) => {
         if (!name) return;
         const rel = posix(String(name));
-        if (rel.split('/').some((s) => s.startsWith('.')) || !TEXT.test(rel)) return;
+        if (rel.split('/').some((s) => s.startsWith('.')) || !(TEXT.test(rel) || isImage(rel))) return;
         this.changed.add(rel);
         if (this.timer) clearTimeout(this.timer);
         this.timer = setTimeout(() => void this.flushChanges(), 400);
@@ -193,6 +207,8 @@ work, and picks up changes you make here yourself.
   the .json and .css files its resume and cover letter, and application.json the
   application form's answers, once they're ready for you to review and send.
 - documents/: resumes, letters and answers not tied to one job.
+- images/: logos and pictures your documents use, by name. originals/ keeps each
+  one as it was before it was edited.
 
 PDFs are made again whenever they're needed, so deleting them is safe.
 Questlog keeps a history of every change; see Settings > Your files.

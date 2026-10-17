@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "geo": "node scripts/geo.mjs",
     "desktop": "npm --prefix desktop run dev",
+    "app": "npm --prefix desktop run dev -- --fast",
     "desktop:dist": "npm --prefix desktop run dist"
   },
   "dependencies": {

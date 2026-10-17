@@ -61,7 +61,24 @@ const payListed = (job: Job) => !!(job.payMax ?? job.payMin) || (!!job.pay && !/
 /** The name of the pay filter depends on whether a floor is set. */
 export const payFilterName = (ctx: SignContext) => (ctx.floor ? 'Meets your floor' : SIGN_NAME.pay);
 
+// Lists ask for the same job's signs many times over (every row, every filter count); work each out once.
+let cachedFor: SignContext | null = null;
+let cache = new WeakMap<Job, Partial<Record<SignId, Sign>>>();
+
 export function signsOf(job: Job, ctx: SignContext): Partial<Record<SignId, Sign>> {
+  if (ctx !== cachedFor) {
+    cachedFor = ctx;
+    cache = new WeakMap();
+  }
+  let out = cache.get(job);
+  if (!out) {
+    out = computeSigns(job, ctx);
+    cache.set(job, out);
+  }
+  return out;
+}
+
+function computeSigns(job: Job, ctx: SignContext): Partial<Record<SignId, Sign>> {
   const out: Partial<Record<SignId, Sign>> = {};
 
   const hybrid = /\bhybrid\b/i.test(job.location);

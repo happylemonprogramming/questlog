@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
-import { STAGE_LABEL, type Chat, type Doc, type Job, type Profile, type Settings, type SourceFile, type Stage } from './types';
+import { STAGE_LABEL, type Chat, type Doc, type ImageAsset, type Job, type Profile, type Settings, type SourceFile, type Stage } from './types';
 
 /** Everything lives in this one IndexedDB database, on this device only. */
 // Named for the app's first name, Offerdex, so existing data carries over.
@@ -10,6 +10,7 @@ export const db = new Dexie('offerdex') as Dexie & {
   profile: EntityTable<Profile, 'id'>;
   settings: EntityTable<Settings, 'id'>;
   files: EntityTable<SourceFile, 'id'>;
+  images: EntityTable<ImageAsset, 'name'>;
 };
 
 db.version(1).stores({
@@ -22,6 +23,10 @@ db.version(1).stores({
 
 db.version(2).stores({
   files: 'id, bundle, path',
+});
+
+db.version(3).stores({
+  images: 'name, updatedAt',
 });
 
 export const uid = () => crypto.randomUUID().slice(0, 8);
@@ -97,6 +102,7 @@ export async function exportAll() {
     chats: await db.chats.toArray(),
     profile: await db.profile.toArray(),
     files: await db.files.toArray(),
+    images: await db.images.toArray(),
     settings: (await db.settings.toArray()).map((s) => ({
       ...s,
       providers: s.providers.map(({ apiKey: _key, ...p }) => p),

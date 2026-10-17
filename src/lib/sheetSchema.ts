@@ -48,7 +48,7 @@ const section = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('html'),
     ...base,
-    html: str.describe('Markup for anything the other kinds cannot express. Inert: no scripts, forms or embeds; images must be data: URLs.'),
+    html: str.describe('Markup for anything the other kinds cannot express. Inert: no scripts, forms or embeds; for pictures use the image library: <img src="image:arthrex-logo" alt="Arthrex">.'),
   }),
 ]);
 

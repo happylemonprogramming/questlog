@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { ChatMessage } from '@porygon/core';
@@ -48,6 +48,12 @@ function describe(name: string, args: Record<string, unknown>): string {
     case 'attach_document': return 'Attached a document';
     case 'click_form': return 'Clicked on the form';
     case 'save_application': return 'Saved the application for you to review';
+    case 'add_image': return `Added image ${a('name') || ''}`.trim();
+    case 'edit_image': return `Edited image ${a('name')}`;
+    case 'reset_image': return `Reset image ${a('name')}`;
+    case 'view_image': return `Looked at image ${a('name')}`;
+    case 'list_images': return 'Looked through the image library';
+    case 'delete_image': return `Deleted image ${a('name')}`;
     case 'read_page': return 'Read the page';
     case 'list_folder': return `Looked in ${a('path') || 'a folder'}`;
     case 'read_file': return `Read ${a('path') || 'a file'}`;
@@ -112,37 +118,101 @@ function Said({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Transcript({ messages }: { messages: ChatMessage[] }) {
+/** One message. Saved messages come back from the database as new objects, so it compares what they say, not which object they are. */
+const Message = memo(
+  function Message({ m, results }: { m: ChatMessage; results: (ChatMessage | undefined)[] }) {
+    if (m.role === 'user') {
+      return (
+        <div className="flex justify-end">
+          <div className="max-w-[85%] whitespace-pre-wrap rounded-md border border-frame/35 bg-sunken/70 px-3.5 py-2 text-[13.5px] leading-relaxed">
+            {m.content}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <Said>
+        <div className="space-y-1.5">
+          {m.content.trim() && <Markdown text={m.content} />}
+          {m.toolCalls?.length ? (
+            <div className="space-y-0.5">
+              {m.toolCalls.map((c, i) => <ToolLine key={c.id} name={c.name} args={parseArgs(c.arguments)} result={results[i]} />)}
+            </div>
+          ) : null}
+        </div>
+      </Said>
+    );
+  },
+  (a, b) =>
+    a.m.role === b.m.role &&
+    a.m.content === b.m.content &&
+    (a.m.toolCalls ?? []).map((c) => c.id + c.name + c.arguments).join() === (b.m.toolCalls ?? []).map((c) => c.id + c.name + c.arguments).join() &&
+    a.results.length === b.results.length &&
+    a.results.every((r, i) => r?.content === b.results[i]?.content),
+);
+
+/** How many messages a conversation shows at first. Long ones keep the rest a press away. */
+const RECENT = 40;
+
+const Transcript = memo(function Transcript({ messages }: { messages: ChatMessage[] }) {
+  const [limit, setLimit] = useState(RECENT);
   const results = useMemo(() => new Map(messages.filter((m) => m.role === 'tool').map((m) => [m.toolCallId, m])), [messages]);
+  const shown = messages.map((m, i) => [m, i] as const).filter(([m]) => m.role === 'user' || m.role === 'assistant');
+  const start = Math.max(0, shown.length - limit);
   return (
     <>
-      {messages.map((m, i) => {
-        if (m.role === 'user') {
-          return (
-            <div key={i} className="flex justify-end">
-              <div className="max-w-[85%] whitespace-pre-wrap rounded-md border border-frame/35 bg-sunken/70 px-3.5 py-2 text-[13.5px] leading-relaxed">
-                {m.content}
-              </div>
-            </div>
-          );
-        }
-        if (m.role === 'assistant') {
-          return (
-            <Said key={i}>
-              <div className="space-y-1.5">
-                {m.content.trim() && <Markdown text={m.content} />}
-                {m.toolCalls?.length ? (
-                  <div className="space-y-0.5">
-                    {m.toolCalls.map((c) => <ToolLine key={c.id} name={c.name} args={parseArgs(c.arguments)} result={results.get(c.id)} />)}
-                  </div>
-                ) : null}
-              </div>
-            </Said>
-          );
-        }
-        return null;
-      })}
+      {start > 0 && (
+        <button onClick={() => setLimit((l) => l + RECENT * 2)} className="mx-auto block rounded-md px-3 py-1.5 text-[12.5px] font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground">
+          Show earlier ({start})
+        </button>
+      )}
+      {shown.slice(start).map(([m, i]) => (
+        <Message key={i} m={m} results={(m.toolCalls ?? []).map((c) => results.get(c.id))} />
+      ))}
     </>
+  );
+});
+
+/**
+ * The box you type in. It keeps its own text, so typing redraws only the
+ * box and never the conversation above it.
+ */
+function Composer({ inputRef, mobile, running, onSend, header, footer }: { inputRef: React.RefObject<HTMLTextAreaElement>; mobile?: boolean; running: boolean; onSend: (text: string) => boolean; header?: React.ReactNode; footer: React.ReactNode }) {
+  const [draft, setDraft] = useState('');
+  const send = () => {
+    if (onSend(draft)) setDraft('');
+  };
+  return (
+    <div className="panel bg-background transition-[border-color,box-shadow] duration-300 focus-within:border-gold/60 focus-within:shadow-[0_0_0_4px_hsl(var(--gold)/0.12),0_10px_30px_-12px_hsl(var(--gold)/0.4)]">
+      {header}
+      <textarea
+        ref={inputRef}
+        value={draft}
+        rows={1}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !mobile) {
+            e.preventDefault();
+            send();
+          }
+        }}
+        enterKeyHint={mobile ? 'enter' : 'send'}
+        placeholder="Tell me what to do, or paste a posting link…"
+        className="block max-h-48 min-h-[44px] w-full resize-none bg-transparent px-3.5 py-3 text-[13.5px] leading-relaxed max-lg:text-[16px] placeholder:text-muted-foreground/70 focus:outline-none [field-sizing:content]"
+      />
+      <div className="flex items-center justify-between px-2 pb-2">
+        <div className="flex min-w-0 items-center gap-0.5">{footer}</div>
+        {running ? (
+          <Button size="icon" variant="primary" onClick={stop} className="max-lg:size-10" aria-label="Stop">
+            <Square className="!size-3 fill-current" />
+          </Button>
+        ) : (
+          <Button size="icon" variant="gold" onMouseDown={(e) => e.preventDefault()} onClick={send} disabled={!draft.trim()} className="max-lg:size-10" aria-label="Send">
+            <ArrowUp />
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -223,7 +293,6 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
   useEffect(() => void desktop()?.agent.engines().then(setEngines), []);
   const engineLabel = engines.find((e) => e.id === engine)?.label ?? engine;
   const sessionOpts = useSessionOptions(chatId);
-  const [draft, setDraft] = useState('');
   const scroller = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const running = !!live && !live.error && live.chatId === chatId;
@@ -243,23 +312,27 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
     if (!mobile) input.current?.focus();
   }, [chatId, mobile]);
 
-  async function submit(text = draft) {
+  /** Send a message. Says at once whether it was taken, so the box knows to clear. */
+  function submit(text: string): boolean {
     text = text.trim();
-    if (!text || live && !live.error) return;
+    if (!text || (live && !live.error)) return false;
     clearError();
-    let id = chat ? chatId : null;
-    if (!id) {
-      id = await newChat();
-      setChatId(id);
-    }
-    setDraft('');
-    void send(id, text, { path: view.path, label: view.label }, { navigate });
+    void (async () => {
+      let id = chat ? chatId : null;
+      if (!id) {
+        id = await newChat();
+        setChatId(id);
+      }
+      await send(id, text, { path: view.path, label: view.label }, { navigate });
+    })();
+    return true;
   }
 
   // Requests from page buttons. Read through a ref so the handler sees the latest state.
   const submitRef = useRef(submit);
   submitRef.current = submit;
   useEffect(() => onAsk((text) => void submitRef.current(text)), []);
+  const onSend = useCallback((text: string) => submitRef.current(text), []);
 
   async function startNew() {
     setChatId(await newChat());
@@ -385,46 +458,26 @@ export function ChatPanel({ onClose, mobile }: { onClose?: () => void; mobile?: 
             {isDesktop() ? 'Pick who runs the guide: Claude Code, Codex, OpenCode, or an AI provider.' : 'Connect an AI provider to start. Meridian works out of the box.'}
           </Link>
         )}
-        <div className="panel bg-background transition-[border-color,box-shadow] duration-300 focus-within:border-gold/60 focus-within:shadow-[0_0_0_4px_hsl(var(--gold)/0.12),0_10px_30px_-12px_hsl(var(--gold)/0.4)]">
-          {view.label && (
+        <Composer
+          inputRef={input}
+          mobile={mobile}
+          running={running}
+          onSend={onSend}
+          header={view.label && (
             <div className="flex items-center gap-1.5 px-3 pt-2.5 text-[11.5px] text-muted-foreground">
               <span className="size-1.5 rotate-45 bg-gold" />
               <span className="truncate">{view.applying ? 'Applying to' : 'Looking at'} {view.job ? `${view.job.company}: ${view.job.title}` : view.doc?.title}</span>
             </div>
           )}
-          <textarea
-            ref={input}
-            value={draft}
-            rows={1}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !mobile) {
-                e.preventDefault();
-                void submit();
-              }
-            }}
-            enterKeyHint={mobile ? 'enter' : 'send'}
-            placeholder="Tell me what to do, or paste a posting link…"
-            className="block max-h-48 min-h-[44px] w-full resize-none bg-transparent px-3.5 py-3 text-[13.5px] leading-relaxed max-lg:text-[16px] placeholder:text-muted-foreground/70 focus:outline-none [field-sizing:content]"
-          />
-          <div className="flex items-center justify-between px-2 pb-2">
-            <div className="flex min-w-0 items-center gap-0.5">
+          footer={
+            <>
               <Link to="/settings" className="truncate rounded-md px-1.5 py-1 font-mono text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground">
                 {engine ? engineLabel : provider ? `${provider.name} · ${provider.model ?? 'no model'}` : 'No provider'}
               </Link>
               {engine && chatId && sessionOpts && <SessionPicker chatId={chatId} engine={engine} options={sessionOpts} />}
-            </div>
-            {running ? (
-              <Button size="icon" variant="primary" onClick={stop} className="max-lg:size-10" aria-label="Stop">
-                <Square className="!size-3 fill-current" />
-              </Button>
-            ) : (
-              <Button size="icon" variant="gold" onMouseDown={(e) => e.preventDefault()} onClick={() => submit()} disabled={!draft.trim()} className="max-lg:size-10" aria-label="Send">
-                <ArrowUp />
-              </Button>
-            )}
-          </div>
-        </div>
+            </>
+          }
+        />
       </div>
     </aside>
   );

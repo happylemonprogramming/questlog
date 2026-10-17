@@ -18,6 +18,8 @@ import { log } from './log';
  */
 
 const MAX_READ = 10 * 1024 * 1024;
+const MAX_IMAGE = 10 * 1024 * 1024;
+const IMAGE_TYPES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml' };
 const MAX_PAGE = 200 * 1024;
 const MAX_LINE = 1000;
 const MAX_ENTRIES = 400;
@@ -489,6 +491,17 @@ export class LocalFolders {
       to++;
     }
     return { path: abs, size, binary: false, text, from, to, lines: all.length };
+  }
+
+  /** A picture in a shared folder, as base64, for the image library. */
+  async readImage(p: string): Promise<{ name: string; type: string; base64: string }> {
+    const { abs, dir } = await this.locate(p, new Ignores());
+    if (dir) throw new Error(`${p} is a folder.`);
+    const type = IMAGE_TYPES[path.extname(abs).slice(1).toLowerCase()];
+    if (!type) throw new Error(`${p} isn't a PNG, JPEG, WebP, GIF or SVG.`);
+    const size = (await stat(abs)).size;
+    if (size > MAX_IMAGE) throw new Error(`${p} is ${Math.round(size / 1024 / 1024)} MB; images can be up to 10 MB.`);
+    return { name: path.basename(abs), type, base64: (await readFile(abs)).toString('base64') };
   }
 
   /** Files whose name or text contains the query, ignoring case, with a few matching lines each. */

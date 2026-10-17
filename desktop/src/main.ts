@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, net, protocol, shell, type WebContents } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, net, protocol, session, shell, type WebContents } from 'electron';
 import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -71,6 +71,8 @@ function createWindow() {
       // The application form loads in a <webview>, which unlike an iframe works on any site.
       webviewTag: true,
       additionalArguments: HIDDEN ? ['--questlog-test'] : [],
+      // Tests run hidden but measure real frames.
+      backgroundThrottling: !HIDDEN,
     },
   });
   if (!HIDDEN) win.once('ready-to-show', () => win?.show());
@@ -242,6 +244,38 @@ async function viewSite(url: string) {
   }
 }
 
+/**
+ * A picture from the web, for the image library: a logo, a headshot. Fetched
+ * here, where pages' cross-origin rules don't apply, in the same throwaway
+ * session as viewSite, so it carries no cookies of the user's.
+ */
+async function fetchImage(url: string): Promise<{ type: string; base64: string; url: string }> {
+  if (!/^https?:\/\//i.test(url)) throw new Error('Give a full http(s) URL.');
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 20_000);
+  try {
+    const res = await session.fromPartition('sites').fetch(url, { signal: ctrl.signal, headers: { accept: 'image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8' } });
+    if (!res.ok) throw new Error(`The server said ${res.status} ${res.statusText}.`);
+    let type = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > 10 * 1024 * 1024) throw new Error('That image is over 10 MB.');
+    // Some servers send images as octet-stream; go by the bytes.
+    if (!type.startsWith('image/')) {
+      const head = buf.subarray(0, 512).toString('latin1');
+      type = buf[0] === 0x89 && head.startsWith('PNG', 1) ? 'image/png'
+        : buf[0] === 0xff && buf[1] === 0xd8 ? 'image/jpeg'
+        : head.startsWith('GIF8') ? 'image/gif'
+        : head.startsWith('RIFF') && head.slice(8, 12) === 'WEBP' ? 'image/webp'
+        : /<svg[\s>]/i.test(buf.subarray(0, 4096).toString('utf8')) ? 'image/svg+xml'
+        : '';
+      if (!type) throw new Error(`That address isn't an image (it's ${res.headers.get('content-type') || 'unknown'}). Find the image's own URL.`);
+    }
+    return { type, base64: buf.toString('base64'), url: res.url };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function handle(channel: string, fn: (...args: any[]) => unknown) {
   ipcMain.handle(channel, async (_e, ...args) => fn(...args));
 }
@@ -273,12 +307,14 @@ handle('history:undo', () => workspace.history.undo());
 handle('history:clear', () => workspace.history.clear());
 handle('legacy:taken', () => legacyTaken());
 handle('site:view', (url: string) => viewSite(url));
+handle('image:fetch', (url: string) => fetchImage(url));
 
 handle('local:grant', () => local.grant(win));
 handle('local:grants', () => local.grants());
 handle('local:revoke', (folder: string) => local.revoke(folder));
 handle('local:list', (p?: string, depth?: number) => local.list(p, depth));
 handle('local:read', (p: string, offset?: number, limit?: number) => local.read(p, offset, limit));
+handle('local:readImage', (p: string) => local.readImage(p));
 handle('local:search', (query: string, p?: string) => local.search(query, p));
 handle('local:git', (p?: string, opts?: { emails?: string[] }) => local.gitHistory(p, opts));
 

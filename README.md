@@ -45,6 +45,8 @@ Questlog/
     posting.md            the posting
     resume.json, resume.css, letter.json, letter.css, answer-why-acme.md
   documents/              documents not tied to one job
+  images/                 logos and pictures your documents use, by name
+    originals/            each one as it was before it was edited
 ```
 
 PDFs are made again whenever they're needed, so deleting them is safe. **Settings → Your files** opens the folder, moves it, and shows the history with Undo.
@@ -65,7 +67,7 @@ Pick it in **Settings → Agent**:
 
 API keys stay on your computer and are left out of exports.
 
-The agent can read public Greenhouse, Ashby and Lever job boards, save and judge listings against your rules, write and design documents, fill in forms, and read folders you grant it. It never submits an application or contacts anyone.
+The agent can read public Greenhouse, Ashby and Lever job boards, save and judge listings against your rules, write and design documents, bring in and edit pictures for them (a company's logo, your headshot: trim, crop, resize, recolor, remove a background, circle-crop), fill in forms, and read folders you grant it. It never submits an application or contacts anyone.
 
 ## Bring your data
 
@@ -81,6 +83,7 @@ The same app also runs as a web page, as a lighter way to try it. Data stays in 
 npm install
 npm --prefix desktop install
 npm run desktop       # dev server and the desktop window; closing the window stops both
+npm run app           # the desktop window on a production build: full speed, no hot reload, same data as `desktop`
 npm run dev           # just the web app, at http://localhost:5173
 npm run build         # typecheck and production build of the web app
 npm run desktop:dist  # package the desktop app into desktop/dist

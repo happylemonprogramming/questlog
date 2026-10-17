@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 import YAML from 'yaml';
 import { db, EMPTY_PROFILE } from './db';
 import { desktop, type WorkspaceInfo, type WsFile } from './desktop';
-import { STAGES, type Doc, type Job, type Profile } from './types';
+import { STAGES, type Doc, type ImageAsset, type Job, type Profile } from './types';
 
 /**
  * The workspace folder is where the user's data really lives in the desktop
@@ -106,6 +106,18 @@ function docFiles(doc: Doc, base: string): WsFile[] {
 
 const docPaths = (base: string) => [`${base}.json`, `${base}.css`, `${base}.md`];
 
+const EXT: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'image/svg+xml': 'svg' };
+const TYPE: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml' };
+
+/** Where each image's files are now, so a change of format can remove the old ones. */
+const imagePaths = new Map<string, string[]>();
+
+function imageFiles(img: ImageAsset): WsFile[] {
+  const files: WsFile[] = [{ path: `images/${img.name}.${EXT[img.type] ?? 'png'}`, base64: img.base64 }];
+  if (img.original) files.push({ path: `images/originals/${img.name}.${EXT[img.original.type] ?? 'png'}`, base64: img.original.base64 });
+  return files;
+}
+
 function profileFiles(p: Profile): WsFile[] {
   const about: Record<string, unknown> = {};
   for (const k of ABOUT) about[k] = p[k];
@@ -121,14 +133,33 @@ function profileFiles(p: Profile): WsFile[] {
 interface Parsed {
   jobs: Map<string, Job>;
   docs: Map<string, Doc>;
+  images: Map<string, ImageAsset>;
   profile: Profile | null;
   jobDir: Map<string, string>;
   docBase: Map<string, string>;
+  imagePaths: Map<string, string[]>;
+}
+
+function parseImages(files: WsFile[], out: Parsed) {
+  const originals = new Map<string, { type: string; base64: string }>();
+  for (const f of files) {
+    const m = f.path.match(/^images\/(originals\/)?([a-z0-9][a-z0-9-]*)\.(\w+)$/);
+    if (!m || f.base64 === undefined || !TYPE[m[3].toLowerCase()]) continue;
+    const [, original, name, ext] = m;
+    out.imagePaths.set(name, [...(out.imagePaths.get(name) ?? []), f.path]);
+    if (original) originals.set(name, { type: TYPE[ext.toLowerCase()], base64: f.base64 });
+    else out.images.set(name, { name, type: TYPE[ext.toLowerCase()], base64: f.base64, updatedAt: 0 });
+  }
+  for (const [name, o] of originals) {
+    const img = out.images.get(name);
+    if (img) img.original = o;
+  }
 }
 
 function parse(files: WsFile[]): Parsed {
-  const byPath = new Map(files.map((f) => [f.path, f.text]));
-  const out: Parsed = { jobs: new Map(), docs: new Map(), profile: null, jobDir: new Map(), docBase: new Map() };
+  const byPath = new Map(files.filter((f) => f.text !== undefined).map((f) => [f.path, f.text!]));
+  const out: Parsed = { jobs: new Map(), docs: new Map(), images: new Map(), profile: null, jobDir: new Map(), docBase: new Map(), imagePaths: new Map() };
+  parseImages(files, out);
   const jobIn = new Map<string, string>();
 
   for (const [p, text] of byPath) {
@@ -206,7 +237,7 @@ function parse(files: WsFile[]): Parsed {
 
 // --- Keeping the two in step ------------------------------------------------------
 
-type Table = 'jobs' | 'docs' | 'profile';
+type Table = 'jobs' | 'docs' | 'profile' | 'images';
 const dirty = new Map<string, { table: Table; id: string; gone?: boolean; label?: string }>();
 let applying = false;
 let timer: ReturnType<typeof setTimeout> | null = null;
@@ -219,8 +250,11 @@ function mark(table: Table, id: string, change: { gone?: boolean; label?: string
   timer = setTimeout(() => void flush(), 400);
 }
 
-const label = (table: Table, rec: Partial<Job & Doc> | undefined) =>
-  table === 'profile' ? 'profile' : table === 'jobs' ? `${rec?.company ?? ''}: ${rec?.title ?? ''}` : `${rec?.kind ?? 'document'} "${rec?.title ?? ''}"`;
+const label = (table: Table, rec: Partial<Job & Doc & ImageAsset> | undefined) =>
+  table === 'profile' ? 'profile'
+  : table === 'jobs' ? `${rec?.company ?? ''}: ${rec?.title ?? ''}`
+  : table === 'images' ? `image ${rec?.name ?? ''}`
+  : `${rec?.kind ?? 'document'} "${rec?.title ?? ''}"`;
 
 /** Write what changed in the app to the folder. */
 export function flush(): Promise<void> {
@@ -239,6 +273,14 @@ export function flush(): Promise<void> {
         const p = await db.profile.get('me');
         if (p) files.push(...profileFiles(p));
         said.push('Updated your profile');
+      } else if (c.table === 'images') {
+        const img = c.gone ? undefined : await db.images.get(c.id);
+        const out = img ? imageFiles(img) : [];
+        files.push(...out);
+        for (const p of imagePaths.get(c.id) ?? []) if (!out.some((f) => f.path === p)) remove.push(p);
+        if (out.length) imagePaths.set(c.id, out.map((f) => f.path));
+        else imagePaths.delete(c.id);
+        said.push(img ? `Saved ${label('images', img)}` : `Deleted image ${c.id}`);
       } else if (c.table === 'jobs') {
         const job = c.gone ? undefined : await db.jobs.get(c.id);
         if (job) {
@@ -290,6 +332,11 @@ async function writeAll() {
   if (p) files.push(...profileFiles(p));
   for (const job of await db.jobs.toArray()) files.push(...jobFiles(job));
   for (const doc of await db.docs.toArray()) files.push(...docFiles(doc, (await baseOf(doc)).base));
+  for (const img of await db.images.toArray()) {
+    const out = imageFiles(img);
+    files.push(...out);
+    imagePaths.set(img.name, out.map((f) => f.path));
+  }
   if (files.length) await d.workspace.write(files, 'Moved your job search into this folder');
 }
 
@@ -309,11 +356,24 @@ async function load() {
   const parsed = parse(await d.workspace.readAll());
   jobDir.clear();
   docBase.clear();
+  imagePaths.clear();
   for (const [k, v] of parsed.jobDir) jobDir.set(k, v);
   for (const [k, v] of parsed.docBase) docBase.set(k, v);
+  for (const [k, v] of parsed.imagePaths) imagePaths.set(k, v);
   applying = true;
   try {
-    await db.transaction('rw', db.jobs, db.docs, db.profile, async () => {
+    await db.transaction('rw', [db.jobs, db.docs, db.profile, db.images], async () => {
+      const images = await db.images.toArray();
+      await db.images.bulkDelete(images.filter((x) => !parsed.images.has(x.name) && !dirty.has(`images:${x.name}`)).map((x) => x.name));
+      const haveImg = new Map(images.map((x) => [x.name, x]));
+      await db.images.bulkPut(
+        [...parsed.images.values()]
+          .filter((x) => {
+            const prev = haveImg.get(x.name);
+            return !prev || prev.base64 !== x.base64 || prev.type !== x.type || prev.original?.base64 !== x.original?.base64;
+          })
+          .map((x) => ({ ...x, updatedAt: Date.now() })),
+      );
       const jobs = await db.jobs.toArray();
       const docs = await db.docs.toArray();
       const jobsOut = jobs.filter((j) => !parsed.jobs.has(j.id) && !dirty.has(`jobs:${j.id}`)).map((j) => j.id);
@@ -392,6 +452,9 @@ export async function startDisk() {
   db.docs.hook('creating', function (id, obj) { this.onsuccess = () => mark('docs', String(id ?? obj.id)); });
   db.docs.hook('updating', function (_m, id) { this.onsuccess = () => mark('docs', String(id)); });
   db.docs.hook('deleting', function (id, obj) { this.onsuccess = () => mark('docs', String(id), { gone: true, label: label('docs', obj) }); });
+  db.images.hook('creating', function (id, obj) { this.onsuccess = () => mark('images', String(id ?? obj.name)); });
+  db.images.hook('updating', function (_m, id) { this.onsuccess = () => mark('images', String(id)); });
+  db.images.hook('deleting', function (id) { this.onsuccess = () => mark('images', String(id), { gone: true }); });
   db.profile.hook('creating', function () { this.onsuccess = () => mark('profile', 'me'); });
   db.profile.hook('updating', function () { this.onsuccess = () => mark('profile', 'me'); });
 
@@ -435,6 +498,7 @@ export async function chooseWorkspace(pick: boolean) {
   if (parsed && (parsed.jobs.size || parsed.docs.size || parsed.profile)) {
     for (const j of await db.jobs.toArray()) if (!parsed.jobs.has(j.id)) mark('jobs', j.id);
     for (const x of await db.docs.toArray()) if (!parsed.docs.has(x.id)) mark('docs', x.id);
+    for (const x of await db.images.toArray()) if (!parsed.images.has(x.name)) mark('images', x.name);
     if (!parsed.profile && (await db.profile.get('me'))) mark('profile', 'me');
     for (const [k, v] of parsed.jobDir) jobDir.set(k, v);
     for (const [k, v] of parsed.docBase) docBase.set(k, v);
